@@ -2,13 +2,13 @@
     /**
      * TEMPLATE: MONTHLY TICKET
      * โครงสร้าง HTML สำหรับตั๋วรายเดือน (Thermal Printer 80mm Layout)
-     * Update: Layout & Font sizes as per specific requirements
+     * Update: Removed VAT breakdown rows
      */
     function generateMonthlyTicketHtml(data) {
         const {
             paymentId, paymentDateTime, bookingMonth, bookerName, productName,
             dayDetails, storageFee, paymentHistory,
-            priceExVat, vat, grandTotal, totalPaid, percent, remaining,
+            grandTotal, totalPaid, percent, remaining,
             officerName,
             currentPaymentAmount, currentPaymentMethod
         } = data;
@@ -28,12 +28,8 @@
         
         daysOrder.forEach(dayName => {
             const d = getDayData(dayName);
-            // แสดงเฉพาะวันที่มีการเลือก (count > 0)
             if (d && d.count > 0) {
-                // Format: ([Price] x [Count]) + ([Elec] x [Count])
-                // Note: Price and Elec per unit show no decimals
                 const calcStr = `(${fmtNoDec(d.pricePerDay)} x ${d.count}) + (${fmtNoDec(d.elecCostPerDay)} x ${d.count})`;
-                
                 dayRows += `
                     <div style="margin-bottom: 2px;">
                         <div style="font-weight: bold; text-align: left; font-size: 14px;">
@@ -62,8 +58,6 @@
         // --- 2. Payment History Logic ---
         let historyRows = "";
         paymentHistory.forEach(h => {
-            // h.date format expected from server: "DD MMM YYYY" (e.g. 22 ธ.ค. 2568)
-            // Ensure alignment: Left, Center, Right
             historyRows += `
                 <div style="display: flex; width: 100%; font-size: 14px; margin-bottom: 2px;">
                     <div style="width: 35%; text-align: left;">${h.date}</div>
@@ -73,9 +67,7 @@
             `;
         });
 
-        // --- 3. Summary Section Calculations ---
-        const sumVatBase = fmt(priceExVat);
-        const sumVatAmt = fmt(vat);
+        // --- 3. Summary Section ---
         const sumTotal = fmt(grandTotal);
         const sumPaid = fmt(totalPaid);
         const sumPercent = percent.toFixed(0) + "%";
@@ -149,21 +141,12 @@
 
                 <!-- 6. Summary & Tax -->
                 <div style="margin-top: 2px; font-size: 14px;">
-                    <!-- Use Flexbox for 2 Columns alignment -->
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                        <div style="text-align: right; width: 60%;">ราคาไม่รวมภาษีมูลค่าเพิ่ม : </div>
-                        <div style="text-align: right; width: 40%;">${sumVatBase}</div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                        <div style="text-align: right; width: 60%;">ภาษีมูลค่าเพิ่ม 7% : </div>
-                        <div style="text-align: right; width: 40%;">${sumVatAmt}</div>
-                    </div>
+                    <!-- VAT Rows Removed -->
                     <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                         <div style="text-align: right; width: 60%; font-weight: bold;">รวมเป็นเงินทั้งสิ้น : </div>
                         <div style="text-align: right; width: 40%; font-weight: bold; font-size: 16px;">${sumTotal}</div>
                     </div>
                     
-                    <!-- Dashed Line 20% on the right column -->
                     <div style="display: flex; justify-content: flex-end; margin: 4px 0;">
                         <div style="width: 40%; border-bottom: 1px dashed #000;"></div>
                     </div>

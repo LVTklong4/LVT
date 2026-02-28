@@ -2,7 +2,7 @@
     /**
      * Scripts_Print_Map
      * Logic สำหรับสร้างผังตรวจการณ์ (A4 Landscape)
-     * Update: FIX Ticket overlapping (Force hide ticket areas)
+     * Update: Fix White Page Issue (Clean up CSS & Restore Ticket Areas)
      */
 
     function openMapPrintPreview() {
@@ -11,7 +11,7 @@
             return;
         }
 
-        // 1. Force Hide Ticket Areas via JS (Safety Check)
+        // 1. Force Hide Ticket Areas to prevent overlap during Map Print
         const ticketArea = document.getElementById('ticket-area');
         if (ticketArea) ticketArea.style.display = 'none';
         
@@ -59,15 +59,23 @@
     }
 
     function closeMapPrint() {
+        // 1. Hide Map Area & Clear Content (Remove Style Tag)
         const area = document.getElementById('report-print-area');
         if (area) {
             area.style.display = 'none';
             area.innerHTML = ''; 
         }
+
+        // 2. RESTORE Ticket Areas (Important!)
+        // Reset display property to allow other print scripts to control them
+        const ticketArea = document.getElementById('ticket-area');
+        if (ticketArea) ticketArea.style.display = '';
+        
+        const monthlyArea = document.getElementById('monthly-ticket-area');
+        if (monthlyArea) monthlyArea.style.display = '';
     }
 
     function generateMapPrintHtml() {
-        // --- 1. Prepare Data ---
         let maxRow = 0; 
         let maxCol = 0; 
         
@@ -97,7 +105,6 @@
         
         unpaidList.sort((a,b) => a.stallName.localeCompare(b.stallName, undefined, {numeric: true, sensitivity: 'base'}));
 
-        // --- 2. Generate Grid HTML ---
         let gridHtml = '';
         
         for (let r=1; r<=maxRow; r++) {
@@ -132,7 +139,6 @@
                             productLabel = `<div style="font-size: 7px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-top: 1px;">${booking.product || booking.bookerName}</div>`;
                             
                             if (booking.status === 'ชำระแล้ว' || booking.status === 'ชำระรายวัน' || booking.status === 'ไม่ว่าง') {
-                                // Paid
                                 if(booking.type === 'รายเดือน') {
                                      bgStyle = 'background-color: #fbcfe8;'; 
                                      borderStyle = 'border: 1px solid #f472b6;'; 
@@ -141,17 +147,14 @@
                                      borderStyle = 'border: 1px solid #f87171;';
                                 }
                             } else if (booking.status === 'ค้างชำระ') {
-                                // Unpaid (Orange)
                                 bgStyle = 'background-color: #fed7aa;'; 
                                 borderStyle = 'border: 2px solid #ea580c;'; 
                                 icons += `<div style="position: absolute; top: 0; right: 0; font-size: 8px;">⚠️</div>`;
                             } else if (booking.status === 'ลา') {
-                                // Leave
                                 bgStyle = 'background-color: #d1d5db;'; 
                                 productLabel = '<div style="font-size: 7px; color: #4b5563;">ลา</div>';
                             }
                         } else {
-                             // Free
                              if (isFood) {
                                  bgStyle = 'background-color: #dcfce7;'; 
                                  borderStyle = 'border: 1px solid #86efac;'; 
@@ -190,7 +193,6 @@
             }
         }
 
-        // --- 3. Generate Unpaid List HTML ---
         let unpaidHtml = '';
         if (unpaidList.length > 0) {
             unpaidHtml = `
@@ -210,7 +212,6 @@
             unpaidHtml = `<div style="font-size: 11px; text-align: center; padding: 4px; border: 1px dashed #16a34a; color: #16a34a;">- ไม่มียอดค้างชำระ (รายวัน/ประจำ) -</div>`;
         }
 
-        // --- 4. Final Layout ---
         let dateStr = "-";
         if (typeof selectedDate !== 'undefined' && selectedDate) {
             const [y, m, d] = selectedDate.split('-');
@@ -237,7 +238,6 @@
                 font-family: 'Sarabun', sans-serif;
                 color: black;
             ">
-                <!-- HEADER -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 3px; height: 10mm;">
                      <div>
                         <h1 style="margin: 0; font-size: 16px; font-weight: bold;">ผัง ${dateStr}</h1>
@@ -245,7 +245,6 @@
                      </div>
                 </div>
 
-                <!-- MAP GRID -->
                 <div style="
                     flex-grow: 1;
                     margin: 5px 0;
@@ -260,18 +259,15 @@
                     ${gridHtml}
                 </div>
 
-                <!-- FOOTER -->
                 <div style="flex-shrink: 0; height: auto;">
                     ${unpaidHtml}
-                    <!-- Signature -->
-                    <div style="margin-top: 25px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                    <div style="margin-top: 8px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
                          <div style="font-size: 11px;">ลงชื่อผู้ตรวจ:</div>
                          <div style="border-bottom: 1px dotted #000; width: 200px; height: 1em;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- CSS FOR PRINT -->
             <style>
                 @media print {
                     @page { 
@@ -284,23 +280,11 @@
                         -webkit-print-color-adjust: exact !important; 
                         print-color-adjust: exact !important;
                     }
-                    /* EXPLICITLY HIDE TICKETS IN MAP PRINT MODE */
-                    #ticket-area, #monthly-ticket-area { display: none !important; }
-                    
-                    /* SHOW MAP */
-                    #report-print-area, #report-print-area * { visibility: visible !important; }
-                    #report-print-area {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        height: 100%;
-                        z-index: 99999;
-                        background: white;
-                        display: block !important;
-                    }
-                    
+                    /* HIDE ONLY CONTROL BAR - Do not use global body hide */
                     .no-print { display: none !important; }
+                    
+                    /* Ensure Map is Visible */
+                    #report-print-area { display: block !important; }
                 }
             </style>
         `;

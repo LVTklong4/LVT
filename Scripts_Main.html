@@ -2,19 +2,14 @@
     /**
      * Scripts_Main
      * Main Controller & Logic
-     * Update: Full Code Restoration (กู้คืนโค้ดส่วนที่หายไป)
-     * Update: Ensures fetchData calls renderGrid from Scripts_UI correctly
+     * Update: Added btnExtraBooking to logout hide list
      */
 
-    // ประกาศตัวแปรมารอรับ URL
     let globalDashboardUrl = null;
 
-    // สั่งให้ไปดึง URL ทันทีที่หน้าเว็บโหลดเสร็จ (ทำเงียบๆ หลังบ้าน)
     document.addEventListener('DOMContentLoaded', function() {
         google.script.run
             .withSuccessHandler(function(url) {
-                // ได้ URL มาแล้ว เก็บใส่ตัวแปรไว้ เตรียมใช้งาน
-                // สำคัญ: ต้องเป็น 'Dashboard' ตัวใหญ่ตาม Code.gs
                 globalDashboardUrl = url + "?page=Dashboard";
                 console.log("Dashboard URL ready:", globalDashboardUrl);
             })
@@ -25,29 +20,24 @@
 
     window.onload = function() {
         try {
-            // 1. Initialize Modals
             const modals = ['bookingModal', 'guestModal', 'monthlyManagementModal', 'paymentActionModal', 'storageModal', 'storageManagementModal', 'utilityModal', 'moveBookingModal', 'ticketPreviewModal', 'customConfirmModal', 'customAlertModal', 'bookingSuccessModal', 'settingsModal', 'billPreviewModal'];
             modals.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) el.style.display = '';
             });
             
-            // 2. Body Scroll
             document.body.style.overflowY = 'scroll';
             
-            // 3. Load Config First (Async)
             if(typeof fetchSystemConfig === 'function') {
                 fetchSystemConfig();
             }
 
-            // 4. Check Session
             if(typeof checkSession === 'function') {
                 checkSession(); 
             } else {
                 console.warn("Session module missing");
             }
 
-            // 5. Render Dates (Start the App)
             if(typeof renderQuickDates === 'function') {
                 renderQuickDates(); 
             } else {
@@ -55,10 +45,8 @@
                 document.getElementById('grid-container').innerHTML = '<div class="p-4 text-red-500 text-center">Error: Script loading failed. Please refresh.</div>';
             }
             
-            // 6. Setup Global Event Listeners
             setupGlobalListeners();
 
-            // 7. Start Auto Refresh
             setInterval(() => {
                 const isModalOpen = document.body.classList.contains('modal-active');
                 if (!document.hidden && !isModalOpen) {
@@ -68,7 +56,6 @@
 
         } catch (e) {
             console.error("Window Load Error:", e);
-            // Fallback for critical error
             alert("เกิดข้อผิดพลาดในการโหลดหน้าเว็บ: " + e.message);
         }
     };
@@ -126,7 +113,6 @@
         google.script.run
             .withSuccessHandler((data) => {
                 if (currentFetchId === lastFetchId) {
-                    // Update Global Data for Search & Print
                     if (data.stalls) stallsData = data.stalls;
                     if (data.bookings) bookingsData = data.bookings;
                     if (data.storageMap) {
@@ -134,7 +120,6 @@
                         else window.globalStorageMap = data.storageMap;
                     }
 
-                    // Call renderGrid from Scripts_UI
                     if (typeof renderGrid === 'function') {
                         renderGrid(data);
                     } else {
@@ -184,11 +169,9 @@
         const marketDays = [0, 3, 6]; 
         let count = 0; 
         
-        // --- FIX: Cutoff Time Logic ---
         let d = new Date();
         const now = new Date();
         
-        // Parse Cutoff Config (Default 19:00)
         let cutoffH = 19, cutoffM = 0;
         if (typeof systemConfig !== 'undefined' && systemConfig.cutoffTime) {
             const parts = systemConfig.cutoffTime.split(':');
@@ -199,11 +182,9 @@
         const currentH = now.getHours();
         const currentM = now.getMinutes();
         
-        // Compare Time: If now >= cutoff, start from tomorrow
         if (currentH > cutoffH || (currentH === cutoffH && currentM >= cutoffM)) {
             d.setDate(d.getDate() + 1);
         }
-        // ------------------------------
 
         let addedDates = new Set();
         let isFirst = true;
@@ -305,7 +286,8 @@
             'btnRefreshCache', 'btnRefreshCacheMobile',
             'btnSettings', 'btnSettingsMobile',
             'btnDashboard', 'btnDashboardMobile',
-            'btnPrintMap', 'btnPrintMapMobile' // <--- ปุ่มปริ้น
+            'btnPrintMap', 'btnPrintMapMobile',
+            'btnExtraBooking', 'btnExtraBookingMobile' // <--- เพิ่มตรงนี้ด้วยครับ
         ];
         elementsToHide.forEach(id => {
             const el = document.getElementById(id);

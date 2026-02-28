@@ -2,7 +2,7 @@
     /**
      * TEMPLATE: STORAGE TICKET (80mm)
      * โครงสร้าง HTML สำหรับตั๋วฝากของ
-     * Update: Use Square Brackets [ ] for Payment Method
+     * Update: Removed VAT breakdown rows
      */
     function generateStorageTicketHtml(data) {
         const {
@@ -11,8 +11,6 @@
         } = data;
 
         const val = parseFloat(amount || 0);
-        const preVat = val / 1.07;
-        const vat = val - preVat;
         const methodDisplay = (method === 'Cash') ? 'เงินสด' : (method === 'Transfer' ? 'โอน' : method);
 
         const IMG_LOGO_URL = "https://img2.pic.in.th/pic/Profile-Alpha_0.png";
@@ -78,14 +76,7 @@
 
                 <!-- 4. Summary & Tax -->
                 <div style="margin-top: 2px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                        <div style="text-align: right; width: 60%;">ราคาไม่รวมภาษีมูลค่าเพิ่ม : </div>
-                        <div style="text-align: right; width: 40%;">${fmt(preVat)}</div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                        <div style="text-align: right; width: 60%;">ภาษีมูลค่าเพิ่ม 7% : </div>
-                        <div style="text-align: right; width: 40%;">${fmt(vat)}</div>
-                    </div>
+                    <!-- VAT Rows Removed -->
                     <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                         <div style="text-align: right; width: 60%; font-weight: bold;">รวมเป็นเงินทั้งสิ้น : </div>
                         <div style="text-align: right; width: 40%; font-weight: bold; font-size: 16px;">${fmt(val)}</div>
@@ -94,7 +85,6 @@
                     <div style="height: 0.3em;"></div>
                     
                     <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                         <!-- FIX: Use Square Brackets -->
                          <div style="text-align: right; width: 60%; font-weight: bold;">การชำระเงิน [${methodDisplay}] : </div>
                          <div style="text-align: right; width: 40%; font-weight: bold; font-size: 16px;">${fmt(val)}</div>
                     </div>

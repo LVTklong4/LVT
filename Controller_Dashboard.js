@@ -8,6 +8,7 @@
  * Update: Change Deadline to 20th of Month (Strict Logic)
  * Update: Add Weekly Milestone Penalties (Week 1 > 35%, Week 2 > 55%, Week 3 > 95%)
  * Update: FIX ReferenceError daysInMonthTotal
+ * Update: Added selectedDays to Monthly bookings for Debt Checklist filtering
  * ------------------------------------------------------------------
  */
 
@@ -184,7 +185,8 @@ function getDashboardData(dateStr) {
                       total: parseFloat(String(row[8]).replace(/,/g,'') || 0),
                       paid: realPaid, 
                       paymentHistory: paymentHistory, 
-                      customerType: row[16] || "Standard"
+                      customerType: row[16] || "Standard",
+                      selectedDays: String(row[12] || "") // เพิ่มฟิลด์วันลงขาย เพื่อใช้ใน Checklist
                   });
               }
           });
@@ -288,7 +290,7 @@ function getDashboardData(dateStr) {
                   if (riskPercent > 100) riskPercent = 100;
 
                   // Create Explanation
-                  const riskBreakdown = `เวลา(${Math.round(timeScore)}) + หนี้(${Math.round(debtScore)})` + 
+                  const riskBreakdown = `เวลา(${Math.round(timeScore)}) + หหนี้(${Math.round(debtScore)})` + 
                                         (sundayScore > 0 ? ` + อาทิตย์(${sundayScore})` : ``) + 
                                         (penaltyScore > 0 ? ` + ไม่จ่าย(${penaltyScore})` : ``) +
                                         milestoneText +

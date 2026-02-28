@@ -2,8 +2,7 @@
     /**
      * Scripts_Session
      * จัดการ Session และ Firebase Authentication
-     * Update: Full Code Restoration (แก้ปัญหาโค้ดหาย)
-     * Update: Added btnPrintMap to restoreAdminUI
+     * Update: Added btnExtraBooking to visible list
      */
 
     // Firebase Config from User
@@ -61,12 +60,13 @@
             if(defIcon) defIcon.classList.add('hidden');
         }
 
-        // --- UPDATE: เพิ่ม btnPrintMap และ btnPrintMapMobile ในรายการที่จะแสดง ---
+        // --- UPDATE: เพิ่มปุ่ม Extra Booking ในรายการแสดงผล ---
         const idsToShow = [
             'btnNextDate', 'btnPrevDate', 'btnArchive', 
             'btnMonthlyTop', 'btnMonthlyTopMobile',
             'btnStorageTop', 'btnStorageTopMobile',
-            'btnPrintMap', 'btnPrintMapMobile' // <--- เพิ่มตรงนี้เพื่อให้ปุ่มปริ้นแสดง
+            'btnPrintMap', 'btnPrintMapMobile',
+            'btnExtraBooking', 'btnExtraBookingMobile' // <--- เพิ่มตรงนี้ครับ
         ];
         idsToShow.forEach(id => {
             const el = document.getElementById(id);
@@ -96,7 +96,6 @@
             if(btnSetMob) { btnSetMob.classList.remove('hidden'); btnSetMob.style.display = 'inline-flex'; }
         }
 
-        // Close any open login modals
         if(typeof hideModal === 'function') {
             hideModal('loginModal');
             hideModal('logoutModal');
@@ -112,7 +111,6 @@
         }
     }
 
-    // Google Login Function
     function doGoogleLogin() {
         const btn = document.getElementById('btnGoogleLogin');
         if(btn) {
@@ -160,12 +158,8 @@
         }).checkLogin(email); 
     }
 
-    // FIX: Removed duplicate confirmLogout (It is now in Scripts_Main.html)
-
-    // FIX: Main Function to Toggle Panels
     function toggleAdminPanel() {
         if (currentAdmin) {
-            // Populate Logout Modal Data
             const nameEl = document.getElementById('logout_name');
             const roleEl = document.getElementById('logout_role');
             if(nameEl) nameEl.innerText = currentAdmin.name || 'Admin';

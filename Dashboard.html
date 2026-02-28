@@ -141,7 +141,22 @@
                          <div class="vintage-card p-4 min-h-[300px]"><div class="vintage-header mb-4"><i class="fa-solid fa-layer-group"></i> สัดส่วนการจองแยกโซน</div><div class="space-y-4" id="zone_bars_container"></div></div>
                          <div class="vintage-card"><div class="vintage-header"><i class="fa-solid fa-crown text-yellow-600"></i> ลูกค้าชั้นดี</div><table class="w-full text-sm text-left"><thead class="bg-[#F5DEB3] text-[#5D4037] text-xs uppercase font-bold border-b-2 border-[#8B5A2B]"><tr><th class="p-3 w-10">#</th><th class="p-3">ลูกค้า</th><th class="p-3 text-right">ยอดจ่าย</th></tr></thead><tbody id="table_prime_customers" class="divide-y divide-[#D7CCC8]"></tbody></table></div>
                     </div>
-                    <div class="vintage-card border-red-800/50"><div class="vintage-header bg-red-100 text-red-900"><i class="fa-solid fa-triangle-exclamation"></i> ติดตามหนี้เร่งด่วน</div><div class="p-3 bg-red-50/50 min-h-[400px]"><div id="risk_list_container" class="space-y-2"></div></div></div>
+                    <div class="vintage-card border-red-800/50">
+                        <div class="vintage-header bg-red-100 text-red-900 flex justify-between items-center">
+                            <span><i class="fa-solid fa-triangle-exclamation"></i> ติดตามหนี้เร่งด่วน</span>
+                            <!-- เพิ่ม Checkbox และปุ่มพิมพ์ตรงนี้ให้เรียบร้อย -->
+                            <div class="flex items-center gap-2">
+                                <label class="flex items-center gap-1 cursor-pointer bg-white/50 px-2 py-1 rounded text-[10px] font-bold text-gray-700 border border-red-200 hover:bg-white transition-colors" title="หากติ๊ก จะพิมพ์รายชื่อลูกหนี้ทั้งหมดโดยไม่สนว่าวันนี้มาขายหรือไม่">
+                                    <input type="checkbox" id="chk_printAllDebts" class="form-checkbox text-red-600 rounded w-3 h-3 focus:ring-0 cursor-pointer">
+                                    <span>รวมทุกวัน</span>
+                                </label>
+                                <button onclick="printDebtChecklist()" class="px-2 py-1 bg-red-600 text-white rounded text-xs shadow-sm hover:bg-red-700 transition flex items-center gap-1 font-bold">
+                                    <i class="fa-solid fa-print"></i> พิมพ์ใบตามเก็บ
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-red-50/50 min-h-[400px]"><div id="risk_list_container" class="space-y-2"></div></div>
+                    </div>
                 </div>
             </div>
 
@@ -188,6 +203,8 @@
     <?!= include('Part_Modal_Expense'); ?>
     <?!= include('Template_Report'); ?>
     <?!= include('Scripts_Print_Report'); ?>
+    <?!= include('Template_Print_Checklist'); ?> <!-- NEW: ไฟล์เทมเพลตใบงาน -->
+    <?!= include('Scripts_Print_Checklist'); ?> <!-- NEW: ไฟล์สคริปต์สั่งพิมพ์ใบงาน -->
     <?!= include('Scripts_Dashboard_UI'); ?>
     <?!= include('Scripts_Dashboard'); ?>
     <?!= include('Scripts_Accounting'); ?>

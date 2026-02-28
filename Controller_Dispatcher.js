@@ -1,16 +1,15 @@
 /**
  * ------------------------------------------------------------------
  * CONTROLLER: DISPATCHER (CORE)
- * ศูนย์กลางการทำงานหลัก (Map, Save Booking)
- * Note: ไฟล์นี้ต้องมีฟังก์ชัน saveBooking ห้ามซ้ำกับไฟล์อื่น
+ * ศูนย์กลางการทำงานหลัก (Map, Save Booking, System Utils)
+ * Update: FIX Storage Date Logic (Daily Booking adds +6 days for storage)
  * ------------------------------------------------------------------
  */
 
 function getMapData(dateStr) {
-  const stalls = getStallsDataCached();
+  const stalls = getStallsDataCached(); 
   const bookings = RepoDaily.getMapDataRaw(dateStr);
   
-  // Safe check for Storage Service
   let storageMap = {};
   if (typeof ServiceStorage !== 'undefined' && typeof ServiceStorage.getActiveStorageMap === 'function') {
       storageMap = ServiceStorage.getActiveStorageMap();
@@ -19,10 +18,27 @@ function getMapData(dateStr) {
   return { stalls: stalls, bookings: bookings, storageMap: storageMap };
 }
 
-// Main Save Function
+function getStallsDataCached() {
+    try {
+        const ss = SpreadsheetApp.openById(SHEET_ID_SETUP);
+        const sheet = ss.getSheetByName("Stalls");
+        const data = sheet.getDataRange().getValues();
+        data.shift(); // Header
+        return data.map(r => ({
+            name: String(r[0]), 
+            row: parseInt(r[1]) || 0, 
+            col: parseInt(r[2]) || 0, 
+            type: String(r[3]),
+            priceWed: parseFloat(r[4]||0),
+            priceSat: parseFloat(r[5]||0),
+            priceSun: parseFloat(r[6]||0),
+            priceMonth: parseFloat(r[7]||0)
+        }));
+    } catch(e) { return []; }
+}
+
 function saveBooking(formObject) {
   const lock = LockService.getScriptLock();
-  // FIX: Increased lock wait time to 30 seconds to prevent "System busy" errors
   try { lock.waitLock(30000); } catch (e) { return { success: false, message: "⚠️ ระบบทำงานหนัก กรุณารอสักครู่" }; }
 
   try {
@@ -74,14 +90,21 @@ function saveBooking(formObject) {
         const mainStallName = formObject.stallName || (stallList.length > 0 ? stallList[0].name : "");
         if (mainStallName && typeof ServiceStorage !== 'undefined') {
              let customStart, customEnd;
+             
              if (isMonthly) {
+                 // กรณีรายเดือน: ฝากทั้งเดือน
                  const d = new Date(formObject.date);
                  customStart = new Date(d.getFullYear(), d.getMonth(), 1);
                  customEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
              } else {
+                 // กรณีรายวัน: ฝาก 7 วัน (วันเริ่ม + 6 วัน)
                  const d = new Date(formObject.date);
-                 customStart = d;
-                 customEnd = new Date(d); 
+                 customStart = new Date(d); // Clone date
+                 
+                 // FIX: Calculate End Date (+6 days)
+                 const e = new Date(d);
+                 e.setDate(d.getDate() + 6);
+                 customEnd = e; 
              }
 
              ServiceStorage.createStorage({
@@ -102,25 +125,29 @@ function saveBooking(formObject) {
     let totalElecPriceAll = (isMonthly) ? (elecUnitInput * 10 * calcResult.totalMonthlyDays) : (elecUnitInput * 10);
     if (customerType === 'VIP') totalElecPriceAll = 0;
     
-    // Include Storage Fee in Grand Total
     grandTotal = totalAllPrice + totalElecPriceAll + storageFeeInput;
     
     if (customerType === 'VIP' && formObject.totalPrice) grandTotal = parseFloat(formObject.totalPrice);
 
-    // --- DUPLICATE TRANSACTION PREVENTION ---
     let paidFromForm = parseFloat(formObject.paidAmount || 0);
-    
     const existingPaid = RepoTransaction.getTotalPaid(bookingId);
-    
     let amountToRecord = paidFromForm - existingPaid;
     amountToRecord = Math.round(amountToRecord * 100) / 100;
-
     const totalPaidNow = existingPaid + (amountToRecord > 0 ? amountToRecord : 0);
     
     let status = "ค้างชำระ";
-    if (grandTotal >= 0 && totalPaidNow >= (grandTotal - 0.01)) status = "ชำระแล้ว";
+    if (customerType === 'VIP') {
+        status = "ชำระแล้ว"; 
+    } else {
+        if (grandTotal > 0.01) {
+            if (totalPaidNow >= (grandTotal - 0.01)) {
+                status = "ชำระแล้ว";
+            }
+        }
+    }
+
     if (!formObject.bookerName) status = "ว่าง";
-    if (isMonthly && customerType === 'Regular') status = "ค้างชำระ";
+    if (isMonthly && customerType === 'Regular') status = "ชำระรายวัน";
 
     const batchRows = [];
     
@@ -200,10 +227,8 @@ function saveBooking(formObject) {
     
     if (amountToRecord > 0) {
          const officer = "System"; 
-         
          let remainingPay = amountToRecord;
          
-         // Priority: Stall > Elec > Storage
          let payStall = 0;
          if (totalAllPrice > 0) {
              payStall = Math.min(totalAllPrice, remainingPay);
@@ -226,12 +251,7 @@ function saveBooking(formObject) {
              payStall += remainingPay;
          }
 
-         const breakdown = {
-             stall: payStall,
-             elec: payElec,
-             storage: payStorage
-         };
-         
+         const breakdown = { stall: payStall, elec: payElec, storage: payStorage };
          const totalTransactionValue = amountToRecord; 
          const billType = isMonthly ? "Monthly Rent" : "Daily Rent";
          
@@ -262,5 +282,26 @@ function runArchiveProcess() {
     try {
         const msg = ServiceArchive.runDailyArchive();
         return { success: true, message: msg };
+    } catch(e) { return { success: false, message: e.toString() }; }
+}
+
+// --- SYSTEM UTILS ---
+function clearSystemCache() {
+    return { success: true, message: "อัปเดตข้อมูลผังตลาดเรียบร้อย" };
+}
+
+function getSystemConfig() {
+    try {
+        const props = PropertiesService.getScriptProperties();
+        const cutoff = props.getProperty('CUTOFF_TIME') || "19:00";
+        return { success: true, data: { cutoffTime: cutoff } };
+    } catch(e) { return { success: false, message: e.toString() }; }
+}
+
+function saveSystemConfig(key, value) {
+    try {
+        const props = PropertiesService.getScriptProperties();
+        props.setProperty(key, value);
+        return { success: true, message: "บันทึกการตั้งค่าเรียบร้อย" };
     } catch(e) { return { success: false, message: e.toString() }; }
 }

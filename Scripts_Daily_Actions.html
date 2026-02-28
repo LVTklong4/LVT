@@ -2,9 +2,7 @@
     /**
      * Scripts_Daily_Actions
      * ศูนย์รวม Logic ฝั่ง Client สำหรับ "รายวัน" ทั้งหมด
-     * (Includes: Modal Open, UI Toggle, Form Calc, Submission)
-     * FIX: calcTotalDaily now includes storage fee in total calculation
-     * FIX: Payment buttons disabled styling matches theme when paid
+     * Update: Added Extra Booking History Logic
      */
 
     // --- 1. MODAL & UI LOGIC ---
@@ -12,6 +10,9 @@
     function openDailyModal(stall, booking, storageInfo = null) {
         document.getElementById('bookingFormDaily').reset();
         
+        // Reset Mode to Standard
+        toggleExtraMode(false);
+
         // Reset Buttons visibility
         document.getElementById('d_btn_delete').classList.add('hidden');
         document.getElementById('d_btn_print').classList.add('hidden');
@@ -20,7 +21,7 @@
         document.getElementById('d_btn_move').classList.add('hidden');
         document.getElementById('d_btn_storage').classList.remove('hidden');
 
-        // Set Date based on selection
+        // Set Date
         const [y, m, d] = selectedDate.split('-').map(Number);
         const dayOfWeek = new Date(y, m - 1, d).getDay();
         let dayPrice = 0;
@@ -33,14 +34,11 @@
 
         document.getElementById('d_date').value = selectedDate;
         
-        // Init Stalls
         selectedStalls = [{name: stall.name, price: dayPrice}];
         
-        // Admin Info
         document.getElementById('d_admin_badge').innerText = currentAdmin ? currentAdmin.name : '-';
         document.getElementById('d_header_date_right').innerText = formatThaiDateFull(selectedDate);
         
-        // Setup Storage Button Action
         const storageBtn = document.getElementById('d_btn_storage');
         storageBtn.onclick = () => {
             const name = document.getElementById('d_bookerName').value;
@@ -52,7 +50,6 @@
         // --- Case: Existing Booking ---
         if (booking) {
              const bookingId = booking.id;
-             // Filter related bookings (multi-stall)
              const related = bookingsData.filter(b => b.id === bookingId);
              
              const uniqueStalls = new Map();
@@ -72,32 +69,28 @@
              
              const isPaid = (primary.status === "ชำระแล้ว");
 
-             // Set Payment Method value first
              if (isPaid && primary.paymentMethod) {
                  document.getElementById('d_paymentMethod').value = primary.paymentMethod;
              } else {
                  document.getElementById('d_paymentMethod').value = '';
              }
              
-             // Ensure buttons are active based on amount initially
              checkPaymentAmountDaily();
 
              if (isPaid) {
-                 // Buttons for Paid state
                  document.getElementById('d_btn_print').classList.remove('hidden');
                  document.getElementById('d_btn_preview').classList.remove('hidden');
                  document.getElementById('d_btn_move').classList.remove('hidden');
                  document.getElementById('d_btn_leave').classList.remove('hidden');
                  setDailyReadOnly(true); 
              } else {
-                 // Buttons for Unpaid state
                  if(currentAdmin) document.getElementById('d_btn_delete').classList.remove('hidden');
                  document.getElementById('d_btn_move').classList.remove('hidden'); 
                  setDailyReadOnly(false);
              }
         } 
-        // --- Case: New Booking ---
         else {
+            // New Booking
             document.getElementById('d_bookingId').value = "";
             document.getElementById('d_elecUnit').value = 0;
             document.getElementById('d_storageFee').value = 0;
@@ -112,16 +105,151 @@
             }
         }
         
-        // Render Tags
-        if(typeof renderStallTagsDaily === 'function') renderStallTagsDaily();
-        
+        renderStallTagsDaily();
         calcTotalDaily();
         showModal('bookingModalDaily');
     }
 
+    // --- NEW: Open Extra Booking Modal ---
+    function openExtraBookingModal() {
+        document.getElementById('bookingFormDaily').reset();
+        
+        toggleExtraMode(true); // Switch to Extra Mode
+
+        document.getElementById('d_btn_delete').classList.add('hidden');
+        document.getElementById('d_btn_print').classList.add('hidden');
+        document.getElementById('d_btn_preview').classList.add('hidden');
+        document.getElementById('d_btn_leave').classList.add('hidden');
+        document.getElementById('d_btn_move').classList.add('hidden');
+        document.getElementById('d_btn_storage').classList.remove('hidden'); 
+
+        document.getElementById('d_date').value = selectedDate;
+        
+        selectedStalls = []; 
+        
+        document.getElementById('d_admin_badge').innerText = currentAdmin ? currentAdmin.name : '-';
+        document.getElementById('d_header_date_right').innerText = formatThaiDateFull(selectedDate) + " (นอกผัง)";
+
+        // Auto Generate Name
+        refreshExtraName();
+
+        // Set default manual price to 0
+        document.getElementById('d_manualPrice').value = "0";
+
+        setDailyReadOnly(false);
+        calcTotalDaily();
+        
+        // NEW: Load History
+        renderExtraBookingHistory();
+        
+        showModal('bookingModalDaily');
+    }
+    
+    function refreshExtraName() {
+        if(typeof getNextExtraStallName === 'function') {
+            const nextName = getNextExtraStallName();
+            document.getElementById('d_extraStallName').value = nextName;
+            // Update selectedStalls implicitly for calc (dummy)
+            selectedStalls = [{name: nextName, price: 0}]; 
+        }
+    }
+
+    function toggleExtraMode(isExtra) {
+        const stdStall = document.getElementById('d_stdStallContainer');
+        const extStall = document.getElementById('d_extraStallContainer');
+        const manualPrice = document.getElementById('d_manualPriceGroup');
+        const historySec = document.getElementById('d_extraHistorySection');
+        const isExtraInput = document.getElementById('d_isExtraMode');
+        
+        if (isExtra) {
+            stdStall.classList.add('hidden');
+            extStall.classList.remove('hidden');
+            manualPrice.classList.remove('hidden');
+            historySec.classList.remove('hidden'); // Show History
+            isExtraInput.value = "true";
+        } else {
+            stdStall.classList.remove('hidden');
+            extStall.classList.add('hidden');
+            manualPrice.classList.add('hidden');
+            historySec.classList.add('hidden'); // Hide History
+            isExtraInput.value = "false";
+        }
+    }
+
+    function renderExtraBookingHistory() {
+        const tbody = document.getElementById('d_extraHistoryBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        // Filter Bookings
+        let list = [];
+        if (typeof bookingsData !== 'undefined' && Array.isArray(bookingsData)) {
+            // Find bookings for selectedDate where name starts with "นอกผัง-"
+            const todayStr = formatThaiDateShort(selectedDate); // Re-use util logic or simple compare?
+            // Actually bookingsData usually has normalized YYYY-MM-DD in one of the fields? 
+            // In Scripts_Main.html -> renderGrid receives mapped data.
+            // Let's use the 'id' and re-fetch if needed, BUT bookingsData available globally is already filtered for MAP (meaning it's for selectedDate).
+            // So we just need to filter by stallName pattern.
+            
+            list = bookingsData.filter(b => {
+                // Check Stall Name pattern (Starts with "นอกผัง-")
+                return b.stallName && String(b.stallName).startsWith("นอกผัง-");
+            });
+        }
+        
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-center text-gray-400">ยังไม่มีรายการวันนี้</td></tr>';
+            return;
+        }
+        
+        // Sort by Index
+        list.sort((a, b) => {
+            const numA = parseInt(a.stallName.split('-')[1]) || 0;
+            const numB = parseInt(b.stallName.split('-')[1]) || 0;
+            return numA - numB;
+        });
+
+        list.forEach(b => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-indigo-50 cursor-pointer border-b last:border-0 transition-colors";
+            
+            // Status Badge
+            let statusBadge = `<span class="text-orange-500 font-bold">ค้าง</span>`;
+            if (b.status === "ชำระแล้ว") statusBadge = `<span class="text-green-600 font-bold">จ่ายแล้ว</span>`;
+            
+            tr.innerHTML = `
+                <td class="px-3 py-2 font-bold text-indigo-700">${b.stallName}</td>
+                <td class="px-3 py-2 text-gray-700">${b.bookerName} <span class="text-[10px] text-gray-400">(${b.product})</span></td>
+                <td class="px-3 py-2 text-right text-[10px]">${statusBadge}</td>
+            `;
+            
+            // On Click -> Open that booking (in Standard mode, but with manual price enabled?)
+            // We can re-use openDailyModal but need to ensure it handles manual price.
+            // Actually, for "Extra" bookings, we should open them in "Extra Mode" too to allow editing price.
+            tr.onclick = () => {
+                // Simulate opening existing booking but force Extra Mode
+                openDailyModal({name: b.stallName}, b);
+                
+                // Override to show Extra Mode controls
+                setTimeout(() => {
+                    toggleExtraMode(true);
+                    document.getElementById('d_extraStallName').value = b.stallName;
+                    
+                    // Restore Price (Little hacky as daily modal recalculates based on grid)
+                    // If it was manual price, we need to set it back.
+                    // The 'b.stallPrice' from bookingsData should hold the manual price.
+                    document.getElementById('d_manualPrice').value = b.stallPrice || 0;
+                    calcTotalDaily();
+                }, 100);
+            };
+            
+            tbody.appendChild(tr);
+        });
+    }
+
     function closeModalDaily() { 
         hideModal('bookingModalDaily'); 
-        // Force hide dropdown when closing modal
         const dropdown = document.getElementById('addStallDropdown');
         if(dropdown) {
             dropdown.classList.add('hidden');
@@ -130,8 +258,7 @@
     }
 
     function setDailyReadOnly(isReadOnly) {
-        // Disable Inputs
-        const ids = ['d_elecUnit', 'd_storageFee', 'd_paidAmount'];
+        const ids = ['d_elecUnit', 'd_storageFee', 'd_paidAmount', 'd_manualPrice'];
         ids.forEach(id => {
              const el = document.getElementById(id);
              if(el) {
@@ -141,51 +268,39 @@
              }
         });
         
-        // Explicitly enable note if ReadOnly, or follow normal flow
         const noteEl = document.getElementById('d_note');
         if(noteEl) {
              noteEl.disabled = false;
              noteEl.classList.remove('bg-gray-100', 'cursor-not-allowed');
         }
         
-        // Hide/Show Add Stall Button
         const btnAdd = document.getElementById('d_btnAddStall');
         if(btnAdd) isReadOnly ? btnAdd.classList.add('hidden') : btnAdd.classList.remove('hidden');
         
-        // Hide/Show Remove 'x' Buttons in Stall List
         const removeBtns = document.querySelectorAll('.btn-remove-stall');
         removeBtns.forEach(btn => {
             if(isReadOnly) btn.classList.add('hidden');
             else btn.classList.remove('hidden');
         });
         
-        // FIX: Payment Method Buttons Styling for ReadOnly (Theme Color for Selected)
         const btnCash = document.getElementById('d_btn_cash');
         const btnTransfer = document.getElementById('d_btn_transfer');
         const currentMethod = document.getElementById('d_paymentMethod').value;
         
         if (isReadOnly) {
-             // Disable both buttons
              if(btnCash) btnCash.disabled = true;
              if(btnTransfer) btnTransfer.disabled = true;
 
-             // Apply Style: Selected = Theme Blue, Unselected = Gray
              if (currentMethod === 'Cash') {
-                 // Selected: Theme Blue (bg-blue-600)
                  btnCash.className = "flex-1 border border-blue-600 bg-blue-600 text-white text-xs font-bold rounded opacity-100 cursor-not-allowed shadow-none"; 
-                 // Unselected: Gray/Ghost
                  btnTransfer.className = "flex-1 border border-gray-300 bg-gray-100 text-gray-400 text-xs font-bold rounded opacity-100 cursor-not-allowed"; 
              } else if (currentMethod === 'Transfer') {
-                 // Selected: Theme Blue (bg-blue-600)
                  btnTransfer.className = "flex-1 border border-blue-600 bg-blue-600 text-white text-xs font-bold rounded opacity-100 cursor-not-allowed shadow-none"; 
-                 // Unselected: Gray/Ghost
                  btnCash.className = "flex-1 border border-gray-300 bg-gray-100 text-gray-400 text-xs font-bold rounded opacity-100 cursor-not-allowed"; 
              } else {
-                 // No method selected
                  btnCash.className = btnTransfer.className = "flex-1 border border-gray-300 bg-gray-100 text-gray-400 text-xs font-bold rounded opacity-100 cursor-not-allowed";
              }
         } else {
-             // If NOT read only, normal evaluation
              checkPaymentAmountDaily();
         }
     }
@@ -199,15 +314,11 @@
         
         if (input) input.value = method || "";
 
-        // Standard Active/Inactive Classes (When Not Disabled)
         const baseClass = "flex-1 border rounded text-xs font-bold transition-all h-full";
         const activeClass = "bg-blue-600 text-white border-blue-600 shadow-md transform scale-105";
         const inactiveClass = "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
-
-        // Disabled Classes (When amount is 0, wait for input)
         const disabledClass = "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border-gray-200";
 
-        // Check if buttons are disabled (e.g. no amount entered)
         if (btnCash.disabled) {
             btnCash.className = `${baseClass} ${disabledClass}`;
             btnTransfer.className = `${baseClass} ${disabledClass}`;
@@ -222,20 +333,17 @@
         const btnCash = document.getElementById('d_btn_cash');
         const btnTransfer = document.getElementById('d_btn_transfer');
         const currentMethod = document.getElementById('d_paymentMethod').value;
-        
-        // Check if main input is disabled (indicating ReadOnly state) - DO NOT override if ReadOnly
         const isReadOnly = document.getElementById('d_paidAmount').disabled;
         
         if (!isReadOnly) {
             if (paid > 0) {
                 btnCash.disabled = false;
                 btnTransfer.disabled = false;
-                // Re-apply style based on current selection
                 selectPaymentDaily(currentMethod);
             } else {
                 btnCash.disabled = true;
                 btnTransfer.disabled = true;
-                document.getElementById('d_paymentMethod').value = ''; // Reset method if amount cleared
+                document.getElementById('d_paymentMethod').value = ''; 
                 selectPaymentDaily('');
             }
         }
@@ -246,15 +354,23 @@
     function calcTotalDaily() {
         const elecUnitEl = document.getElementById('d_elecUnit');
         const storageFeeEl = document.getElementById('d_storageFee');
+        const isExtraMode = document.getElementById('d_isExtraMode').value === "true";
         
         const elecUnit = parseFloat(elecUnitEl ? elecUnitEl.value : 0) || 0;
         const storageFee = parseFloat(storageFeeEl ? storageFeeEl.value : 0) || 0;
         
-        // Calculate
-        let totalStallPrice = selectedStalls.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
+        let totalStallPrice = 0;
+        
+        if (isExtraMode) {
+            // Use Manual Price
+            totalStallPrice = parseFloat(document.getElementById('d_manualPrice').value || 0);
+        } else {
+            // Use Standard Calc
+            totalStallPrice = selectedStalls.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
+        }
+
         let totalElecCost = elecUnit * 10;
         
-        // FIX: Include storageFee in Total Calculation for Daily Booking
         let total = totalStallPrice + totalElecCost + storageFee; 
 
         const totalPriceEl = document.getElementById('d_totalPrice');
@@ -264,11 +380,11 @@
     function submitBookingDailyEvent(e) {
         e.preventDefault();
         
-        // Validation: Payment
         const paidAmount = parseFloat(document.getElementById('d_paidAmount').value || 0);
         const paymentMethod = document.getElementById('d_paymentMethod').value;
         const totalStr = document.getElementById('d_totalPrice').innerText.replace(/,/g, '');
         const totalVal = parseFloat(totalStr);
+        const isExtraMode = document.getElementById('d_isExtraMode').value === "true";
 
         if (paidAmount > 0 && paymentMethod === "") {
             showAlert("กรุณาเลือกช่องทางการชำระเงิน (เงินสด/โอน)", "แจ้งเตือน", true);
@@ -279,6 +395,24 @@
             showAlert(`ยอดชำระ (${paidAmount}) เกินยอดรวมที่ต้องจ่าย (${totalVal})`, "ข้อผิดพลาด", true);
             return;
         }
+        
+        let stallName = "";
+        let stallPrice = 0;
+
+        if (isExtraMode) {
+            // FIX: Get Auto-Generated Name
+            stallName = document.getElementById('d_extraStallName').value.trim();
+            stallPrice = parseFloat(document.getElementById('d_manualPrice').value || 0);
+            if (!stallName) {
+                showAlert("ระบบกำลังสร้างชื่อล็อค กรุณารอสักครู่", "ข้อมูลไม่ครบ", true);
+                return;
+            }
+            // Update selectedStalls with correct manual data for backend
+            selectedStalls = [{name: stallName, price: stallPrice}];
+        } else {
+            stallName = selectedStalls[0]?.name || "";
+            stallPrice = selectedStalls[0]?.price || 0;
+        }
 
         const elecUnit = document.getElementById('d_elecUnit').value;
         const storageFee = document.getElementById('d_storageFee').value;
@@ -288,15 +422,15 @@
         const formData = {
             bookingId: document.getElementById('d_bookingId').value,
             date: document.getElementById('d_date').value, 
-            stallName: selectedStalls[0]?.name || "",
+            stallName: stallName,
             stallListJson: stallListJson,
             bookerName: document.getElementById('d_bookerName').value,
             phone: document.getElementById('d_phone').value,
             product: document.getElementById('d_product').value,
-            rentType: 'รายวัน',
+            rentType: 'รายวัน', // Extra mode uses Daily type but with custom stall name
             elecUnit: elecUnit,
             storageFee: storageFee,
-            stallPrice: selectedStalls[0]?.price || 0,
+            stallPrice: stallPrice,
             totalPrice: totalStr,
             paidAmount: document.getElementById('d_paidAmount').value,
             paymentMethod: paymentMethod,
