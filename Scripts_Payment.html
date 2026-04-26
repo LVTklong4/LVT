@@ -38,14 +38,15 @@
         const decoded = decodeURIComponent(payment);
         const p = JSON.parse(decoded);
         
-        document.getElementById('paymentModalTitle').innerText = "แก้ไขข้อมูลชำระเงิน";
+        document.getElementById('paymentModalTitle').innerText = "แก้ไขข้อมูลชำระเงิน/ส่วนลด";
         document.getElementById('pay_paymentId').value = p.paymentId; // Set Edit Mode
         document.getElementById('pay_bookingId').value = currentPayContext.bookingId; // Keep context
         document.getElementById('pay_date').value = p.date; // Set existing date (YYYY-MM-DD)
         document.getElementById('pay_amount').value = parseFloat(p.amount);
         document.getElementById('pay_note').value = p.note;
         
-        const method = p.method === 'Transfer' ? 'Transfer' : 'Cash';
+        // FIX 3: Handle Discount Edit
+        const method = p.method === 'Transfer' ? 'Transfer' : (p.method === 'ส่วนลด' ? 'Discount' : 'Cash');
         document.querySelector(`input[name="pay_method"][value="${method}"]`).checked = true;
         
         toggleSlipInput();
@@ -55,7 +56,7 @@
     }
 
     function deletePayment(paymentId) {
-        showConfirm("ยืนยันการลบรายการชำระเงินนี้?", "ยืนยันการลบ", () => {
+        showConfirm("ยืนยันการลบรายการนี้?", "ยืนยันการลบ", () => {
             showLoader();
             google.script.run
                 .withSuccessHandler((res) => {
@@ -170,7 +171,6 @@
                     res.data.forEach(p => {
                         let slipHtml = '-';
                         if (p.slipUrl && p.slipUrl.trim() !== "") {
-                            // FIX: Updated slip button to open lightbox
                             slipHtml = `<button onclick="viewFullSlipUrl('${p.slipUrl}')" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors text-[10px] font-bold border border-blue-200"><i class="fa-solid fa-image mr-1"></i> ดูสลิป</button>`;
                         }
 
@@ -185,12 +185,20 @@
                             `;
                         }
 
+                        // FIX 3: Display 'ส่วนลด' styling
+                        let methodDisplay = '';
+                        if (p.method === 'Cash') methodDisplay = '<span class="bg-gray-100 text-gray-700 px-1 rounded text-[10px] font-bold">เงินสด</span>';
+                        else if (p.method === 'ส่วนลด') methodDisplay = '<span class="bg-orange-50 text-orange-600 border border-orange-200 px-1 rounded text-[10px] font-bold">ส่วนลด</span>';
+                        else methodDisplay = '<span class="bg-blue-50 text-blue-600 px-1 rounded text-[10px] font-bold">โอนจ่าย</span>';
+
+                        const amountColor = p.method === 'ส่วนลด' ? 'text-orange-600' : 'text-green-600';
+
                         const row = `
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-2 py-2 border-b text-gray-600 text-xs">${p.date}</td>
                                 <td class="px-2 py-2 border-b text-gray-500 text-xs">${p.time}</td>
-                                <td class="px-2 py-2 border-b font-bold text-green-600 text-xs">${parseFloat(p.amount).toLocaleString()}</td>
-                                <td class="px-2 py-2 border-b text-gray-700 text-xs">${p.method === 'Cash' ? '<span class="bg-gray-100 px-1 rounded text-[10px]">เงินสด</span>' : '<span class="bg-blue-50 text-blue-600 px-1 rounded text-[10px]">โอน</span>'}</td>
+                                <td class="px-2 py-2 border-b font-bold ${amountColor} text-xs">${parseFloat(p.amount).toLocaleString()}</td>
+                                <td class="px-2 py-2 border-b text-center text-xs">${methodDisplay}</td>
                                 <td class="px-2 py-2 border-b text-center text-xs">${slipHtml}</td>
                                 <td class="px-2 py-2 border-b text-gray-400 italic text-[10px] truncate max-w-[100px]" title="${p.note}">${p.note}</td>
                                 <td class="px-2 py-2 border-b text-center text-xs">${actionBtns}</td>
@@ -223,16 +231,30 @@
         }
     }
 
+    // FIX 3: Toggle UI based on Discount
     function toggleSlipInput() {
         const methodEl = document.querySelector('input[name="pay_method"]:checked');
         const method = methodEl ? methodEl.value : 'Cash';
         const slipSection = document.getElementById('slipUploadSection');
+        const amountLabel = document.getElementById('pay_amount_label');
+        const amountInput = document.getElementById('pay_amount');
+
         if (method === 'Transfer') {
             slipSection.classList.remove('hidden');
+            if(amountLabel) amountLabel.innerText = "ยอดชำระ (บาท)";
+            if(amountInput) { amountInput.classList.remove('text-orange-600'); amountInput.classList.add('text-green-600'); }
+        } else if (method === 'Discount') {
+            slipSection.classList.add('hidden');
+            document.getElementById('pay_slip').value = "";
+            document.getElementById('slipPreviewContainer').classList.add('hidden');
+            if(amountLabel) amountLabel.innerHTML = "<span class='text-orange-600'><i class='fa-solid fa-tags'></i> ยอดที่ต้องการให้ส่วนลด/ลดหนี้ (บาท)</span>";
+            if(amountInput) { amountInput.classList.remove('text-green-600'); amountInput.classList.add('text-orange-600'); }
         } else {
             slipSection.classList.add('hidden');
             document.getElementById('pay_slip').value = "";
             document.getElementById('slipPreviewContainer').classList.add('hidden');
+            if(amountLabel) amountLabel.innerText = "ยอดชำระ (บาท)";
+            if(amountInput) { amountInput.classList.remove('text-orange-600'); amountInput.classList.add('text-green-600'); }
         }
     }
 
@@ -240,14 +262,14 @@
         const bookingId = document.getElementById('pay_bookingId').value;
         const paymentId = document.getElementById('pay_paymentId').value;
         const amount = document.getElementById('pay_amount').value;
-        const date = document.getElementById('pay_date').value; // Get Date
+        const date = document.getElementById('pay_date').value; 
         const methodEl = document.querySelector('input[name="pay_method"]:checked');
         const method = methodEl ? methodEl.value : 'Cash';
         const note = document.getElementById('pay_note').value;
         const slipInput = document.getElementById('pay_slip');
 
         if (!date) {
-            showAlert("กรุณาระบุวันที่ชำระเงิน", "ข้อมูลไม่ครบถ้วน", true);
+            showAlert("กรุณาระบุวันที่", "ข้อมูลไม่ครบถ้วน", true);
             return;
         }
 
@@ -255,12 +277,18 @@
             showAlert("กรุณาระบุยอดเงิน", "ข้อมูลไม่ครบถ้วน", true);
             return;
         }
+        
+        // FIX 3: Require Note for Discount
+        if (method === 'Discount' && (!note || note.trim() === '')) {
+            showAlert("กรุณาระบุเหตุผลการให้ส่วนลดในช่องโน้ต (เช่น ลดค่าไฟ)", "ข้อมูลไม่ครบถ้วน", true);
+            return;
+        }
 
         const paymentData = {
             bookingId: bookingId,
-            paymentId: paymentId, // Send ID if Editing
+            paymentId: paymentId, 
             amount: amount,
-            date: date, // Send Date
+            date: date, 
             method: method,
             note: note
         };
@@ -276,7 +304,6 @@
             };
             reader.readAsDataURL(file);
         } else {
-            // Check required slip for new transfer payments (not strict on edit if not changing)
             if (method === 'Transfer' && !paymentId && slipInput.files.length === 0) {
                  showAlert("กรุณาแนบสลิปโอนเงิน", "ข้อมูลไม่ครบถ้วน", true);
                  return;
@@ -309,7 +336,6 @@
             .saveMonthlyPayment(data);
     }
     
-    // FIX: Lightbox Functions
     function viewFullSlip() {
         const src = document.getElementById('slipPreview').src;
         if(src && src !== "") {
@@ -318,7 +344,6 @@
         }
     }
     
-    // FIX: View Slip from URL (for History Table)
     function viewFullSlipUrl(url) {
         if(url && url !== "") {
             document.getElementById('slipLightboxImg').src = url;

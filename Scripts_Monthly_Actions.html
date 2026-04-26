@@ -2,8 +2,7 @@
     /**
      * Scripts_Monthly_Actions
      * ศูนย์รวม Logic ฝั่ง Client สำหรับ "รายเดือน"
-     * FIX: ปรับปรุง Logic สรุปราคา (รวมยอดทุกล็อคในบรรทัดเดียว)
-     * FIX: Disable Fields in Edit Mode
+     * FIX: Disable Fields in Edit Mode and toggle hint for discount
      */
 
     window.isMonthlyEditMode = false;
@@ -56,9 +55,7 @@
         
         document.getElementById('m_admin_badge').innerText = currentAdmin.name;
 
-        // Enable All Fields
         setMonthlyInputsState(false);
-
         renderStallTagsMonthly();
 
         const bookingModal = document.getElementById('bookingModalMonthly');
@@ -155,10 +152,16 @@
         showModal('bookingModalMonthly');
     }
 
-    // FIX: Function to Disable/Enable Fields
+    // FIX 3: Disable/Enable Fields and Hint Text
     function setMonthlyInputsState(isDisabled) {
         document.getElementById('m_date').disabled = isDisabled;
         document.getElementById('m_elecUnit').disabled = isDisabled;
+        
+        const hint = document.getElementById('m_elec_edit_hint');
+        if (hint) {
+            if (isDisabled) hint.classList.remove('hidden');
+            else hint.classList.add('hidden');
+        }
         
         const radios = document.getElementsByName('m_customerType');
         for(const r of radios) r.disabled = isDisabled;
@@ -166,13 +169,9 @@
         const checkboxes = document.querySelectorAll('#monthlyOptions input[type="checkbox"]');
         for(const cb of checkboxes) cb.disabled = isDisabled;
 
-        // Add Stall Button & Remove Buttons handling
         const addBtn = document.getElementById('m_btnAddStallMain');
         if(addBtn) addBtn.style.display = isDisabled ? 'none' : 'inline-flex';
         
-        // Remove buttons in tags handled in renderStallTagsMonthly via global flag check or CSS
-        // But better to handle here if possible, or re-render
-        // We will rely on re-rendering or CSS class injection
         const container = document.getElementById('selectedStallsContainer_Monthly');
         if (container) {
             if (isDisabled) container.classList.add('pointer-events-none', 'opacity-80');
@@ -264,32 +263,23 @@
             }
         }
 
-        // --- NEW LOGIC: Combine Prices of All Selected Stalls FIRST ---
-        // 1. Calculate Combined Price Per Day Type (Rate)
         let combinedDailyRate = { 3: 0, 6: 0, 0: 0 };
 
         selectedStalls.forEach(stall => {
             const sData = stallsData.find(s => s.name === stall.name);
             if (!sData) return;
             
-            // Check if this stall is active for specific day?
-            // Assuming if Global Checkbox is checked, all selected stalls apply.
-            // If user selected checkboxes manually, `stall.days` holds the truth.
-            
-            // If Full Package -> Use Col H
             if (isFullPackage) {
                 const rate = parseFloat(sData.priceMonth || 0);
                 if (stall.days.includes(3)) combinedDailyRate[3] += rate;
                 if (stall.days.includes(6)) combinedDailyRate[6] += rate;
                 if (stall.days.includes(0)) combinedDailyRate[0] += rate;
             } else {
-                // Use Daily Prices
                 if (stall.days.includes(3)) combinedDailyRate[3] += parseFloat(sData.priceWed || 0);
                 if (stall.days.includes(6)) combinedDailyRate[6] += parseFloat(sData.priceSat || 0);
                 if (stall.days.includes(0)) combinedDailyRate[0] += parseFloat(sData.priceSun || 0);
             }
 
-            // Track Unique Dates for Electricity (unchanged)
             stall.days.forEach(dayIdx => {
                 if (activeDays.has(dayIdx)) {
                     for (let i = 0; i < remainingDays; i++) {
@@ -302,22 +292,19 @@
             });
         });
 
-        // 2. Calculate Total Price per Day Type
         [3, 6, 0].forEach(dayIdx => {
             if (periodDayCounts[dayIdx] > 0 && combinedDailyRate[dayIdx] > 0) {
                 dayBreakdown[dayIdx].totalPrice = combinedDailyRate[dayIdx] * periodDayCounts[dayIdx];
                 dayBreakdown[dayIdx].dayCount = periodDayCounts[dayIdx];
-                dayBreakdown[dayIdx].pricePerRound = combinedDailyRate[dayIdx]; // Combined Rate
+                dayBreakdown[dayIdx].pricePerRound = combinedDailyRate[dayIdx]; 
             }
         });
 
-        // Generate HTML
         let summaryHtml = "";
         let totalStallAll = 0;
 
         [3, 6, 0].forEach(idx => {
             const info = dayBreakdown[idx];
-            // Show row if valid count and rate > 0
             if (info.dayCount > 0 && info.pricePerRound > 0) {
                 summaryHtml += `
                     <div class="flex justify-between items-center">
@@ -394,7 +381,6 @@
 
         const stallListJson = JSON.stringify(selectedStalls);
 
-        // Payment defaults
         const paidAmount = 0;
         const paymentMethod = ""; 
 

@@ -3,6 +3,7 @@
  * CONTROLLER: PAYMENT OPERATIONS
  * ฟังก์ชันสำหรับการจัดการการเงินและการชำระเงิน
  * FIX: Update saveMonthlyPayment/updatePaymentTransaction to handle custom dates correctly
+ * FIX 3: Added support for 'Discount' (ส่วนลด) category and method
  * ------------------------------------------------------------------
  */
 
@@ -20,46 +21,54 @@ function saveMonthlyPayment(paymentData) {
          } catch(e) { console.error(e); }
     }
     
-    // FIX: Ensure recordDate uses the user-selected date
     const recordDate = paymentData.date ? paymentData.date : Utils.formatDateForSheet(now);
     
-    // FIX: Define breakdown for monthly payment (Assign amount to stall category)
     const breakdown = {
         stall: parseFloat(paymentData.amount),
         elec: 0,
         storage: 0
     };
+    
+    // FIX 3: Map Discount properly
+    let dbMethod = paymentData.method;
+    let category = "ชำระเพิ่มเติม";
+    if (paymentData.method === 'Discount') {
+        dbMethod = "ส่วนลด";
+        category = "ปรับปรุงยอด/ให้ส่วนลด";
+    }
 
-    // FIX: Pass recordDate to addTransaction
     RepoTransaction.addTransaction(
         paymentData.bookingId, 
-        "ชำระเพิ่มเติม", 
+        category, 
         paymentData.amount, 
-        paymentData.method, 
+        dbMethod, 
         paymentData.note, 
         "System", 
         breakdown, 
         "Monthly Rent", 
         slipUrl,
-        recordDate // Pass custom date here
+        recordDate
     );
 
     const totalPaid = RepoTransaction.getTotalPaid(paymentData.bookingId);
     RepoMonthly.updateTotalPaidValue(paymentData.bookingId, totalPaid);
     
-    return { success: true, message: "บันทึกการชำระเงินเรียบร้อย" };
+    return { success: true, message: "บันทึกเรียบร้อย" };
 }
 
 function updatePaymentTransaction(paymentData) {
-    // FIX: Extract date from paymentData and pass to RepoTransaction
     const recordDate = paymentData.date ? paymentData.date : null;
+    
+    // FIX 3: Map Discount properly
+    let dbMethod = paymentData.method;
+    if (paymentData.method === 'Discount') dbMethod = "ส่วนลด";
     
     const success = RepoTransaction.updateTransaction(
         paymentData.paymentId, 
         paymentData.amount, 
-        paymentData.method, 
+        dbMethod, 
         paymentData.note,
-        recordDate // Pass custom date here
+        recordDate
     );
     
     if (success) {

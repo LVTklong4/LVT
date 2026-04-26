@@ -1,15 +1,16 @@
 /**
  * ------------------------------------------------------------------
  * CONTROLLER: DISPATCHER (CORE)
- * ศูนย์กลางการทำงานหลัก (Map, Save Booking, System Utils)
- * Update: FIX Storage Date Logic (Daily Booking adds +6 days for storage)
+ * ศูนย์กลางการทำงานหลัก (Map, Save Booking)
+ * Note: ไฟล์นี้ต้องมีฟังก์ชัน saveBooking ห้ามซ้ำกับไฟล์อื่น
  * ------------------------------------------------------------------
  */
 
 function getMapData(dateStr) {
-  const stalls = getStallsDataCached(); 
+  const stalls = getStallsDataCached();
   const bookings = RepoDaily.getMapDataRaw(dateStr);
   
+  // Safe check for Storage Service
   let storageMap = {};
   if (typeof ServiceStorage !== 'undefined' && typeof ServiceStorage.getActiveStorageMap === 'function') {
       storageMap = ServiceStorage.getActiveStorageMap();
@@ -18,27 +19,10 @@ function getMapData(dateStr) {
   return { stalls: stalls, bookings: bookings, storageMap: storageMap };
 }
 
-function getStallsDataCached() {
-    try {
-        const ss = SpreadsheetApp.openById(SHEET_ID_SETUP);
-        const sheet = ss.getSheetByName("Stalls");
-        const data = sheet.getDataRange().getValues();
-        data.shift(); // Header
-        return data.map(r => ({
-            name: String(r[0]), 
-            row: parseInt(r[1]) || 0, 
-            col: parseInt(r[2]) || 0, 
-            type: String(r[3]),
-            priceWed: parseFloat(r[4]||0),
-            priceSat: parseFloat(r[5]||0),
-            priceSun: parseFloat(r[6]||0),
-            priceMonth: parseFloat(r[7]||0)
-        }));
-    } catch(e) { return []; }
-}
-
+// Main Save Function
 function saveBooking(formObject) {
   const lock = LockService.getScriptLock();
+  // FIX: Increased lock wait time to 30 seconds to prevent "System busy" errors
   try { lock.waitLock(30000); } catch (e) { return { success: false, message: "⚠️ ระบบทำงานหนัก กรุณารอสักครู่" }; }
 
   try {
@@ -90,21 +74,14 @@ function saveBooking(formObject) {
         const mainStallName = formObject.stallName || (stallList.length > 0 ? stallList[0].name : "");
         if (mainStallName && typeof ServiceStorage !== 'undefined') {
              let customStart, customEnd;
-             
              if (isMonthly) {
-                 // กรณีรายเดือน: ฝากทั้งเดือน
                  const d = new Date(formObject.date);
                  customStart = new Date(d.getFullYear(), d.getMonth(), 1);
                  customEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
              } else {
-                 // กรณีรายวัน: ฝาก 7 วัน (วันเริ่ม + 6 วัน)
                  const d = new Date(formObject.date);
-                 customStart = new Date(d); // Clone date
-                 
-                 // FIX: Calculate End Date (+6 days)
-                 const e = new Date(d);
-                 e.setDate(d.getDate() + 6);
-                 customEnd = e; 
+                 customStart = d;
+                 customEnd = new Date(d); 
              }
 
              ServiceStorage.createStorage({
@@ -125,29 +102,25 @@ function saveBooking(formObject) {
     let totalElecPriceAll = (isMonthly) ? (elecUnitInput * 10 * calcResult.totalMonthlyDays) : (elecUnitInput * 10);
     if (customerType === 'VIP') totalElecPriceAll = 0;
     
+    // Include Storage Fee in Grand Total
     grandTotal = totalAllPrice + totalElecPriceAll + storageFeeInput;
     
     if (customerType === 'VIP' && formObject.totalPrice) grandTotal = parseFloat(formObject.totalPrice);
 
+    // --- DUPLICATE TRANSACTION PREVENTION ---
     let paidFromForm = parseFloat(formObject.paidAmount || 0);
+    
     const existingPaid = RepoTransaction.getTotalPaid(bookingId);
+    
     let amountToRecord = paidFromForm - existingPaid;
     amountToRecord = Math.round(amountToRecord * 100) / 100;
+
     const totalPaidNow = existingPaid + (amountToRecord > 0 ? amountToRecord : 0);
     
     let status = "ค้างชำระ";
-    if (customerType === 'VIP') {
-        status = "ชำระแล้ว"; 
-    } else {
-        if (grandTotal > 0.01) {
-            if (totalPaidNow >= (grandTotal - 0.01)) {
-                status = "ชำระแล้ว";
-            }
-        }
-    }
-
+    if (grandTotal >= 0 && totalPaidNow >= (grandTotal - 0.01)) status = "ชำระแล้ว";
     if (!formObject.bookerName) status = "ว่าง";
-    if (isMonthly && customerType === 'Regular') status = "ชำระรายวัน";
+    if (isMonthly && customerType === 'Regular') status = "ค้างชำระ";
 
     const batchRows = [];
     
@@ -227,8 +200,10 @@ function saveBooking(formObject) {
     
     if (amountToRecord > 0) {
          const officer = "System"; 
+         
          let remainingPay = amountToRecord;
          
+         // Priority: Stall > Elec > Storage
          let payStall = 0;
          if (totalAllPrice > 0) {
              payStall = Math.min(totalAllPrice, remainingPay);
@@ -251,7 +226,12 @@ function saveBooking(formObject) {
              payStall += remainingPay;
          }
 
-         const breakdown = { stall: payStall, elec: payElec, storage: payStorage };
+         const breakdown = {
+             stall: payStall,
+             elec: payElec,
+             storage: payStorage
+         };
+         
          const totalTransactionValue = amountToRecord; 
          const billType = isMonthly ? "Monthly Rent" : "Daily Rent";
          
@@ -285,23 +265,43 @@ function runArchiveProcess() {
     } catch(e) { return { success: false, message: e.toString() }; }
 }
 
-// --- SYSTEM UTILS ---
-function clearSystemCache() {
-    return { success: true, message: "อัปเดตข้อมูลผังตลาดเรียบร้อย" };
-}
-
-function getSystemConfig() {
+// --- เพิ่มฟังก์ชันใหม่สำหรับการเคลียร์ Cache และดึงข้อมูลผังสด 100% (Bypass) ---
+function clearAndFetchFreshMap(dateStr) {
     try {
-        const props = PropertiesService.getScriptProperties();
-        const cutoff = props.getProperty('CUTOFF_TIME') || "19:00";
-        return { success: true, data: { cutoffTime: cutoff } };
-    } catch(e) { return { success: false, message: e.toString() }; }
-}
+        // 1. ล้าง Cache เท่าที่ทำได้
+        const cache = CacheService.getScriptCache();
+        cache.remove("STALLS_DATA");
+        cache.remove("MAP_DATA");
+        
+        // 2. ดึงข้อมูลผังสดๆ จาก Sheet โดยตรง (Bypass Cache 100%)
+        const ssSetup = SpreadsheetApp.openById(SHEET_ID_SETUP); // ใช้ตัวแปร SHEET_ID_SETUP จาก Config.js
+        const sheetStalls = ssSetup.getSheetByName("Stalls");
+        const stallsData = sheetStalls.getDataRange().getValues();
+        stallsData.shift(); // เอา Header ออก
+        
+        // แปลงข้อมูลให้อยู่ใน Format มาตรฐานของระบบ
+        const freshStalls = stallsData.map(row => ({
+            name: String(row[0]).trim(), 
+            row: row[1], col: row[2], type: row[3],
+            priceWed: row[4], priceSat: row[5], priceSun: row[6], priceMonth: row[7]
+        }));
 
-function saveSystemConfig(key, value) {
-    try {
-        const props = PropertiesService.getScriptProperties();
-        props.setProperty(key, value);
-        return { success: true, message: "บันทึกการตั้งค่าเรียบร้อย" };
-    } catch(e) { return { success: false, message: e.toString() }; }
+        // บันทึกทับ Cache ใหม่ทันที เผื่อฟังก์ชันอื่นเข้ามาเรียกใช้
+        cache.put("STALLS_DATA", JSON.stringify(freshStalls), 21600);
+
+        // 3. ดึงข้อมูลการจองและข้อมูลฝากของ ณ วันนั้น แนบกลับไปให้หน้าบ้านด้วย
+        const bookings = RepoDaily.getMapDataRaw(dateStr);
+        let storageMap = {};
+        if (typeof ServiceStorage !== 'undefined' && typeof ServiceStorage.getActiveStorageMap === 'function') {
+            storageMap = ServiceStorage.getActiveStorageMap();
+        }
+        
+        return { 
+            success: true, 
+            message: "อัปเดตผังตลาดล่าสุดจากระบบหลังบ้านเรียบร้อย", 
+            data: { stalls: freshStalls, bookings: bookings, storageMap: storageMap } 
+        };
+    } catch(e) {
+        return { success: false, message: "Error: " + e.toString() };
+    }
 }
