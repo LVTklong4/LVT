@@ -1,0 +1,272 @@
+<script>
+    /**
+     * Scripts_KhlongThom
+     * จัดการตั๋วโซนคลองถม (รองรับทั้ง 2 โหมด: คลองถมหลัก และ คลองถมทั่วไป)
+     */
+
+    function openKhlongThomModal() {
+        if (!currentAdmin) {
+            showAlert("กรุณาเข้าสู่ระบบก่อนใช้งาน", "แจ้งเตือน", true);
+            return;
+        }
+
+        // รีเซ็ตให้เลือกโหมดแรกเสมอ
+        document.querySelector('input[name="kt_ticketType"][value="Main"]').checked = true;
+
+        // อัปเดตข้อความ Preview รันเลขตั๋ว
+        updateKtTypeUI();
+
+        // วันที่สำหรับส่งยอด
+        const now = new Date();
+        const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        document.getElementById('kt_reconDate').value = localDate;
+
+        // Reset Inputs
+        document.getElementById('kt_startNum').value = "1";
+        document.getElementById('kt_endNum').value = "";
+        document.getElementById('kt_totalPrintCount').innerText = "0 ใบ";
+        
+        document.getElementById('kt_cashCount').value = "0";
+        document.getElementById('kt_transferCount').value = "0";
+        
+        document.getElementById('kt_elecCash').value = "0";
+        document.getElementById('kt_elecTransfer').value = "0";
+        
+        calcKtReconTotal();
+
+        // ไปที่แท็บพิมพ์ตั๋วเริ่มต้น
+        switchKtTab('print');
+
+        const modal = document.getElementById('khlongThomModal');
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        document.body.classList.add('modal-active');
+    }
+
+    function closeKhlongThomModal() {
+        const modal = document.getElementById('khlongThomModal');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            if (document.querySelectorAll('.modal:not(.hidden):not(.opacity-0)').length === 0) {
+                document.body.classList.remove('modal-active');
+            }
+        }, 300);
+    }
+
+    // สลับโหมดคลองถมหลัก / ทั่วไป
+    function updateKtTypeUI() {
+        const typeEl = document.querySelector('input[name="kt_ticketType"]:checked');
+        const type = typeEl ? typeEl.value : 'Main';
+        const previewEl = document.getElementById('kt_date_preview');
+
+        const now = new Date();
+        const thYear = (now.getFullYear() + 543).toString().slice(-2);
+        const thMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const thDay = String(now.getDate()).padStart(2, '0');
+        const dateStr = `${thYear}${thMonth}${thDay}`;
+
+        if (type === 'Main') {
+            previewEl.innerText = `คลองถม ${dateStr}-XXX`;
+            document.getElementById('kt_ticketPrice').value = "150"; // Default
+            document.getElementById('kt_reconPrice').value = "150"; // Default
+        } else {
+            previewEl.innerText = `คลองถมทั่วไป ${dateStr}-XXX`;
+            document.getElementById('kt_ticketPrice').value = "100"; // Default
+            document.getElementById('kt_reconPrice').value = "100"; // Default
+        }
+        
+        calcKtReconTotal();
+    }
+
+    function switchKtTab(tab) {
+        const tPrint = document.getElementById('ktTabPrint');
+        const tRecon = document.getElementById('ktTabReconcile');
+        const cPrint = document.getElementById('ktContentPrint');
+        const cRecon = document.getElementById('ktContentReconcile');
+
+        const activeTabClass = "text-teal-700 border-teal-600 bg-teal-50";
+        const inactiveTabClass = "text-gray-500 border-transparent hover:text-teal-600 bg-white";
+
+        if (tab === 'print') {
+            tPrint.className = `flex-1 py-3 text-sm font-bold transition-colors border-b-2 ${activeTabClass}`;
+            tRecon.className = `flex-1 py-3 text-sm font-bold transition-colors border-b-2 ${inactiveTabClass}`;
+            cPrint.classList.remove('hidden');
+            cRecon.classList.add('hidden');
+        } else {
+            tPrint.className = `flex-1 py-3 text-sm font-bold transition-colors border-b-2 ${inactiveTabClass}`;
+            tRecon.className = `flex-1 py-3 text-sm font-bold transition-colors border-b-2 ${activeTabClass}`;
+            cPrint.classList.add('hidden');
+            cRecon.classList.remove('hidden');
+            
+            // Sync price from Print tab
+            const pPrice = document.getElementById('kt_ticketPrice').value;
+            if (pPrice) document.getElementById('kt_reconPrice').value = pPrice;
+            calcKtReconTotal();
+        }
+    }
+
+    // --- TAB 1: Print Logic ---
+    function calcKtPrintCount() {
+        const start = parseInt(document.getElementById('kt_startNum').value || 0);
+        const end = parseInt(document.getElementById('kt_endNum').value || 0);
+        let count = (end >= start) ? (end - start + 1) : 0;
+        document.getElementById('kt_totalPrintCount').innerText = `${count} ใบ`;
+    }
+
+    function executePrintKhlongThom() {
+        const typeEl = document.querySelector('input[name="kt_ticketType"]:checked');
+        const type = typeEl ? typeEl.value : 'Main';
+        const price = document.getElementById('kt_ticketPrice').value;
+        const start = parseInt(document.getElementById('kt_startNum').value || 0);
+        const end = parseInt(document.getElementById('kt_endNum').value || 0);
+
+        if (!price || start < 1 || end < start) {
+            showAlert("กรุณาระบุช่วงเลขตั๋วให้ถูกต้อง", "ข้อมูลไม่ครบถ้วน", true);
+            return;
+        }
+
+        const count = end - start + 1;
+        if (count > 200) {
+            showAlert("พิมพ์ได้สูงสุด 200 ใบต่อครั้ง เพื่อป้องกัน Browser ค้าง", "จำนวนเยอะเกินไป", true);
+            return;
+        }
+
+        const now = new Date();
+        const thYear = (now.getFullYear() + 543).toString().slice(-2);
+        const thMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const thDay = String(now.getDate()).padStart(2, '0');
+        
+        // กำหนด Prefix และชื่อประเภทตั๋ว
+        const ticketTypeName = type === 'Main' ? 'คลองถม' : 'คลองถมทั่วไป';
+        const prefix = `${ticketTypeName} ${thYear}${thMonth}${thDay}-`;
+        
+        const timestampStr = formatTicketDateTime(now);
+        const officerName = currentAdmin ? (currentAdmin.employeeId || currentAdmin.name) : "System";
+
+        const ticketsData = [];
+        for (let i = start; i <= end; i++) {
+            const paddedNum = String(i).padStart(3, '0');
+            ticketsData.push({
+                ticketNumber: `${prefix}${paddedNum}`,
+                price: parseFloat(price).toLocaleString(undefined, {minimumFractionDigits: 0}),
+                timestampStr: timestampStr,
+                officerName: officerName,
+                ticketTypeName: ticketTypeName
+            });
+        }
+
+        if (typeof generateKhlongThomTicketHtml !== 'function') {
+            showAlert("ไม่พบ Template ตั๋วคลองถม", "ระบบมีปัญหา", true);
+            return;
+        }
+
+        const html = generateKhlongThomTicketHtml(ticketsData);
+        
+        const ticketArea = getOrCreateTicketArea('ticket-area');
+        const monthlyArea = getOrCreateTicketArea('monthly-ticket-area');
+        
+        ticketArea.innerHTML = html;
+        ticketArea.style.display = 'block';
+        monthlyArea.style.display = 'none';
+
+        document.getElementById('khlongThomModal').style.display = 'none';
+
+        setTimeout(() => {
+            window.print();
+            ticketArea.style.display = 'none';
+            document.getElementById('khlongThomModal').style.display = 'flex';
+        }, 500);
+    }
+
+    // --- TAB 2: Reconcile Logic ---
+    function calcKtReconTotal() {
+        const price = parseFloat(document.getElementById('kt_reconPrice').value || 0);
+        
+        // ค่าตั๋ว
+        const cashCount = parseInt(document.getElementById('kt_cashCount').value || 0);
+        const transferCount = parseInt(document.getElementById('kt_transferCount').value || 0);
+        const ticketTotal = (cashCount + transferCount) * price;
+
+        // ค่าไฟ
+        const elecCash = parseFloat(document.getElementById('kt_elecCash').value || 0);
+        const elecTransfer = parseFloat(document.getElementById('kt_elecTransfer').value || 0);
+        const elecTotal = elecCash + elecTransfer;
+
+        // รวมยอด
+        const grandTotal = ticketTotal + elecTotal;
+
+        document.getElementById('kt_ticketTotalDisplay').innerText = ticketTotal.toLocaleString();
+        document.getElementById('kt_elecTotalDisplay').innerText = elecTotal.toLocaleString();
+        document.getElementById('kt_grandTotal').innerText = grandTotal.toLocaleString();
+    }
+
+    function submitKhlongThomReconciliation() {
+        const typeEl = document.querySelector('input[name="kt_ticketType"]:checked');
+        const type = typeEl ? typeEl.value : 'Main';
+        const typeLabel = type === 'Main' ? 'คลองถม (หลัก)' : 'คลองถมทั่วไป';
+
+        const date = document.getElementById('kt_reconDate').value;
+        const price = document.getElementById('kt_reconPrice').value;
+        
+        const cashCount = parseInt(document.getElementById('kt_cashCount').value || 0);
+        const transferCount = parseInt(document.getElementById('kt_transferCount').value || 0);
+        
+        const elecCash = parseFloat(document.getElementById('kt_elecCash').value || 0);
+        const elecTransfer = parseFloat(document.getElementById('kt_elecTransfer').value || 0);
+
+        if (!date) {
+            showAlert("กรุณาระบุวันที่นำส่งเงิน", "ข้อมูลไม่ครบ", true);
+            return;
+        }
+
+        if (cashCount === 0 && transferCount === 0 && elecCash === 0 && elecTransfer === 0) {
+            showAlert("กรุณาระบุจำนวนคัน หรือ ค่าไฟ อย่างน้อย 1 ช่องทาง", "ข้อมูลเป็นศูนย์", true);
+            return;
+        }
+
+        const ticketTotal = (cashCount + transferCount) * parseFloat(price);
+        const elecTotal = elecCash + elecTransfer;
+        const grandTotal = ticketTotal + elecTotal;
+
+        const confirmMsg = `ยืนยันการนำส่งยอดของ "${typeLabel}" รวม ${grandTotal.toLocaleString()} บาท? \n` +
+                           `- ค่าตั๋ว ${ticketTotal.toLocaleString()} บ. (${cashCount + transferCount} คัน)\n` +
+                           `- ค่าไฟ ${elecTotal.toLocaleString()} บ.`;
+
+        showConfirm(confirmMsg, "ยืนยันส่งยอด", () => {
+            showLoader();
+            const officerName = currentAdmin ? currentAdmin.name : "System";
+
+            const data = {
+                ticketType: type, // ส่งประเภทคลองถมไปบอกหลังบ้าน
+                date: date,
+                pricePerTicket: price,
+                cashCount: cashCount,
+                transferCount: transferCount,
+                elecCash: elecCash,
+                elecTransfer: elecTransfer,
+                officer: officerName
+            };
+
+            google.script.run
+                .withSuccessHandler((res) => {
+                    hideLoader();
+                    if(res.success) {
+                        closeKhlongThomModal();
+                        showAlert(res.message, "สำเร็จ", false);
+                        
+                        if(typeof fetchData === 'function') fetchData(true);
+                        if(typeof fetchAccountingOnly === 'function') fetchAccountingOnly();
+                    } else {
+                        showAlert(res.message, "ข้อผิดพลาด", true);
+                    }
+                })
+                .withFailureHandler((err) => {
+                    hideLoader();
+                    showAlert("Error: " + err, "ข้อผิดพลาด", true);
+                })
+                .submitKhlongThomRevenue(data);
+        });
+    }
+</script>

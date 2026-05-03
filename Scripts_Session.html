@@ -2,7 +2,7 @@
     /**
      * Scripts_Session
      * จัดการ Session และ Firebase Authentication
-     * Update: Added btnExtraBooking to visible list
+     * Update: Added btnKhlongThom to visible list for Admin
      */
 
     // Firebase Config from User
@@ -60,13 +60,14 @@
             if(defIcon) defIcon.classList.add('hidden');
         }
 
-        // --- UPDATE: เพิ่มปุ่ม Extra Booking ในรายการแสดงผล ---
+        // --- UPDATE: เพิ่มปุ่ม btnKhlongThom ในรายการแสดงผล ---
         const idsToShow = [
             'btnNextDate', 'btnPrevDate', 'btnArchive', 
             'btnMonthlyTop', 'btnMonthlyTopMobile',
             'btnStorageTop', 'btnStorageTopMobile',
             'btnPrintMap', 'btnPrintMapMobile',
-            'btnExtraBooking', 'btnExtraBookingMobile' // <--- เพิ่มตรงนี้ครับ
+            'btnExtraBooking', 'btnExtraBookingMobile',
+            'btnKhlongThom', 'btnKhlongThomMobile' // <--- เพิ่มปุ่มคลองถมตรงนี้
         ];
         idsToShow.forEach(id => {
             const el = document.getElementById(id);
@@ -171,5 +172,44 @@
             if(typeof showModal === 'function') showModal('loginModal');
             else document.getElementById('loginModal').classList.remove('hidden');
         }
+    }
+
+    function confirmLogout() {
+        if(typeof hideModal === 'function') hideModal('logoutModal');
+        
+        auth.signOut().then(() => { console.log("Firebase Signed Out"); });
+
+        currentAdmin = null;
+        localStorage.removeItem(SESSION_KEY);
+        
+        const badge = document.getElementById('admin_badge');
+        if(badge) badge.innerText = "";
+        
+        const avatar = document.getElementById('userAvatar');
+        const defIcon = document.getElementById('defaultUserIcon');
+        if(avatar) avatar.classList.add('hidden');
+        if(defIcon) defIcon.classList.remove('hidden');
+
+        // Hide all admin buttons (Update: include KhlongThom buttons)
+        const elementsToHide = [
+            'btnNextDate', 'btnPrevDate', 'btnArchive', 
+            'btnMonthlyTop', 'btnMonthlyTopMobile',
+            'btnStorageTop', 'btnStorageTopMobile',
+            'btnRefreshCache', 'btnRefreshCacheMobile',
+            'btnSettings', 'btnSettingsMobile',
+            'btnDashboard', 'btnDashboardMobile',
+            'btnPrintMap', 'btnPrintMapMobile',
+            'btnExtraBooking', 'btnExtraBookingMobile',
+            'btnKhlongThom', 'btnKhlongThomMobile' 
+        ];
+        elementsToHide.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.add('hidden');
+                el.style.display = ''; 
+            }
+        });
+        
+        fetchData();
     }
 </script>
