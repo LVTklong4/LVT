@@ -13,9 +13,37 @@
             <input type="date" id="pay_date" class="w-full border p-2 rounded text-center text-sm font-bold text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
         </div>
 
+        <!-- NEW: ยอดเงินและปุ่มคำนวณแบบมีตัวเลขกำกับ (UX Improvement) -->
+        <div class="mb-4 bg-blue-50/40 p-3 rounded-lg border border-blue-100">
+            <div class="flex justify-between items-center mb-2 pb-2 border-b border-blue-200/60">
+                <div class="text-xs text-gray-600">ยอดเต็ม: <span id="pay_info_total" class="font-bold text-gray-800">0.00</span></div>
+                <div class="text-xs text-red-600">ค้างชำระ: <span id="pay_info_remain" class="font-bold text-sm">0.00</span></div>
+            </div>
+            
+            <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider text-center">ตัวช่วยคำนวณยอดชำระ</label>
+            <div class="grid grid-cols-4 gap-2" id="pay_quick_buttons">
+                <button type="button" onclick="setPaymentPercent(25)" class="flex flex-col items-center justify-center bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg py-1.5 transition shadow-sm group">
+                    <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-700">25%</span>
+                    <span id="lbl_pct_25" class="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium mt-0.5">0.00</span>
+                </button>
+                <button type="button" onclick="setPaymentPercent(50)" class="flex flex-col items-center justify-center bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg py-1.5 transition shadow-sm group">
+                    <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-700">50%</span>
+                    <span id="lbl_pct_50" class="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium mt-0.5">0.00</span>
+                </button>
+                <button type="button" onclick="setPaymentPercent(75)" class="flex flex-col items-center justify-center bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg py-1.5 transition shadow-sm group">
+                    <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-700">75%</span>
+                    <span id="lbl_pct_75" class="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium mt-0.5">0.00</span>
+                </button>
+                <button type="button" onclick="setPaymentPercent(100)" class="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 border border-blue-300 hover:border-blue-500 rounded-lg py-1.5 transition shadow-sm group">
+                    <span class="text-[11px] font-bold text-blue-700">ปิดยอด</span>
+                    <span id="lbl_pct_100" class="text-[10px] text-blue-600 font-bold mt-0.5">0.00</span>
+                </button>
+            </div>
+        </div>
+
         <div class="mb-4">
             <label class="block text-xs font-bold text-gray-700 mb-1" id="pay_amount_label">ยอดชำระ (บาท)</label>
-            <input type="number" id="pay_amount" class="w-full border p-2 rounded text-center text-xl font-bold text-green-600" placeholder="0.00">
+            <input type="number" id="pay_amount" class="w-full border border-gray-300 p-2 rounded-lg text-center text-2xl font-bold text-green-600 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-400 shadow-inner" placeholder="0.00">
         </div>
         
         <!-- FIX 3: Add Discount Option -->
@@ -47,7 +75,7 @@
         </div>
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">โน้ต / หมายเหตุ</label>
-            <textarea id="pay_note" class="w-full border p-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" rows="2"></textarea>
+            <textarea id="pay_note" class="w-full border border-gray-300 p-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" rows="2"></textarea>
         </div>
         <div class="flex gap-2">
             <button onclick="closePaymentModal()" class="flex-1 py-2 bg-gray-100 rounded text-gray-600 text-sm font-bold hover:bg-gray-200 transition">ยกเลิก</button>

@@ -1,8 +1,8 @@
 <script>
     /**
      * Scripts_UI
-     * Centralized UI Helpers (Modal, Alerts, Loaders) & Map Rendering
-     * Update: Adjusted Monthly Product Text Color (White -> Pink-900) for better visibility
+     * Centralized UI Helpers (Modal, Alerts, Loaders, Dropdown)
+     * Update: Added Dropdown Toggle Logic for new Vertical Menus
      */
 
     // ==========================================
@@ -18,6 +18,53 @@
         const overlay = document.getElementById('processOverlay');
         if (overlay) overlay.classList.add('hidden');
     }
+
+    // --- NEW: DROPDOWN MENU LOGIC ---
+    function toggleDropdown(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            // ปิด Dropdown ตัวอื่นก่อน
+            if (id !== 'opDropdown') {
+                const op = document.getElementById('opDropdown');
+                if(op) { op.classList.add('hidden'); op.classList.remove('flex'); }
+            }
+            if (id !== 'profileDropdown') {
+                const pr = document.getElementById('profileDropdown');
+                if(pr) { pr.classList.add('hidden'); pr.classList.remove('flex'); }
+            }
+            
+            // เปิด-ปิดตัวที่ถูกคลิก
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                el.classList.add('flex'); // เพื่อให้ปุ่มเรียงแนวตั้ง
+            } else {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        }
+    }
+
+    // ดักจับการคลิกที่ว่างๆ ให้ปิด Dropdown อัตโนมัติ
+    document.addEventListener('click', function(event) {
+        const opContainer = document.getElementById('menuOpContainer');
+        const prContainer = document.getElementById('menuProfileContainer');
+        
+        if (opContainer && !opContainer.contains(event.target)) {
+            const opDropdown = document.getElementById('opDropdown');
+            if(opDropdown) {
+                opDropdown.classList.add('hidden');
+                opDropdown.classList.remove('flex');
+            }
+        }
+        
+        if (prContainer && !prContainer.contains(event.target)) {
+            const prDropdown = document.getElementById('profileDropdown');
+            if(prDropdown) {
+                prDropdown.classList.add('hidden');
+                prDropdown.classList.remove('flex');
+            }
+        }
+    });
 
     // --- SHARED MODAL LOGIC ---
     function showModal(modalId) {
@@ -161,11 +208,10 @@
     }
 
     // ==========================================
-    // PART 2: MAP RENDERING LOGIC (ORIGINAL STRUCTURE)
+    // PART 2: MAP RENDERING LOGIC
     // ==========================================
 
     function renderGrid(data) {
-        // Update Globals
         stallsData = (data && data.stalls) ? data.stalls : [];
         bookingsData = (data && data.bookings) ? data.bookings : [];
         
@@ -177,7 +223,6 @@
         const grid = document.getElementById('grid-container');
         if (!grid) return;
         
-        // Clear loader
         const loader = grid.querySelector('.grid-loading-overlay');
         if(loader) loader.remove();
 
@@ -186,7 +231,6 @@
             return; 
         }
         
-        // Calculate Grid Dimensions
         let maxRow = 26; 
         let maxCol = 20; 
         stallsData.forEach(s => {
@@ -198,11 +242,9 @@
 
         grid.style.gridTemplateColumns = `repeat(${maxCol}, minmax(45px, 1fr))`;
 
-        // Prepare Map
         const bookingMap = {};
         bookingsData.forEach(b => bookingMap[b.stallName] = b);
         
-        // Date Logic
         const [y, m, d] = selectedDate.split('-').map(Number);
         const dateObj = new Date(y, m - 1, d);
         const dayOfWeek = dateObj.getDay();
@@ -212,13 +254,11 @@
         
         const fragment = document.createDocumentFragment();
 
-        // Render Loop
         for (let r=1; r<=maxRow; r++) {
             for (let c=1; c<=maxCol; c++) {
                 const cellId = `stall-${r}-${c}`;
                 const stall = stallsData.find(s => parseInt(s.row) == r && parseInt(s.col) == c);
                 
-                // Smart DOM Reuse
                 let cell = document.getElementById(cellId);
                 let isUpdate = (cell !== null);
 
@@ -229,7 +269,6 @@
                     cell.style.gridColumn = c; 
                 }
                 
-                // Base Style
                 let baseClassName = 'stall-box rounded text-center shadow-sm relative';
                 let finalClassName = baseClassName;
                 let contentHtml = "";
@@ -244,16 +283,12 @@
                     let bgClass = "bg-gray-200";
                     let forcedPurple = false;
                     
-                    // Regular Monthly Logic
                     const isRegularMonthly = (booking && booking.type === "รายเดือน" && booking.note && booking.note.includes("[ลูกค้าประจำ]"));
 
-                    // Forced Purple for Real Monthly
                     if (booking && booking.type === "รายเดือน" && booking.product && booking.product.trim() !== "" && !isRegularMonthly) { 
                         bgClass = "bg-monthly"; 
-                        // [MODIFIED] Change text-white to text-pink-900 (Dark Purple/Pink) for better visibility
                         contentHtml += `<div class="text-[10px] mt-0.5 truncate px-1 w-full bg-white bg-opacity-20 rounded font-normal text-pink-900 font-bold">${booking.product}</div>`; 
                         forcedPurple = true; 
-                        // Icon for Monthly
                         contentHtml += `<div class="absolute -top-1 -right-1 text-white bg-purple-600 rounded-full w-4 h-4 flex items-center justify-center shadow-sm text-[8px] z-20"><i class="fa-solid fa-crown"></i></div>`;
                     }
                     
@@ -265,27 +300,22 @@
                             const isFood = stall.type.includes("อาหาร");
                             if (booking) {
                                 if (booking.status === "ชำระแล้ว" || booking.status === "ไม่ว่าง") { 
-                                    // Paid / Full
                                     bgClass = isFood ? "bg-food-occupied" : "bg-cloth-occupied"; 
                                     contentHtml += `<div class="text-[10px] mt-0.5 truncate px-1 w-full bg-white bg-opacity-20 rounded font-normal">${booking.product}</div>`; 
                                 } else { 
-                                    // Unpaid -> Show Product Name
                                     bgClass = isFood ? "bg-food-unpaid" : "bg-cloth-unpaid"; 
                                     const displayText = booking.product || booking.bookerName || "ไม่ระบุ";
                                     contentHtml += `<div class="text-[10px] mt-0.5 font-normal truncate w-full px-0.5">${displayText}</div>`; 
                                     
-                                    // Warning Icon (Top-Right)
                                     contentHtml += `<div class="absolute -top-1 -right-1 text-red-600 bg-white rounded-full w-4 h-4 flex items-center justify-center shadow-sm text-[10px] z-20 border border-red-200 animate-pulse"><i class="fa-solid fa-exclamation"></i></div>`;
                                 }
                             } else { 
-                                // Free
                                 bgClass = isFood ? "bg-food-free" : "bg-cloth-free"; 
                                 contentHtml += `<div class="text-[10px] mt-0.5 font-normal">${price || '-'}.-</div>`; 
                             }
                         }
                     }
                     
-                    // Storage Icon (Top-Left)
                     if (storage) {
                         contentHtml += `<div class="absolute -top-1 -left-1 bg-white rounded-full p-0.5 shadow border border-gray-300 z-20 text-[10px] cursor-help h-4 w-4 flex items-center justify-center" title="ฝากของ: ${storage.ownerName}">📦</div>`;
                     }

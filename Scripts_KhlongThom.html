@@ -1,7 +1,7 @@
 <script>
     /**
      * Scripts_KhlongThom
-     * จัดการตั๋วโซนคลองถม (รองรับทั้ง 2 โหมด: คลองถมหลัก และ คลองถมทั่วไป)
+     * จัดการตั๋วโซนคลองถม (รองรับทั้ง 2 โหมด: คลองถมหลัก และ คลองถมทั่วไปแบบยืดหยุ่นราคา)
      */
 
     function openKhlongThomModal() {
@@ -10,31 +10,22 @@
             return;
         }
 
-        // รีเซ็ตให้เลือกโหมดแรกเสมอ
         document.querySelector('input[name="kt_ticketType"][value="Main"]').checked = true;
-
-        // อัปเดตข้อความ Preview รันเลขตั๋ว
-        updateKtTypeUI();
-
-        // วันที่สำหรับส่งยอด
+        
         const now = new Date();
         const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         document.getElementById('kt_reconDate').value = localDate;
 
-        // Reset Inputs
         document.getElementById('kt_startNum').value = "1";
         document.getElementById('kt_endNum').value = "";
         document.getElementById('kt_totalPrintCount').innerText = "0 ใบ";
         
-        document.getElementById('kt_cashCount').value = "0";
-        document.getElementById('kt_transferCount').value = "0";
-        
+        document.getElementById('kt_cashInput').value = "0";
+        document.getElementById('kt_transferInput').value = "0";
         document.getElementById('kt_elecCash').value = "0";
         document.getElementById('kt_elecTransfer').value = "0";
         
-        calcKtReconTotal();
-
-        // ไปที่แท็บพิมพ์ตั๋วเริ่มต้น
+        updateKtTypeUI();
         switchKtTab('print');
 
         const modal = document.getElementById('khlongThomModal');
@@ -55,7 +46,7 @@
         }, 300);
     }
 
-    // สลับโหมดคลองถมหลัก / ทั่วไป
+    // สลับโหมดคลองถมหลัก / ทั่วไป (Smart UI)
     function updateKtTypeUI() {
         const typeEl = document.querySelector('input[name="kt_ticketType"]:checked');
         const type = typeEl ? typeEl.value : 'Main';
@@ -67,14 +58,42 @@
         const thDay = String(now.getDate()).padStart(2, '0');
         const dateStr = `${thYear}${thMonth}${thDay}`;
 
+        const priceGroup = document.getElementById('kt_price_group');
+        const priceHint = document.getElementById('kt_price_hint');
+        const reconPriceGroup = document.getElementById('kt_recon_price_group');
+        
+        const lblCash = document.getElementById('lbl_kt_cash');
+        const lblTransfer = document.getElementById('lbl_kt_transfer');
+        const inputHint = document.getElementById('kt_input_hint');
+
+        // รีเซ็ตค่าเพื่อป้องกันความสับสนตอนสลับโหมด
+        document.getElementById('kt_cashInput').value = "0";
+        document.getElementById('kt_transferInput').value = "0";
+
         if (type === 'Main') {
             previewEl.innerText = `คลองถม ${dateStr}-XXX`;
-            document.getElementById('kt_ticketPrice').value = "150"; // Default
-            document.getElementById('kt_reconPrice').value = "150"; // Default
+            priceGroup.classList.remove('hidden');
+            priceHint.classList.add('hidden');
+            reconPriceGroup.classList.remove('hidden');
+            
+            lblCash.innerText = "สด (คัน)";
+            lblTransfer.innerText = "โอน (คัน)";
+            inputHint.innerText = "(ระบุจำนวนคัน)";
+            
+            document.getElementById('kt_ticketPrice').value = "150"; 
+            document.getElementById('kt_reconPrice').value = "150"; 
         } else {
             previewEl.innerText = `คลองถมทั่วไป ${dateStr}-XXX`;
-            document.getElementById('kt_ticketPrice').value = "100"; // Default
-            document.getElementById('kt_reconPrice').value = "100"; // Default
+            priceGroup.classList.add('hidden');
+            priceHint.classList.remove('hidden');
+            reconPriceGroup.classList.add('hidden');
+            
+            lblCash.innerText = "ยอดเงินรวม สด (บ.)";
+            lblTransfer.innerText = "ยอดเงินรวม โอน (บ.)";
+            inputHint.innerText = "(ระบุยอดเงินรวม)";
+            
+            document.getElementById('kt_ticketPrice').value = "0"; 
+            document.getElementById('kt_reconPrice').value = "0"; 
         }
         
         calcKtReconTotal();
@@ -100,9 +119,11 @@
             cPrint.classList.add('hidden');
             cRecon.classList.remove('hidden');
             
-            // Sync price from Print tab
-            const pPrice = document.getElementById('kt_ticketPrice').value;
-            if (pPrice) document.getElementById('kt_reconPrice').value = pPrice;
+            const type = document.querySelector('input[name="kt_ticketType"]:checked').value;
+            if (type === 'Main') {
+                const pPrice = document.getElementById('kt_ticketPrice').value;
+                if (pPrice) document.getElementById('kt_reconPrice').value = pPrice;
+            }
             calcKtReconTotal();
         }
     }
@@ -122,7 +143,12 @@
         const start = parseInt(document.getElementById('kt_startNum').value || 0);
         const end = parseInt(document.getElementById('kt_endNum').value || 0);
 
-        if (!price || start < 1 || end < start) {
+        if (type === 'Main' && !price) {
+            showAlert("กรุณาระบุราคาตั๋ว", "ข้อมูลไม่ครบถ้วน", true);
+            return;
+        }
+
+        if (start < 1 || end < start) {
             showAlert("กรุณาระบุช่วงเลขตั๋วให้ถูกต้อง", "ข้อมูลไม่ครบถ้วน", true);
             return;
         }
@@ -138,7 +164,6 @@
         const thMonth = String(now.getMonth() + 1).padStart(2, '0');
         const thDay = String(now.getDate()).padStart(2, '0');
         
-        // กำหนด Prefix และชื่อประเภทตั๋ว
         const ticketTypeName = type === 'Main' ? 'คลองถม' : 'คลองถมทั่วไป';
         const prefix = `${ticketTypeName} ${thYear}${thMonth}${thDay}-`;
         
@@ -150,7 +175,7 @@
             const paddedNum = String(i).padStart(3, '0');
             ticketsData.push({
                 ticketNumber: `${prefix}${paddedNum}`,
-                price: parseFloat(price).toLocaleString(undefined, {minimumFractionDigits: 0}),
+                price: type === 'Main' ? parseFloat(price).toLocaleString(undefined, {minimumFractionDigits: 0}) : "",
                 timestampStr: timestampStr,
                 officerName: officerName,
                 ticketTypeName: ticketTypeName
@@ -182,23 +207,45 @@
 
     // --- TAB 2: Reconcile Logic ---
     function calcKtReconTotal() {
-        const price = parseFloat(document.getElementById('kt_reconPrice').value || 0);
+        const typeEl = document.querySelector('input[name="kt_ticketType"]:checked');
+        const type = typeEl ? typeEl.value : 'Main';
         
-        // ค่าตั๋ว
-        const cashCount = parseInt(document.getElementById('kt_cashCount').value || 0);
-        const transferCount = parseInt(document.getElementById('kt_transferCount').value || 0);
-        const ticketTotal = (cashCount + transferCount) * price;
+        const price = parseFloat(document.getElementById('kt_reconPrice').value || 0);
+        const inputCash = parseFloat(document.getElementById('kt_cashInput').value || 0);
+        const inputTransfer = parseFloat(document.getElementById('kt_transferInput').value || 0);
+        
+        let ticketCashTotal = 0;
+        let ticketTransferTotal = 0;
+
+        // คำนวณยอดตั๋วตามโหมด
+        if (type === 'Main') {
+            ticketCashTotal = inputCash * price;
+            ticketTransferTotal = inputTransfer * price;
+        } else {
+            // โหมด General รับค่าเงินบาทตรงๆ ไม่ต้องคูณ
+            ticketCashTotal = inputCash;
+            ticketTransferTotal = inputTransfer;
+        }
+        
+        const ticketTotal = ticketCashTotal + ticketTransferTotal;
 
         // ค่าไฟ
         const elecCash = parseFloat(document.getElementById('kt_elecCash').value || 0);
         const elecTransfer = parseFloat(document.getElementById('kt_elecTransfer').value || 0);
         const elecTotal = elecCash + elecTransfer;
 
-        // รวมยอด
-        const grandTotal = ticketTotal + elecTotal;
+        // รวมเงินสด / รวมเงินโอน
+        const sumCash = ticketCashTotal + elecCash;
+        const sumTransfer = ticketTransferTotal + elecTransfer;
 
+        // รวมยอด
+        const grandTotal = sumCash + sumTransfer;
+
+        // Update UI
         document.getElementById('kt_ticketTotalDisplay').innerText = ticketTotal.toLocaleString();
         document.getElementById('kt_elecTotalDisplay').innerText = elecTotal.toLocaleString();
+        document.getElementById('kt_totalCashDisplay').innerText = sumCash.toLocaleString();
+        document.getElementById('kt_totalTransferDisplay').innerText = sumTransfer.toLocaleString();
         document.getElementById('kt_grandTotal').innerText = grandTotal.toLocaleString();
     }
 
@@ -208,11 +255,8 @@
         const typeLabel = type === 'Main' ? 'คลองถม (หลัก)' : 'คลองถมทั่วไป';
 
         const date = document.getElementById('kt_reconDate').value;
-        const price = document.getElementById('kt_reconPrice').value;
-        
-        const cashCount = parseInt(document.getElementById('kt_cashCount').value || 0);
-        const transferCount = parseInt(document.getElementById('kt_transferCount').value || 0);
-        
+        const inputCash = parseFloat(document.getElementById('kt_cashInput').value || 0);
+        const inputTransfer = parseFloat(document.getElementById('kt_transferInput').value || 0);
         const elecCash = parseFloat(document.getElementById('kt_elecCash').value || 0);
         const elecTransfer = parseFloat(document.getElementById('kt_elecTransfer').value || 0);
 
@@ -221,32 +265,56 @@
             return;
         }
 
-        if (cashCount === 0 && transferCount === 0 && elecCash === 0 && elecTransfer === 0) {
-            showAlert("กรุณาระบุจำนวนคัน หรือ ค่าไฟ อย่างน้อย 1 ช่องทาง", "ข้อมูลเป็นศูนย์", true);
+        if (inputCash === 0 && inputTransfer === 0 && elecCash === 0 && elecTransfer === 0) {
+            showAlert("กรุณาระบุยอด อย่างน้อย 1 ช่องทาง", "ข้อมูลเป็นศูนย์", true);
             return;
         }
 
-        const ticketTotal = (cashCount + transferCount) * parseFloat(price);
-        const elecTotal = elecCash + elecTransfer;
-        const grandTotal = ticketTotal + elecTotal;
+        let ticketCashTotal = 0;
+        let ticketTransferTotal = 0;
+        let cashDesc = "";
+        let transferDesc = "";
 
-        const confirmMsg = `ยืนยันการนำส่งยอดของ "${typeLabel}" รวม ${grandTotal.toLocaleString()} บาท? \n` +
-                           `- ค่าตั๋ว ${ticketTotal.toLocaleString()} บ. (${cashCount + transferCount} คัน)\n` +
-                           `- ค่าไฟ ${elecTotal.toLocaleString()} บ.`;
+        if (type === 'Main') {
+            const price = parseFloat(document.getElementById('kt_reconPrice').value || 0);
+            ticketCashTotal = inputCash * price;
+            ticketTransferTotal = inputTransfer * price;
+            cashDesc = `ขายตั๋วคลองถม ${inputCash} คัน (เงินสด)`;
+            transferDesc = `ขายตั๋วคลองถม ${inputTransfer} คัน (โอนจ่าย)`;
+        } else {
+            ticketCashTotal = inputCash;
+            ticketTransferTotal = inputTransfer;
+            cashDesc = `ส่งยอดตั๋วคลองถมทั่วไป แบบรวมราคา (เงินสด)`;
+            transferDesc = `ส่งยอดตั๋วคลองถมทั่วไป แบบรวมราคา (โอนจ่าย)`;
+        }
+
+        const ticketTotal = ticketCashTotal + ticketTransferTotal;
+        const elecTotal = elecCash + elecTransfer;
+        
+        const sumCash = ticketCashTotal + elecCash;
+        const sumTransfer = ticketTransferTotal + elecTransfer;
+        const grandTotal = sumCash + sumTransfer;
+
+        const confirmMsg = `ยืนยันการนำส่งยอดของ "${typeLabel}" รวมทั้งสิ้น ${grandTotal.toLocaleString()} บาท?\n` +
+                           `แบ่งเป็น\n` +
+                           `💵 เงินสด: ${sumCash.toLocaleString()} บาท\n` +
+                           `📱 เงินโอน: ${sumTransfer.toLocaleString()} บาท\n\n` +
+                           `(รายละเอียด: ค่าตั๋ว ${ticketTotal.toLocaleString()} บ. / ค่าไฟ ${elecTotal.toLocaleString()} บ.)`;
 
         showConfirm(confirmMsg, "ยืนยันส่งยอด", () => {
             showLoader();
             const officerName = currentAdmin ? currentAdmin.name : "System";
 
             const data = {
-                ticketType: type, // ส่งประเภทคลองถมไปบอกหลังบ้าน
+                ticketType: type, 
                 date: date,
-                pricePerTicket: price,
-                cashCount: cashCount,
-                transferCount: transferCount,
+                cashAmount: ticketCashTotal,
+                transferAmount: ticketTransferTotal,
                 elecCash: elecCash,
                 elecTransfer: elecTransfer,
-                officer: officerName
+                officer: officerName,
+                cashDesc: cashDesc,
+                transferDesc: transferDesc
             };
 
             google.script.run

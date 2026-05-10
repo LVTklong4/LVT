@@ -2,6 +2,7 @@
     /**
      * TEMPLATE: KHLONG THOM TICKET (80mm)
      * โครงสร้าง HTML สำหรับตั๋วคลองถม (ปริ้นท์ต่อเนื่อง)
+     * FIX: เพิ่มระบบต้นขั้ว (Stub) สำหรับคลองถมทั่วไป และตัวอักษรสีดำสนิท
      */
     function generateKhlongThomTicketHtml(dataArray) {
         const IMG_LOGO_URL = "https://img2.pic.in.th/pic/Profile-Alpha_0.png";
@@ -11,47 +12,106 @@
         dataArray.forEach((ticket) => {
             const { ticketNumber, price, timestampStr, officerName, ticketTypeName } = ticket;
             
-            // ใช้ page-break-after: always; เพื่อบังคับให้เครื่องพิมพ์ตัดกระดาษ/ขึ้นหน้าใหม่ทุกใบ
-            html += `
-                <div style="font-family: 'Sarabun', sans-serif; color: black; line-height: 1.4; width: 100%; max-width: 300px; margin: 0 auto; background: white; padding: 10px; font-size: 14px; page-break-after: always;">
-                    
-                    <div style="text-align: center;">
-                        <img src="${IMG_LOGO_URL}" style="width: 80px; height: auto; margin: 0 auto; display: block;" loading="eager">
-                        <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">ตลาดนัดลาดสวายวินเทจ</div>
-                        <div style="font-size: 14px; font-weight: bold; color: #000; background-color: #f3f4f6; padding: 4px; margin-top: 5px; border-radius: 4px; border: 1px solid #d1d5db;">
-                            ตั๋ว/ใบเสร็จ (โซน${ticketTypeName})
+            // แยกการพิมพ์ตามประเภท
+            if (ticketTypeName === 'คลองถมทั่วไป') {
+                // --- โหมดคลองถมทั่วไป (มีต้นขั้ว + เว้นช่องว่างให้เขียนราคา) ---
+                html += `
+                    <div style="font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.4; width: 100%; max-width: 300px; margin: 0 auto; background: white; padding: 10px; font-size: 14px; page-break-after: always;">
+                        
+                        <!-- ส่วนที่ 1: ต้นขั้ว (Stub) -->
+                        <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 12px; margin-bottom: 12px;">
+                            <div style="font-size: 14px; font-weight: bold; color: #000; background-color: #e5e7eb; padding: 2px; border: 1px solid #000;">
+                                ต้นขั้ว - คลองถมทั่วไป
+                            </div>
+                            <div style="font-size: 20px; font-weight: bold; letter-spacing: 1px; margin: 8px 0; color: #000;">${ticketNumber}</div>
+                            <div style="font-size: 12px; display: flex; justify-content: space-between; font-weight: bold;">
+                                <span>วันที่: ${timestampStr.split(' ')[0]} ${timestampStr.split(' ')[1]} ${timestampStr.split(' ')[2]}</span>
+                            </div>
+                            <div style="font-size: 16px; font-weight: bold; text-align: left; margin-top: 8px; color: #000;">
+                                ราคา : ................................. บาท
+                            </div>
+                        </div>
+
+                        <!-- ส่วนที่ 2: หางตั๋ว (Main Ticket) -->
+                        <div style="text-align: center;">
+                            <img src="${IMG_LOGO_URL}" style="width: 70px; height: auto; margin: 0 auto; display: block;" loading="eager">
+                            <div style="font-size: 16px; font-weight: bold; margin-top: 5px; color: #000;">ตลาดนัดลาดสวายวินเทจ</div>
+                            <div style="font-size: 14px; font-weight: bold; color: #000; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 4px 0; margin-top: 5px;">
+                                ตั๋ว/ใบเสร็จ (โซนคลองถมทั่วไป)
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 10px; text-align: center;">
+                            <div style="font-size: 12px; font-weight: bold; color: #000;">เลขที่ตั๋ว</div>
+                            <div style="font-size: 24px; font-weight: bold; letter-spacing: 1px; margin: 5px 0; color: #000;">${ticketNumber}</div>
+                        </div>
+                        
+                        <div style="border-bottom: 2px dashed #000; margin: 10px 0;"></div>
+
+                        <div style="margin: 15px 0; color: #000;">
+                            <span style="font-size: 18px; font-weight: bold;">ราคา : .............................. บาท</span>
+                        </div>
+
+                        <div style="border-bottom: 2px dashed #000; margin: 10px 0;"></div>
+
+                        <div style="margin-top: 10px; font-size: 12px; color: #000; font-weight: bold;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="text-align: left;">เวลาพิมพ์ : </span><span style="text-align: right;">${timestampStr}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="text-align: left;">ผู้ออกตั๋ว : </span><span style="text-align: right;">${officerName}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; text-align: center; color: #000;">
+                            <div style="font-size: 12px; font-weight: bold;">กรุณาแสดงตั๋วนี้เพื่อเป็นหลักฐานการชำระเงิน</div>
+                            <div style="font-size: 10px; margin-top: 4px;">Power by PJMJK</div>
                         </div>
                     </div>
-
-                    <div style="margin-top: 15px; text-align: center;">
-                        <div style="font-size: 12px; color: #4b5563;">เลขที่ตั๋ว</div>
-                        <div style="font-size: 24px; font-weight: bold; letter-spacing: 1px; margin: 5px 0;">${ticketNumber}</div>
-                    </div>
-                    
-                    <div style="border-bottom: 2px dashed #000; margin: 10px 0;"></div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
-                        <span style="font-size: 16px; font-weight: bold;">ราคา : </span>
-                        <span style="font-size: 22px; font-weight: bold;">${price}.-</span>
-                    </div>
-
-                    <div style="border-bottom: 2px dashed #000; margin: 10px 0;"></div>
-
-                    <div style="margin-top: 10px; font-size: 12px; color: #374151;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="text-align: left;">วันที่พิมพ์ : </span><span style="text-align: right;">${timestampStr}</span>
+                `;
+            } else {
+                // --- โหมดคลองถมหลัก (เหมือนรายวันปกติ ไม่มีต้นขั้ว พิมพ์ราคาชัดเจน) ---
+                html += `
+                    <div style="font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.4; width: 100%; max-width: 300px; margin: 0 auto; background: white; padding: 10px; font-size: 14px; page-break-after: always;">
+                        
+                        <div style="text-align: center;">
+                            <img src="${IMG_LOGO_URL}" style="width: 80px; height: auto; margin: 0 auto; display: block;" loading="eager">
+                            <div style="font-size: 18px; font-weight: bold; margin-top: 5px; color: #000;">ตลาดนัดลาดสวายวินเทจ</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #000; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 4px 0; margin-top: 8px;">
+                                ตั๋ว/ใบเสร็จ (โซน${ticketTypeName})
+                            </div>
                         </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="text-align: left;">ผู้ออกตั๋ว : </span><span style="text-align: right;">${officerName}</span>
+
+                        <div style="margin-top: 15px; text-align: center;">
+                            <div style="font-size: 14px; font-weight: bold; color: #000;">เลขที่ตั๋ว</div>
+                            <div style="font-size: 26px; font-weight: bold; letter-spacing: 1px; margin: 5px 0; color: #000;">${ticketNumber}</div>
+                        </div>
+                        
+                        <div style="border-bottom: 2px dashed #000; margin: 10px 0;"></div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; color: #000;">
+                            <span style="font-size: 18px; font-weight: bold;">ราคา : </span>
+                            <span style="font-size: 26px; font-weight: bold;">${price}.-</span>
+                        </div>
+
+                        <div style="border-bottom: 2px dashed #000; margin: 10px 0;"></div>
+
+                        <div style="margin-top: 10px; font-size: 14px; color: #000; font-weight: bold;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="text-align: left;">วันที่พิมพ์ : </span><span style="text-align: right;">${timestampStr}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="text-align: left;">ผู้ออกตั๋ว : </span><span style="text-align: right;">${officerName}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; text-align: center; color: #000;">
+                            <div style="font-size: 12px; font-weight: bold;">กรุณาแสดงตั๋วนี้เพื่อเป็นหลักฐานการชำระเงิน</div>
+                            <div style="font-size: 10px; margin-top: 4px;">Power by PJMJK</div>
                         </div>
                     </div>
-                    
-                    <div style="margin-top: 20px; text-align: center;">
-                        <div style="font-size: 10px;">กรุณาแสดงตั๋วนี้เพื่อเป็นหลักฐานการชำระเงิน</div>
-                        <div style="font-size: 10px; margin-top: 2px;">Power by PJMJK</div>
-                    </div>
-                </div>
-            `;
+                `;
+            }
         });
 
         return html;

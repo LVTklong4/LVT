@@ -3,7 +3,9 @@
     let currentPayContext = {
         bookingId: null,
         bookerName: null,
-        productName: null
+        productName: null,
+        totalPrice: 0,
+        remaining: 0
     };
 
     function openPaymentModal(bookingId, bookerName, productName) {
@@ -20,17 +22,71 @@
         document.getElementById('pay_note').value = '';
         document.querySelector('input[name="pay_method"][value="Cash"]').checked = true;
         
+        // ดึงยอดรวมและยอดคงเหลือของลูกค้ารายนี้จาก Cache
+        let total = 0, paid = 0, remain = 0;
+        if (typeof monthlyDataCache !== 'undefined') {
+            const item = monthlyDataCache.find(x => x.id === bookingId);
+            if (item) {
+                total = parseFloat(item.totalPrice || 0);
+                paid = parseFloat(item.paid || 0);
+                remain = total - paid;
+            }
+        }
+
         // Update Context
         currentPayContext = {
             bookingId: bookingId,
             bookerName: bookerName,
-            productName: productName
+            productName: productName,
+            totalPrice: total,
+            remaining: remain
         };
+
+        // --- อัปเดตตัวเลขแสดงผลบน UI ทันทีที่เปิดหน้าต่าง ---
+        document.getElementById('pay_info_total').innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('pay_info_remain').innerText = remain.toLocaleString(undefined, {minimumFractionDigits: 2});
+        updatePercentLabels(total, remain);
 
         toggleSlipInput();
         const modal = document.getElementById('paymentActionModal');
         modal.style.display = 'flex';
         modal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    // --- NEW: ฟังก์ชันคำนวณและแสดงยอดลงบนปุ่มเปอร์เซ็นต์ ---
+    function updatePercentLabels(total, remain) {
+        const pcts = [25, 50, 75];
+        pcts.forEach(pct => {
+            let amt = total * (pct / 100);
+            if (amt > remain) amt = remain; // ไม่ให้เกินยอดคงเหลือ
+            amt = Math.round(amt * 100) / 100; // ปัดเศษ
+            const labelEl = document.getElementById(`lbl_pct_${pct}`);
+            if (labelEl) labelEl.innerText = amt.toLocaleString(undefined, {minimumFractionDigits: 2});
+        });
+        
+        // ปุ่ม 100% (ปิดยอด)
+        const lbl100 = document.getElementById('lbl_pct_100');
+        if (lbl100) lbl100.innerText = remain.toLocaleString(undefined, {minimumFractionDigits: 2});
+    }
+
+    // --- NEW: ฟังก์ชันคำนวณยอดชำระตามเปอร์เซ็นต์เมื่อกดปุ่ม ---
+    function setPaymentPercent(pct) {
+        const total = currentPayContext.totalPrice;
+        const remain = currentPayContext.remaining;
+        
+        let calcAmount = 0;
+        if (pct === 100) {
+            calcAmount = remain; // ปิดยอด = จ่ายส่วนที่เหลือทั้งหมด
+        } else {
+            calcAmount = total * (pct / 100);
+            // ถ้ายอดที่คำนวณได้ (เช่น 50%) มากกว่า ยอดคงเหลือจริงๆ ให้ปรับเป็นยอดคงเหลือสูงสุด
+            if (calcAmount > remain) calcAmount = remain;
+        }
+        
+        // ปัดเศษ 2 ตำแหน่ง
+        calcAmount = Math.round(calcAmount * 100) / 100;
+        
+        document.getElementById('pay_amount').value = calcAmount > 0 ? calcAmount : '';
     }
 
     // New Function for Edit Mode
@@ -49,6 +105,11 @@
         const method = p.method === 'Transfer' ? 'Transfer' : (p.method === 'ส่วนลด' ? 'Discount' : 'Cash');
         document.querySelector(`input[name="pay_method"][value="${method}"]`).checked = true;
         
+        // ในโหมดแก้ไข จะอัปเดตตัวเลขแสดงผลด้วย Context เดิมที่มีอยู่
+        document.getElementById('pay_info_total').innerText = currentPayContext.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('pay_info_remain').innerText = currentPayContext.remaining.toLocaleString(undefined, {minimumFractionDigits: 2});
+        updatePercentLabels(currentPayContext.totalPrice, currentPayContext.remaining);
+
         toggleSlipInput();
         const modal = document.getElementById('paymentActionModal');
         modal.style.display = 'flex';
@@ -118,9 +179,21 @@
         currentPayContext = {
             bookingId: bookingId,
             bookerName: bookerName,
-            productName: productName
+            productName: productName,
+            totalPrice: 0,
+            remaining: 0
         };
         
+        // อัปเดต total/remaining เข้า context โดยดึงจาก cache
+        if (typeof monthlyDataCache !== 'undefined') {
+            const item = monthlyDataCache.find(x => x.id === bookingId);
+            if (item) {
+                currentPayContext.totalPrice = parseFloat(item.totalPrice || 0);
+                const paid = parseFloat(item.paid || 0);
+                currentPayContext.remaining = currentPayContext.totalPrice - paid;
+            }
+        }
+
         if (refLabel) {
             refLabel.innerText = `${bookerName} / ${productName || '-'}`;
         }

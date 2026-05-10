@@ -24,7 +24,7 @@
                 </label>
                 <label class="inline-flex items-center cursor-pointer">
                     <input type="radio" name="kt_ticketType" value="General" class="form-radio text-teal-600 h-4 w-4" onchange="updateKtTypeUI()">
-                    <span class="ml-2 text-sm font-bold text-gray-800">คลองถมทั่วไป</span>
+                    <span class="ml-2 text-sm font-bold text-gray-800">คลองถมทั่วไป <span class="text-[10px] text-gray-400 font-normal">(ราคาไม่คงที่)</span></span>
                 </label>
             </div>
         </div>
@@ -49,9 +49,14 @@
                     <b class="ml-5 text-teal-600 text-base"><span id="kt_date_preview">คลองถม YYMMDD-XXX</span></b>
                 </div>
 
-                <div>
+                <!-- ซ่อนเมื่อเลือกคลองถมทั่วไป -->
+                <div id="kt_price_group">
                     <label class="block text-xs font-bold text-gray-700 mb-1">ราคาตั๋วต่อคัน (บาท)</label>
-                    <input type="number" id="kt_ticketPrice" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg font-bold text-teal-700 focus:ring-2 focus:ring-teal-500 outline-none" value="150" required>
+                    <input type="number" id="kt_ticketPrice" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg font-bold text-teal-700 focus:ring-2 focus:ring-teal-500 outline-none" value="150">
+                </div>
+                
+                <div id="kt_price_hint" class="hidden bg-gray-100 p-2 rounded border border-gray-200 text-[10px] text-gray-500 italic">
+                    *โหมดคลองถมทั่วไป: ตั๋วจะถูกพิมพ์โดยเว้นช่องราคาว่างไว้ พร้อมหางตั๋ว(ต้นขั้ว) เพื่อให้พนักงานเขียนราคาและฉีกเองหน้างาน
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -78,13 +83,12 @@
             <!-- TAB 2: Reconcile / Submit Money -->
             <div id="ktContentReconcile" class="hidden space-y-4">
                 
-                <!-- ส่วนกำหนดค่าพื้นฐาน -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">วันที่ประจำรอบ</label>
                         <input type="date" id="kt_reconDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-teal-500 outline-none">
                     </div>
-                    <div>
+                    <div id="kt_recon_price_group">
                         <label class="block text-xs font-bold text-gray-700 mb-1">ราคาตั๋ว (บาท/คัน)</label>
                         <input type="number" id="kt_reconPrice" class="w-full border border-gray-300 rounded-lg px-3 py-2 font-bold text-teal-700 focus:ring-2 focus:ring-teal-500 outline-none bg-gray-50" value="150" oninput="calcKtReconTotal()">
                     </div>
@@ -92,15 +96,15 @@
 
                 <!-- ส่วน 1: ค่าตั๋ว -->
                 <div class="pt-2">
-                    <h4 class="text-xs font-bold text-teal-800 mb-2 border-b border-teal-200 pb-1">1. รายรับค่าตั๋ว (จำนวนคัน)</h4>
+                    <h4 class="text-xs font-bold text-teal-800 mb-2 border-b border-teal-200 pb-1">1. รายรับค่าตั๋ว <span id="kt_input_hint" class="text-[10px] font-normal text-gray-500">(ระบุจำนวนคัน)</span></h4>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-green-50 p-2 rounded-lg border border-green-200">
-                            <label class="block text-[11px] font-bold text-green-700 mb-1 text-center"><i class="fa-solid fa-money-bill-wave"></i> สด (คัน)</label>
-                            <input type="number" id="kt_cashCount" min="0" value="0" class="w-full border border-green-300 rounded px-2 py-1 text-center font-bold text-green-800 focus:ring-1 focus:ring-green-500 outline-none" oninput="calcKtReconTotal()">
+                            <label class="block text-[11px] font-bold text-green-700 mb-1 text-center"><i class="fa-solid fa-money-bill-wave"></i> <span id="lbl_kt_cash">สด (คัน)</span></label>
+                            <input type="number" id="kt_cashInput" min="0" value="0" class="w-full border border-green-300 rounded px-2 py-1 text-center font-bold text-green-800 focus:ring-1 focus:ring-green-500 outline-none" oninput="calcKtReconTotal()">
                         </div>
                         <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                            <label class="block text-[11px] font-bold text-blue-700 mb-1 text-center"><i class="fa-solid fa-mobile-screen"></i> โอน (คัน)</label>
-                            <input type="number" id="kt_transferCount" min="0" value="0" class="w-full border border-blue-300 rounded px-2 py-1 text-center font-bold text-blue-800 focus:ring-1 focus:ring-blue-500 outline-none" oninput="calcKtReconTotal()">
+                            <label class="block text-[11px] font-bold text-blue-700 mb-1 text-center"><i class="fa-solid fa-mobile-screen"></i> <span id="lbl_kt_transfer">โอน (คัน)</span></label>
+                            <input type="number" id="kt_transferInput" min="0" value="0" class="w-full border border-blue-300 rounded px-2 py-1 text-center font-bold text-blue-800 focus:ring-1 focus:ring-blue-500 outline-none" oninput="calcKtReconTotal()">
                         </div>
                     </div>
                 </div>
@@ -130,6 +134,16 @@
                         <span>ยอดค่าไฟรวม:</span>
                         <span id="kt_elecTotalDisplay">0</span>
                     </div>
+                    
+                    <div class="flex justify-between items-center text-sm text-green-400 font-bold mt-1">
+                        <span><i class="fa-solid fa-money-bill-wave mr-1"></i> รวมเงินสด:</span>
+                        <span id="kt_totalCashDisplay">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm text-blue-400 font-bold border-b border-gray-600 pb-2 mb-1">
+                        <span><i class="fa-solid fa-mobile-screen mr-1"></i> รวมเงินโอน:</span>
+                        <span id="kt_totalTransferDisplay">0</span>
+                    </div>
+
                     <div class="flex justify-between items-end">
                         <span class="text-sm font-bold text-white">รวมส่งยอดทั้งหมด</span>
                         <span id="kt_grandTotal" class="text-2xl font-bold text-yellow-400">0</span>

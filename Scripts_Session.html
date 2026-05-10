@@ -2,10 +2,9 @@
     /**
      * Scripts_Session
      * จัดการ Session และ Firebase Authentication
-     * Update: Added btnKhlongThom to visible list for Admin
+     * Update: ผูก Logic ควบคุมปุ่มเข้ากับระบบ Dropdown แนวตั้งตัวใหม่
      */
 
-    // Firebase Config from User
     const firebaseConfig = {
       apiKey: "AIzaSyAKExhCzumzvCoU0tpjiyU_zPHiTLgaEzM",
       authDomain: "ladsawaivintage-9bb71.firebaseapp.com",
@@ -15,16 +14,13 @@
       appId: "1:1082363055126:web:f646e4ec1973e353cb7937"
     };
 
-    // Initialize Firebase
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
 
-    // Auth Variables
     const auth = firebase.auth();
     const provider = new firebase.auth.GoogleAuthProvider();
 
-    // Check Session (Run on Load)
     function checkSession() {
         const sessionJson = localStorage.getItem(SESSION_KEY);
         if (sessionJson) {
@@ -60,18 +56,36 @@
             if(defIcon) defIcon.classList.add('hidden');
         }
 
-        // --- UPDATE: เพิ่มปุ่ม btnKhlongThom ในรายการแสดงผล ---
+        // --- อัปเดตข้อความใน Dropdown Profile ---
+        const dropName = document.getElementById('dropdown_name');
+        const dropRole = document.getElementById('dropdown_role');
+        const authText = document.getElementById('authText');
+        const authIcon = document.getElementById('authIcon');
+
+        if(dropName) dropName.innerText = userSession.name;
+        if(dropRole) {
+            dropRole.innerText = userSession.role;
+            dropRole.className = "text-[10px] text-green-800 bg-green-100 border border-green-200 inline-block px-2 py-0.5 rounded-full mt-1 font-bold tracking-widest uppercase";
+        }
+        if(authText) authText.innerText = "ออกจากระบบ";
+        if(authIcon) authIcon.className = "fa-solid fa-sign-out-alt w-6 text-center text-red-600";
+
+        // --- การเปิดแสดงปุ่มเมนูที่อยู่ใน Dropdown ---
         const idsToShow = [
             'btnNextDate', 'btnPrevDate', 'btnArchive', 
-            'btnMonthlyTop', 'btnMonthlyTopMobile',
-            'btnStorageTop', 'btnStorageTopMobile',
-            'btnPrintMap', 'btnPrintMapMobile',
-            'btnExtraBooking', 'btnExtraBookingMobile',
-            'btnKhlongThom', 'btnKhlongThomMobile' // <--- เพิ่มปุ่มคลองถมตรงนี้
+            'btnMonthlyTop', 'btnStorageTop',
+            'btnPrintMap', 'btnExtraBooking', 'btnKhlongThom',
+            'btnOpMenu' // แสดงปุ่ม "จัดการระบบ"
         ];
+        
         idsToShow.forEach(id => {
             const el = document.getElementById(id);
-            if(el) { el.classList.remove('hidden'); el.style.display = 'inline-flex'; }
+            if(el) { 
+                el.classList.remove('hidden'); 
+                // ใช้ Tailwind class ใน HTML แทนการยัด style inline
+                el.style.display = ''; 
+                if (el.classList.contains('w-full')) el.classList.add('flex'); // สำหรับเมนูใน Dropdown
+            }
         });
 
         const roleStr = String(currentAdmin.role || "").trim().toLowerCase();
@@ -80,21 +94,15 @@
 
         if(isAdminOrSuper) {
             const btnRef = document.getElementById('btnRefreshCache');
-            if(btnRef) { btnRef.classList.remove('hidden'); btnRef.style.display = 'inline-flex'; }
-            const btnRefMob = document.getElementById('btnRefreshCacheMobile');
-            if(btnRefMob) { btnRefMob.classList.remove('hidden'); btnRefMob.style.display = 'inline-flex'; }
+            if(btnRef) { btnRef.classList.remove('hidden'); btnRef.style.display = ''; btnRef.classList.add('flex'); }
         }
 
         if(isSuper) {
             const btnDash = document.getElementById('btnDashboard');
-            if(btnDash) { btnDash.classList.remove('hidden'); btnDash.style.display = 'inline-flex'; }
-            const btnDashMob = document.getElementById('btnDashboardMobile');
-            if(btnDashMob) { btnDashMob.classList.remove('hidden'); btnDashMob.style.display = 'inline-flex'; }
+            if(btnDash) { btnDash.classList.remove('hidden'); btnDash.style.display = ''; btnDash.classList.add('flex'); }
             
             const btnSet = document.getElementById('btnSettings');
-            if(btnSet) { btnSet.classList.remove('hidden'); btnSet.style.display = 'inline-flex'; }
-            const btnSetMob = document.getElementById('btnSettingsMobile');
-            if(btnSetMob) { btnSetMob.classList.remove('hidden'); btnSetMob.style.display = 'inline-flex'; }
+            if(btnSet) { btnSet.classList.remove('hidden'); btnSet.style.display = ''; btnSet.classList.add('flex'); }
         }
 
         if(typeof hideModal === 'function') {
@@ -190,22 +198,35 @@
         if(avatar) avatar.classList.add('hidden');
         if(defIcon) defIcon.classList.remove('hidden');
 
-        // Hide all admin buttons (Update: include KhlongThom buttons)
+        // รีเซ็ตข้อความใน Dropdown Profile ให้กลับเป็น Guest
+        const dropName = document.getElementById('dropdown_name');
+        const dropRole = document.getElementById('dropdown_role');
+        const authText = document.getElementById('authText');
+        const authIcon = document.getElementById('authIcon');
+
+        if(dropName) dropName.innerText = "Guest";
+        if(dropRole) {
+            dropRole.innerText = "Please Login";
+            dropRole.className = "text-[10px] text-gray-500 bg-gray-200 inline-block px-2 py-0.5 rounded-full mt-1 font-bold tracking-widest uppercase";
+        }
+        if(authText) authText.innerText = "เข้าสู่ระบบ";
+        if(authIcon) authIcon.className = "fa-solid fa-sign-in-alt w-6 text-center text-green-600";
+
+        // ซ่อนปุ่มแอดมินทั้งหมด
         const elementsToHide = [
             'btnNextDate', 'btnPrevDate', 'btnArchive', 
-            'btnMonthlyTop', 'btnMonthlyTopMobile',
-            'btnStorageTop', 'btnStorageTopMobile',
-            'btnRefreshCache', 'btnRefreshCacheMobile',
-            'btnSettings', 'btnSettingsMobile',
-            'btnDashboard', 'btnDashboardMobile',
-            'btnPrintMap', 'btnPrintMapMobile',
-            'btnExtraBooking', 'btnExtraBookingMobile',
-            'btnKhlongThom', 'btnKhlongThomMobile' 
+            'btnMonthlyTop', 'btnStorageTop',
+            'btnRefreshCache', 'btnSettings',
+            'btnDashboard', 'btnPrintMap',
+            'btnExtraBooking', 'btnKhlongThom',
+            'btnOpMenu' // ซ่อนปุ่ม "จัดการระบบ"
         ];
+        
         elementsToHide.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.add('hidden');
+                el.classList.remove('flex'); // เอา flex ออกด้วยเพื่อความชัวร์
                 el.style.display = ''; 
             }
         });

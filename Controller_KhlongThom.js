@@ -14,19 +14,20 @@ function submitKhlongThomRevenue(formData) {
         const results = [];
         const officer = formData.officer || "System";
         const date = formData.date;
-        const pricePerTicket = parseFloat(formData.pricePerTicket || 0);
         
-        // กำหนดหมวดหมู่บัญชีตามประเภทที่เลือกหน้าบ้าน
         const categoryName = (formData.ticketType === 'General') ? "ค่าจอดรถคลองถมทั่วไป" : "ค่าจอดรถคลองถม";
-        const typeLabel = (formData.ticketType === 'General') ? "คลองถมทั่วไป" : "คลองถม";
+
+        const cashAmount = parseFloat(formData.cashAmount || 0);
+        const transferAmount = parseFloat(formData.transferAmount || 0);
+        const elecCash = parseFloat(formData.elecCash || 0);
+        const elecTransfer = parseFloat(formData.elecTransfer || 0);
 
         // 1. บันทึกยอดค่าตั๋ว (เงินสด)
-        if (formData.cashCount > 0) {
-            const cashAmount = formData.cashCount * pricePerTicket;
+        if (cashAmount > 0) {
             const cashId = RepoOtherIncome.addIncome({
                 date: date,
                 category: categoryName,
-                description: `ขายตั๋ว${typeLabel} ${formData.cashCount} คัน (เงินสด)`,
+                description: formData.cashDesc || `ส่งยอดตั๋วคลองถม (เงินสด)`,
                 amount: cashAmount,
                 method: "Cash",
                 officer: officer,
@@ -36,12 +37,11 @@ function submitKhlongThomRevenue(formData) {
         }
 
         // 2. บันทึกยอดค่าตั๋ว (โอน)
-        if (formData.transferCount > 0) {
-            const transferAmount = formData.transferCount * pricePerTicket;
+        if (transferAmount > 0) {
             const transferId = RepoOtherIncome.addIncome({
                 date: date,
                 category: categoryName,
-                description: `ขายตั๋ว${typeLabel} ${formData.transferCount} คัน (โอนจ่าย)`,
+                description: formData.transferDesc || `ส่งยอดตั๋วคลองถม (โอนจ่าย)`,
                 amount: transferAmount,
                 method: "Transfer",
                 officer: officer,
@@ -51,12 +51,12 @@ function submitKhlongThomRevenue(formData) {
         }
 
         // 3. บันทึกยอดค่าไฟ (เงินสด)
-        if (formData.elecCash > 0) {
+        if (elecCash > 0) {
             const elecCashId = RepoOtherIncome.addIncome({
                 date: date,
                 category: "ค่าไฟคลองถม",
-                description: `เก็บค่าไฟ${typeLabel} (เงินสด)`,
-                amount: formData.elecCash,
+                description: `เก็บค่าไฟ${categoryName.replace('ค่าจอดรถ', '')} (เงินสด)`,
+                amount: elecCash,
                 method: "Cash",
                 officer: officer,
                 proofUrl: "" 
@@ -65,12 +65,12 @@ function submitKhlongThomRevenue(formData) {
         }
 
         // 4. บันทึกยอดค่าไฟ (โอน)
-        if (formData.elecTransfer > 0) {
+        if (elecTransfer > 0) {
             const elecTransferId = RepoOtherIncome.addIncome({
                 date: date,
                 category: "ค่าไฟคลองถม",
-                description: `เก็บค่าไฟ${typeLabel} (โอนจ่าย)`,
-                amount: formData.elecTransfer,
+                description: `เก็บค่าไฟ${categoryName.replace('ค่าจอดรถ', '')} (โอนจ่าย)`,
+                amount: elecTransfer,
                 method: "Transfer",
                 officer: officer,
                 proofUrl: "" 
@@ -82,7 +82,7 @@ function submitKhlongThomRevenue(formData) {
              return { success: false, message: "ไม่มีจำนวนยอดเงินที่จะบันทึก" };
         }
 
-        return { success: true, message: `บันทึกยอดตั๋วและค่าไฟ (${typeLabel}) เข้าบัญชีเรียบร้อย` };
+        return { success: true, message: `บันทึกยอดตั๋วและค่าไฟเข้าบัญชีเรียบร้อย` };
 
     } catch(e) {
         return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
