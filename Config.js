@@ -22,6 +22,9 @@ const SHEET_ID_ANALYTICS = "1n3F7sDY5fmmZo1gH8ahOF9W7Kg5iAw2rC8PViUrxPMw";
 const SLIP_FOLDER_ID = "1r9NU1rQwf5sEKdboF5BTDbi9RFG40lXx"; 
 const TICKET_FOLDER_ID = "1hVQh-KaKX2m4EeS0mD8qrYs0nUZcsOaV"; 
 
+// โฟลเดอร์สำหรับเก็บรายงานปิดยอด (PDF Snapshot)
+const REPORT_FOLDER_ID = "1EfO8saTsutTFSJ9ZzEf4q5Rw9cCAIOpe"; 
+
 const TIMEZONE = "GMT+7";
 
 // LINE Configuration (กรุณาใส่ Token ที่ได้จาก LINE Developers)
