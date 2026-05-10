@@ -2,7 +2,7 @@
     /**
      * Scripts_Archive
      * จัดการฟังก์ชัน Archive (ย้ายข้อมูลเก่าไปเก็บ)
-     * FIX: Replaced native alerts with custom showAlert/showConfirm
+     * Update: อัปเดตข้อความแจ้งเตือนรวมระบบบัญชีย้อนหลัง 60 วัน
      */
     function confirmArchive() {
         if(typeof showConfirm !== 'function') {
@@ -15,9 +15,14 @@
             return;
         }
 
+        const msg = "ระบบจะดำเนินการเคลียร์พื้นที่ข้อมูล (Hot Data) เพื่อให้ระบบทำงานรวดเร็วขึ้น ดังนี้:\n\n" +
+                    "1. ข้อมูล 'ผังรายวัน': ที่เก่ากว่าเมื่อวาน จะถูกย้ายไป Archive\n" +
+                    "2. ข้อมูล 'บัญชี/การเงิน': ที่เก่ากว่า 60 วัน จะถูกย้ายไป Archive\n\n" +
+                    "ต้องการดำเนินการต่อหรือไม่?";
+
         showConfirm(
-            "ระบบจะดำเนินการกับข้อมูลที่ 'เก่ากว่าวันปัจจุบัน' ดังนี้:\n\n1. ข้อมูล 'รายวัน': ย้ายไปเก็บที่ชีท Archive\n2. ข้อมูล 'รายเดือน': ลบออกจากผังรายวัน (ข้อมูลหลักยังอยู่ในจัดการรายเดือน)\n\nต้องการดำเนินการต่อหรือไม่?", 
-            "⚠️ ยืนยันการเก็บข้อมูลเก่า", 
+            msg, 
+            "⚠️ ยืนยันการเคลียร์พื้นที่ระบบ", 
             () => {
                 showLoader();
                 google.script.run
@@ -25,7 +30,7 @@
                         hideLoader();
                         if (res.success) {
                             if(typeof fetchData === 'function') fetchData(true);
-                            showAlert("สำเร็จ: " + res.message, "การจัดเก็บเสร็จสิ้น", false);
+                            showAlert("สำเร็จ:\n" + res.message, "การจัดเก็บเสร็จสิ้น", false);
                         } else {
                             showAlert("เกิดข้อผิดพลาด: " + res.message, "ข้อผิดพลาด", true);
                         }
