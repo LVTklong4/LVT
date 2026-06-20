@@ -26,6 +26,7 @@ function syncAllDataToSupabase() {
     syncOtherIncome();
     syncExpenses();
     syncMembers();
+    syncAdminRoles();
     
     Logger.log("การซิงก์ข้อมูลทั้งหมดเสร็จสมบูรณ์เรียบร้อย!");
   } catch (error) {
@@ -448,4 +449,34 @@ function syncMembers() {
   
   payload = removeDuplicates(payload, "line_user_id");
   sendToSupabase("members", payload);
+}
+
+/**
+ * 9. ซิงก์ข้อมูลสิทธิ์ผู้ดูแลระบบ (Admin Roles)
+ */
+function syncAdminRoles() {
+  const ss = SpreadsheetApp.openById(SHEET_ID_SETUP);
+  const sheet = ss.getSheetByName("Role");
+  if (!sheet) return;
+  
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return;
+  
+  let payload = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const email = String(row[0]).trim().toLowerCase();
+    if (!email) continue;
+    
+    payload.push({
+      email: email,
+      name: String(row[2]).trim(),
+      role: String(row[3]).trim(),
+      status: String(row[4]).trim(),
+      employee_id: String(row[5] || "").trim() || null
+    });
+  }
+  
+  payload = removeDuplicates(payload, "email");
+  sendToSupabase("admin_roles", payload);
 }
