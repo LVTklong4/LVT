@@ -2,11 +2,9 @@
     /**
      * Scripts_Accounting
      * Client-side Logic for Accounting Tab
-     * Update: Added Closing History Fetch & Filter by Year logic
-     * FIX: Day Lock UI Integration (ซ่อนปุ่มเมื่อวันถูกปิดยอดแล้ว)
+     * Update: Reverted to Single Data Fetch (Stable)
+     * Update: Fixed submitClosing officer name reference error
      */
-
-    let closingHistoryCache = []; 
 
     function fetchAccountingOnly() {
         const loader = document.getElementById('dashLoading');
@@ -19,16 +17,14 @@
             .withSuccessHandler((res) => {
                 if(loader) loader.classList.add('hidden');
                 if (res.success) {
+                    // Update Global Data for Report Printing
                     if (!window.currentDashboardData) window.currentDashboardData = {};
                     window.currentDashboardData.accounting = res.accounting;
                     window.currentDashboardData.stalls = res.stalls;
                     window.currentDashboardData.bookings = res.bookings;
                     window.currentDashboardData.monthlyStats = res.monthlyStats;
                     
-                    // รับสถานะจากหลังบ้านว่า วันนี้ปิดยอดแล้วหรือยัง
-                    window.currentDashboardData.isClosed = res.isClosed;
-                    
-                    renderAccountingUI(res.accounting, res.date, res.isClosed);
+                    renderAccountingUI(res.accounting, res.date);
                 } else {
                     showAlert(res.message, "Error", true);
                 }
@@ -40,8 +36,7 @@
             .getAccountingData(dateVal);
     }
 
-    // --- FIX: เพิ่มพารามิเตอร์ isClosed เข้ามาเช็ค ---
-    function renderAccountingUI(acc, dateStr, isClosed) {
+    function renderAccountingUI(acc, dateStr) {
         if(!acc) return;
         
         // Summary
@@ -61,31 +56,6 @@
         if(netCashDisplay) netCashDisplay.innerText = netCash.toLocaleString(undefined, {minimumFractionDigits: 2});
         
         if(typeof calcDiff === 'function') calcDiff();
-
-        // --- NEW: UI LOCK FOR CLOSED DAYS ---
-        const btnInc = document.getElementById('btn_add_income');
-        const btnExp = document.getElementById('btn_add_expense');
-        const msgLock = document.getElementById('msg_already_closed');
-        const actCash = document.getElementById('closing_actual_cash');
-        const note = document.getElementById('closing_note');
-        const btnSubmit = document.getElementById('btn_submit_closing');
-
-        // ถ้าปิดยอดแล้ว -> ล็อก
-        if (isClosed) {
-            if(btnInc) btnInc.classList.add('hidden');
-            if(btnExp) btnExp.classList.add('hidden');
-            if(msgLock) msgLock.classList.remove('hidden');
-            if(btnSubmit) btnSubmit.classList.add('hidden');
-            if(actCash) { actCash.disabled = true; actCash.value = ''; }
-            if(note) { note.disabled = true; note.value = ''; }
-        } else {
-            if(btnInc) btnInc.classList.remove('hidden');
-            if(btnExp) btnExp.classList.remove('hidden');
-            if(msgLock) msgLock.classList.add('hidden');
-            if(btnSubmit) btnSubmit.classList.remove('hidden');
-            if(actCash) { actCash.disabled = false; actCash.value = ''; }
-            if(note) { note.disabled = false; note.value = ''; }
-        }
     }
 
     function renderIncomeTable(list) {
@@ -214,147 +184,6 @@
              }, 1500);
         }
     }
-    
-    function switchClosingTab(tab) {
-        const btnForm = document.getElementById('tab_closing_form');
-        const btnHist = document.getElementById('tab_closing_history');
-        const secForm = document.getElementById('closing_form_section');
-        const secHist = document.getElementById('closing_history_section');
-        const btnPreview = document.getElementById('btn_preview_report');
-
-        const activeStyle = "px-5 py-2 bg-[#4A3B32] text-[#FDF5E6] font-bold rounded-t-lg font-hand transition-colors border-t-2 border-l-2 border-r-2 border-[#4A3B32] z-10";
-        const inactiveStyle = "px-5 py-2 bg-[#EFEBE9] text-[#5D4037] font-bold rounded-t-lg font-hand transition-colors hover:bg-[#D7CCC8] border-t-2 border-l-2 border-r-2 border-transparent";
-
-        if (tab === 'form') {
-            btnForm.className = activeStyle;
-            btnHist.className = inactiveStyle;
-            secForm.classList.remove('hidden');
-            secHist.classList.add('hidden');
-            btnPreview.classList.remove('hidden');
-        } else {
-            btnHist.className = activeStyle;
-            btnForm.className = inactiveStyle;
-            secForm.classList.add('hidden');
-            secHist.classList.remove('hidden');
-            btnPreview.classList.add('hidden');
-            
-            fetchClosingHistory();
-        }
-    }
-
-    function fetchClosingHistory() {
-        const tbody = document.getElementById('tbl_closing_history');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-[#8D6E63] italic font-hand"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูลประวัติ...</td></tr>';
-        
-        google.script.run
-            .withSuccessHandler((res) => {
-                if (res.success) {
-                    closingHistoryCache = res.data; 
-                    populateHistoryYearDropdown();  
-                    applyHistoryYearFilter();       
-                } else {
-                    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold">${res.message}</td></tr>`;
-                }
-            })
-            .withFailureHandler((err) => {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold">Error: ${err}</td></tr>`;
-            })
-            .getClosingHistory();
-    }
-
-    function populateHistoryYearDropdown() {
-        const select = document.getElementById('filter_history_year');
-        if (!select) return;
-        
-        const currentVal = select.value;
-        const years = new Set();
-        
-        closingHistoryCache.forEach(item => {
-            if(item.date) {
-                const [y, m, d] = item.date.split('-');
-                years.add(parseInt(y) + 543);
-            }
-        });
-        
-        let html = '<option value="ALL">ทั้งหมด</option>';
-        Array.from(years).sort((a,b) => b - a).forEach(year => {
-            html += `<option value="${year}">${year}</option>`;
-        });
-        
-        select.innerHTML = html;
-        
-        const thisYearTH = new Date().getFullYear() + 543;
-        if (currentVal && currentVal !== 'ALL') {
-            select.value = currentVal;
-        } else if (years.has(thisYearTH)) {
-            select.value = thisYearTH;
-        }
-    }
-
-    function applyHistoryYearFilter() {
-        const select = document.getElementById('filter_history_year');
-        const selectedYear = select ? select.value : 'ALL';
-        
-        let filteredData = closingHistoryCache;
-        
-        if (selectedYear !== 'ALL') {
-            filteredData = closingHistoryCache.filter(item => {
-                if(!item.date) return false;
-                const [y, m, d] = item.date.split('-');
-                return (parseInt(y) + 543).toString() === selectedYear;
-            });
-        }
-        
-        renderClosingHistory(filteredData);
-    }
-
-    function renderClosingHistory(data) {
-        const tbody = document.getElementById('tbl_closing_history');
-        if (!tbody) return;
-        
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-[#8D6E63] italic font-hand">ไม่พบประวัติการปิดยอดในปีที่เลือก</td></tr>';
-            return;
-        }
-
-        let html = '';
-        data.forEach(item => {
-            const diffColor = item.diff > 0 ? 'text-[#1565C0]' : (item.diff < 0 ? 'text-[#C62828]' : 'text-[#2E7D32]');
-            
-            const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            let dateDisplay = item.date;
-            try {
-                const [y, m, d] = item.date.split('-');
-                dateDisplay = `${parseInt(d)} ${thaiMonths[parseInt(m)-1]} ${parseInt(y)+543}`;
-            } catch(e) {}
-            
-            let timeStr = "";
-            try {
-                const parts = item.timestamp.split(' ');
-                if(parts.length > 1) timeStr = parts[1].substring(0, 5); 
-            } catch(e) {}
-
-            let linkBtn = '<span class="text-gray-400 text-[10px] bg-gray-100 px-2 py-1 rounded">ไม่มีเอกสาร</span>';
-            if (item.url && item.url.trim() !== "") {
-                linkBtn = `<a href="${item.url}" target="_blank" class="px-3 py-1.5 bg-red-50 text-red-600 rounded border border-red-200 text-xs font-bold hover:bg-red-100 transition shadow-sm inline-flex items-center gap-1"><i class="fa-solid fa-file-pdf"></i> ดู PDF</a>`;
-            }
-
-            html += `
-                <tr class="hover:bg-[#FFF8E1] transition-colors border-b border-[#D7CCC8] last:border-0">
-                    <td class="p-3">
-                        <div class="font-bold text-[#5D4037] text-sm">${dateDisplay}</div>
-                        <div class="text-[10px] text-gray-500">${timeStr} น.</div>
-                    </td>
-                    <td class="p-3 text-right text-gray-700">${parseFloat(item.systemTotal || 0).toLocaleString()}</td>
-                    <td class="p-3 text-right font-bold text-[#4A3B32]">${parseFloat(item.actualCash || 0).toLocaleString()}</td>
-                    <td class="p-3 text-right font-bold ${diffColor}">${item.diff > 0 ? '+' : ''}${parseFloat(item.diff || 0).toLocaleString()}</td>
-                    <td class="p-3 text-center text-xs text-[#8D6E63] font-medium">${item.officer || '-'}</td>
-                    <td class="p-3 text-center">${linkBtn}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
-    }
 
     function submitClosing() {
         const dateFilter = document.getElementById('acc_date_filter').value;
@@ -363,51 +192,42 @@
         const diff = actCash - sysCash;
         const note = document.getElementById('closing_note').value;
         
+        // FIX: Safe Officer Name Access
         let officerName = "System";
         if (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.name) {
             officerName = currentAdmin.name;
         } else {
+            // Fallback try element if exists
             const el = document.getElementById('dash_admin_name');
             if (el) officerName = el.innerText;
         }
 
-        if(!confirm("ยืนยันการปิดยอดประจำวัน? \nระบบจะสร้างรายงาน PDF อัตโนมัติและไม่สามารถแก้ไขได้อีก")) return;
-
-        const loader = document.getElementById('dashLoading');
-        if(loader) loader.classList.remove('hidden');
-
-        let reportHtmlString = "";
-        try {
-            reportHtmlString = generateDailyReportHtml(window.currentDashboardData, dateFilter, actCash, diff, note);
-        } catch(e) {
-            console.error("HTML Generation Failed before submit", e);
-        }
-
         const data = {
             date: dateFilter,
-            systemTotal: document.getElementById('rpt_sum_total') ? document.getElementById('rpt_sum_total').innerText.replace(/,/g, '') : "0",
+            systemTotal: document.getElementById('rpt_sum_total') ? document.getElementById('rpt_sum_total').innerText : "0",
             systemCash: sysCash,
             systemTransfer: 0, 
             cashInDrawer: actCash,
             diff: diff,
             note: note,
-            officer: officerName,
-            htmlContent: reportHtmlString 
+            officer: officerName
         };
+        
+        if(!confirm("ยืนยันการปิดยอดประจำวัน? \nข้อมูลจะถูกบันทึกและไม่สามารถแก้ไขได้")) return;
+
+        const loader = document.getElementById('dashLoading');
+        if(loader) loader.classList.remove('hidden');
         
         google.script.run.withSuccessHandler((res) => {
              if(loader) loader.classList.add('hidden');
              if(res.success) {
                  alert("บันทึกปิดยอดเรียบร้อย");
-                 // Refresh Data to trigger the Lock
-                 fetchAccountingOnly();
-                 switchClosingTab('history');
+                 if(typeof printDailyReport === 'function' && window.currentDashboardData) {
+                     printDailyReport(window.currentDashboardData, dateFilter, actCash, diff, note);
+                 }
              } else {
                  alert("เกิดข้อผิดพลาด: " + res.message);
              }
-        }).withFailureHandler((err) => {
-             if(loader) loader.classList.add('hidden');
-             alert("Error: " + err);
         }).saveDailyClosing(data);
     }
 </script>

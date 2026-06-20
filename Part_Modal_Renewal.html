@@ -5,36 +5,30 @@
         
         <!-- Compact Header with Controls -->
         <div class="modal-header flex flex-col md:flex-row justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 shrink-0 gap-3 z-20 relative">
-            <div class="flex items-center w-full md:w-auto justify-between">
+            <div class="flex items-center">
                 <h3 class="font-bold text-lg text-blue-800 flex items-center"><i class="fa-solid fa-arrows-rotate mr-2"></i>ต่อล็อครายเดือน</h3>
-                <div class="md:hidden cursor-pointer bg-white rounded-full p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 transition shadow-sm" onclick="closeRenewalModal()"><i class="fa-solid fa-times text-lg"></i></div>
             </div>
             
             <!-- Inline Controls -->
-            <div class="flex flex-wrap flex-1 items-center justify-center md:justify-end gap-2 w-full md:w-auto">
-                <!-- Selectors & Button -->
+            <div class="flex flex-1 items-center justify-center gap-2 md:gap-4 w-full md:w-auto">
                 <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm">
                     <span class="text-xs font-bold text-gray-500 whitespace-nowrap">จาก:</span>
                     <select id="renewalSourceMonth" class="border-none text-sm bg-transparent focus:ring-0 text-gray-700 font-medium cursor-pointer py-0 pl-0"></select>
                 </div>
-                <div class="text-gray-400 hidden sm:block"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="text-gray-400"><i class="fa-solid fa-arrow-right"></i></div>
                 <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-blue-200 shadow-sm ring-1 ring-blue-100">
                     <span class="text-xs font-bold text-blue-600 whitespace-nowrap">ถึง:</span>
                     <select id="renewalTargetMonth" class="border-none text-sm bg-transparent focus:ring-0 text-blue-700 font-bold cursor-pointer py-0 pl-0"></select>
                 </div>
                 <button onclick="fetchRenewalCandidates()" class="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm text-sm font-bold whitespace-nowrap"><i class="fa-solid fa-magnifying-glass mr-1"></i> ตรวจสอบ</button>
-
-                <!-- FIX 2: Added Search Input for Filtering the Table -->
-                <div class="relative w-full sm:w-48 mt-2 sm:mt-0">
-                    <input type="text" id="renewalSearchInput" onkeyup="filterRenewalTable()" placeholder="ค้นหาชื่อ/ล็อค..." class="w-full pl-8 pr-2 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white shadow-sm">
-                    <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-blue-400 text-xs"></i>
-                </div>
             </div>
 
-            <div class="hidden md:block cursor-pointer bg-white rounded-full p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 transition shadow-sm" onclick="closeRenewalModal()"><i class="fa-solid fa-times text-lg"></i></div>
+            <div class="cursor-pointer bg-white rounded-full p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 transition shadow-sm" onclick="closeRenewalModal()"><i class="fa-solid fa-times text-lg"></i></div>
         </div>
         
         <!-- Content Area -->
+        <!-- FIX: Changed p-4 to 'px-0 pt-0 pb-4' or just remove padding to ensure sticky header sits flush -->
+        <!-- Using flex-col to manage internal layout if needed, but simple overflow is key -->
         <div class="flex-1 overflow-y-auto bg-gray-50 min-h-[300px]" id="renewalListContainer">
             <div class="flex flex-col items-center justify-center h-full text-gray-400">
                 <i class="fa-solid fa-calendar-days text-4xl mb-3 opacity-30"></i>

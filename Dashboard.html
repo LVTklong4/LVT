@@ -141,21 +141,7 @@
                          <div class="vintage-card p-4 min-h-[300px]"><div class="vintage-header mb-4"><i class="fa-solid fa-layer-group"></i> สัดส่วนการจองแยกโซน</div><div class="space-y-4" id="zone_bars_container"></div></div>
                          <div class="vintage-card"><div class="vintage-header"><i class="fa-solid fa-crown text-yellow-600"></i> ลูกค้าชั้นดี</div><table class="w-full text-sm text-left"><thead class="bg-[#F5DEB3] text-[#5D4037] text-xs uppercase font-bold border-b-2 border-[#8B5A2B]"><tr><th class="p-3 w-10">#</th><th class="p-3">ลูกค้า</th><th class="p-3 text-right">ยอดจ่าย</th></tr></thead><tbody id="table_prime_customers" class="divide-y divide-[#D7CCC8]"></tbody></table></div>
                     </div>
-                    <div class="vintage-card border-red-800/50">
-                        <div class="vintage-header bg-red-100 text-red-900 flex justify-between items-center">
-                            <span><i class="fa-solid fa-triangle-exclamation"></i> ติดตามหนี้เร่งด่วน</span>
-                            <div class="flex items-center gap-2">
-                                <label class="flex items-center gap-1 cursor-pointer bg-white/50 px-2 py-1 rounded text-[10px] font-bold text-gray-700 border border-red-200 hover:bg-white transition-colors" title="หากติ๊ก จะพิมพ์รายชื่อลูกหนี้ทั้งหมดโดยไม่สนว่าวันนี้มาขายหรือไม่">
-                                    <input type="checkbox" id="chk_printAllDebts" class="form-checkbox text-red-600 rounded w-3 h-3 focus:ring-0 cursor-pointer">
-                                    <span>รวมทุกวัน</span>
-                                </label>
-                                <button onclick="printDebtChecklist()" class="px-2 py-1 bg-red-600 text-white rounded text-xs shadow-sm hover:bg-red-700 transition flex items-center gap-1 font-bold">
-                                    <i class="fa-solid fa-print"></i> พิมพ์ใบตามเก็บ
-                                </button>
-                            </div>
-                        </div>
-                        <div class="p-3 bg-red-50/50 min-h-[400px]"><div id="risk_list_container" class="space-y-2"></div></div>
-                    </div>
+                    <div class="vintage-card border-red-800/50"><div class="vintage-header bg-red-100 text-red-900"><i class="fa-solid fa-triangle-exclamation"></i> ติดตามหนี้เร่งด่วน</div><div class="p-3 bg-red-50/50 min-h-[400px]"><div id="risk_list_container" class="space-y-2"></div></div></div>
                 </div>
             </div>
 
@@ -164,12 +150,11 @@
                  <div class="vintage-card p-4 mb-6 flex flex-col md:flex-row justify-between items-center bg-[#4A3B32] text-[#FDF5E6] border-none gap-4">
                      <div class="flex items-center gap-4 w-full md:w-auto">
                          <div><h3 class="font-bold text-lg font-hand">จัดการบัญชี</h3><p class="text-xs text-gray-300">บันทึกรายรับ-รายจ่ายเพิ่มเติม</p></div>
-                         <div class="flex items-center gap-2 bg-[#5D4037] p-1.5 rounded-lg border border-[#8B5A2B] shadow-inner" title="ตัวกรองใช้สำหรับดูข้อมูลย้อนหลัง"><span class="text-xs font-bold text-[#FDF5E6] opacity-90"><i class="fa-solid fa-filter mr-1"></i>ประจำวันที่:</span><input type="date" id="acc_date_filter" class="bg-transparent border-none text-sm font-bold text-[#FDF5E6] focus:ring-0 outline-none w-32 cursor-pointer" onchange="fetchAccountingOnly()"></div>
+                         <div class="flex items-center gap-2 bg-[#5D4037] p-1.5 rounded-lg border border-[#8B5A2B] shadow-inner"><span class="text-xs font-bold text-[#FDF5E6] opacity-90"><i class="fa-solid fa-filter mr-1"></i>ประจำวันที่:</span><input type="date" id="acc_date_filter" class="bg-transparent border-none text-sm font-bold text-[#FDF5E6] focus:ring-0 outline-none w-32 cursor-pointer" onchange="fetchAccountingOnly()"></div>
                      </div>
                      <div class="flex gap-2">
-                         <!-- FIX: Added IDs to buttons for locking -->
-                         <button id="btn_add_income" onclick="setModal({type:'income'})" class="px-4 py-2 bg-[#2E7D32] rounded border border-[#1B5E20] text-xs font-bold hover:bg-[#388E3C] transition shadow-md font-hand"><i class="fa-solid fa-plus"></i> รายรับ</button>
-                         <button id="btn_add_expense" onclick="setModal({type:'expense'})" class="px-4 py-2 bg-[#C62828] rounded border border-[#B71C1C] text-xs font-bold hover:bg-[#D32F2F] transition shadow-md font-hand"><i class="fa-solid fa-minus"></i> รายจ่าย</button>
+                         <button onclick="setModal({type:'income'})" class="px-4 py-2 bg-[#2E7D32] rounded border border-[#1B5E20] text-xs font-bold hover:bg-[#388E3C] transition shadow-md font-hand"><i class="fa-solid fa-plus"></i> รายรับ</button>
+                         <button onclick="setModal({type:'expense'})" class="px-4 py-2 bg-[#C62828] rounded border border-[#B71C1C] text-xs font-bold hover:bg-[#D32F2F] transition shadow-md font-hand"><i class="fa-solid fa-minus"></i> รายจ่าย</button>
                      </div>
                  </div>
                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -182,72 +167,17 @@
                          <div class="overflow-y-auto flex-1 custom-scrollbar p-0"><table class="w-full text-sm"><tbody id="tbl_expenses"></tbody></table></div>
                      </div>
                  </div>
-                 
-                 <!-- CLOSING SECTION (NEW UI TABS) -->
                  <div class="vintage-card p-6 mt-6 border-4 border-[#4A3B32]">
-                     <!-- Tabs Header -->
-                     <div class="flex justify-between items-end border-b-2 border-[#4A3B32] mb-4 pb-0">
-                         <div class="flex gap-1" style="margin-bottom: -2px;">
-                             <button onclick="switchClosingTab('form')" id="tab_closing_form" class="px-5 py-2 bg-[#4A3B32] text-[#FDF5E6] font-bold rounded-t-lg font-hand transition-colors border-t-2 border-l-2 border-r-2 border-[#4A3B32] z-10">ทำรายการปิดยอด</button>
-                             <button onclick="switchClosingTab('history')" id="tab_closing_history" class="px-5 py-2 bg-[#EFEBE9] text-[#5D4037] font-bold rounded-t-lg font-hand transition-colors hover:bg-[#D7CCC8] border-t-2 border-l-2 border-r-2 border-transparent">ประวัติการปิดยอด</button>
-                         </div>
-                         <button id="btn_preview_report" onclick="previewDailyReport()" class="mb-2 px-3 py-1.5 bg-[#D2B48C] text-[#5D4037] rounded font-bold text-xs hover:bg-[#C19A6B] shadow-sm border border-[#8B5A2B] transition"><i class="fa-solid fa-file-invoice"></i> Preview Report</button>
+                     <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-[#4A3B32] font-hand"><i class="fa-solid fa-file-signature"></i> ปิดยอดประจำวัน</h3><button onclick="previewDailyReport()" class="px-3 py-1.5 bg-[#D2B48C] text-[#5D4037] rounded font-bold text-xs hover:bg-[#C19A6B] shadow-sm border border-[#8B5A2B] transition"><i class="fa-solid fa-print"></i> Preview Report</button></div>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div class="bg-[#FFF8DC] p-4 border-2 border-dashed border-[#8B5A2B] rounded"><p class="text-xs text-[#8D6E63] font-bold">เงินสดในระบบ (System)</p><h2 id="rpt_sum_net_cash" class="text-2xl font-bold text-[#4A3B32]">0.00</h2></div>
+                         <div class="bg-[#FFF8DC] p-4 border-2 border-dashed border-[#4A3B32] rounded"><p class="text-xs text-[#4A3B32] font-bold">นับเงินจริง (Actual)</p><input type="text" id="closing_actual_cash" class="w-full bg-transparent text-2xl font-bold text-right text-[#1565C0] outline-none border-b-2 border-[#1565C0] focus:border-[#0D47A1]" placeholder="0.00" onkeyup="calcDiff()"></div>
                      </div>
-
-                     <!-- TAB: Closing Form -->
-                     <div id="closing_form_section">
-                         <!-- FIX: Day Lock Message -->
-                         <div id="msg_already_closed" class="hidden mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-600 font-bold text-center text-sm flex items-center justify-center gap-2">
-                             <i class="fa-solid fa-lock text-xl"></i> วันนี้ถูกปิดยอดและสร้างรายงาน PDF แล้ว ระบบล็อกข้อมูลไม่สามารถแก้ไขหรือปิดยอดซ้ำได้
-                         </div>
-
-                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <div class="bg-[#FFF8DC] p-4 border-2 border-dashed border-[#8B5A2B] rounded"><p class="text-xs text-[#8D6E63] font-bold">เงินสดในระบบ (System)</p><h2 id="rpt_sum_net_cash" class="text-2xl font-bold text-[#4A3B32]">0.00</h2></div>
-                             <div class="bg-[#FFF8DC] p-4 border-2 border-dashed border-[#4A3B32] rounded"><p class="text-xs text-[#4A3B32] font-bold">นับเงินจริง (Actual)</p><input type="text" id="closing_actual_cash" class="w-full bg-transparent text-2xl font-bold text-right text-[#1565C0] outline-none border-b-2 border-[#1565C0] focus:border-[#0D47A1]" placeholder="0.00" onkeyup="calcDiff()"></div>
-                         </div>
-                         <div class="mt-4 flex justify-between items-center bg-[#F9F7EF] p-3 rounded border border-[#D7CCC8]"><span class="font-bold text-[#5D4037]">ผลต่าง (Diff):</span><span id="closing_diff" class="font-bold text-xl">0.00</span></div>
-                         <div class="mt-4"><textarea id="closing_note" class="w-full p-2 border-2 border-[#D7CCC8] rounded bg-[#FFF8DC] text-sm focus:border-[#8B5A2B] outline-none text-[#5D4037]" rows="2" placeholder="หมายเหตุ..."></textarea></div>
-                         <input type="hidden" id="closing_system_cash"><div id="rpt_sum_total" class="hidden"></div>
-                         
-                         <!-- Action Button -->
-                         <button id="btn_submit_closing" onclick="submitClosing()" class="w-full mt-4 py-3 bg-[#4A3B32] text-[#FDF5E6] font-bold text-lg rounded shadow-lg hover:bg-[#3E2723] transition transform active:scale-95 font-hand border-b-4 border-[#271E19] flex items-center justify-center gap-2">
-                             <i class="fa-solid fa-lock"></i> ยืนยันปิดยอด (บันทึก PDF)
-                         </button>
-                         <p class="text-center text-[10px] text-[#8D6E63] mt-2">*เมื่อกดยืนยัน ระบบจะสร้างรายงาน PDF อัตโนมัติและไม่สามารถแก้ไขได้อีก</p>
-                     </div>
-
-                     <!-- TAB: Closing History -->
-                     <div id="closing_history_section" class="hidden">
-                         <div class="flex justify-between items-center mb-3">
-                             <h4 class="text-sm font-bold text-[#5D4037]"><i class="fa-solid fa-list-ul mr-1"></i> รายการย้อนหลัง</h4>
-                             <div class="flex items-center gap-2">
-                                 <span class="text-xs font-bold text-[#8D6E63]">กรองปี (พ.ศ.):</span>
-                                 <select id="filter_history_year" onchange="applyHistoryYearFilter()" class="border border-[#D7CCC8] rounded px-2 py-1 text-sm text-[#5D4037] font-bold focus:outline-none focus:border-[#8B5A2B] bg-white shadow-sm">
-                                     <option value="ALL">ทั้งหมด</option>
-                                 </select>
-                             </div>
-                         </div>
-                         
-                         <div class="overflow-x-auto max-h-[400px] custom-scrollbar rounded-lg border border-[#D7CCC8]">
-                             <table class="w-full text-sm text-left border-collapse">
-                                 <thead class="bg-[#DEB887] text-[#5D4037] sticky top-0 font-bold border-b border-[#8B5A2B]">
-                                     <tr>
-                                         <th class="p-3 whitespace-nowrap">วันที่บันทึก</th>
-                                         <th class="p-3 text-right whitespace-nowrap">ยอดระบบ (บ.)</th>
-                                         <th class="p-3 text-right whitespace-nowrap">นับจริง (บ.)</th>
-                                         <th class="p-3 text-right whitespace-nowrap">ผลต่าง</th>
-                                         <th class="p-3 text-center whitespace-nowrap">ผู้บันทึก</th>
-                                         <th class="p-3 text-center whitespace-nowrap">เอกสารอ้างอิง</th>
-                                     </tr>
-                                 </thead>
-                                 <tbody id="tbl_closing_history" class="divide-y divide-[#D7CCC8] bg-white">
-                                     <!-- JS injection -->
-                                 </tbody>
-                             </table>
-                         </div>
-                     </div>
+                     <div class="mt-4 flex justify-between items-center bg-[#F9F7EF] p-3 rounded border border-[#D7CCC8]"><span class="font-bold text-[#5D4037]">ผลต่าง (Diff):</span><span id="closing_diff" class="font-bold text-xl">0.00</span></div>
+                     <div class="mt-4"><textarea id="closing_note" class="w-full p-2 border-2 border-[#D7CCC8] rounded bg-[#FFF8DC] text-sm focus:border-[#8B5A2B] outline-none text-[#5D4037]" rows="2" placeholder="หมายเหตุ..."></textarea></div>
+                     <input type="hidden" id="closing_system_cash"><div id="rpt_sum_total" class="hidden"></div>
+                     <button onclick="submitClosing()" class="w-full mt-4 py-3 bg-[#4A3B32] text-[#FDF5E6] font-bold text-lg rounded shadow-lg hover:bg-[#3E2723] transition transform active:scale-95 font-hand border-b-4 border-[#271E19]">ยืนยันปิดยอด</button>
                  </div>
-
             </div>
         </div>
     </div>
@@ -258,8 +188,6 @@
     <?!= include('Part_Modal_Expense'); ?>
     <?!= include('Template_Report'); ?>
     <?!= include('Scripts_Print_Report'); ?>
-    <?!= include('Template_Print_Checklist'); ?>
-    <?!= include('Scripts_Print_Checklist'); ?>
     <?!= include('Scripts_Dashboard_UI'); ?>
     <?!= include('Scripts_Dashboard'); ?>
     <?!= include('Scripts_Accounting'); ?>
@@ -301,28 +229,9 @@
                 fetchAccountingOnly();
             }
         }
-
         function setModal(config) {
-            const today = new Date().toISOString().split('T')[0];
-
-            if(config.type === 'income') {
-                const form = document.getElementById('incomeForm');
-                if (form) form.reset(); 
-                
-                const dateEl = document.getElementById('inc_date');
-                if (dateEl) dateEl.value = today; 
-
-                showModal('incomeModal');
-            }
-            if(config.type === 'expense') {
-                const form = document.getElementById('expenseForm');
-                if (form) form.reset(); 
-
-                const dateEl = document.getElementById('exp_date');
-                if (dateEl) dateEl.value = today; 
-
-                showModal('expenseModal');
-            }
+            if(config.type === 'income') showModal('incomeModal');
+            if(config.type === 'expense') showModal('expenseModal');
         }
     </script>
 </body>

@@ -2,33 +2,10 @@
     /**
      * Scripts_Booking_Stalls_Monthly
      * จัดการรายการล็อคสำหรับ "รายเดือน" เท่านั้น
-     * FIX: Handle unchecking global day to sync selectedStalls array properly
+     * FIX: Filter out blank stall names in dropdown (Problem #2)
      */
 
     let activeMonthlyAddDay = null; 
-
-    // --- FIX: ฟังก์ชันดักจับการติ๊กวันลงขาย ---
-    function toggleMonthlyDayGlobal(day, isChecked) {
-        if (!isChecked) {
-            // ถ้ายกเลิกการเลือกวัน ให้วิ่งไปเช็คและลบวันนั้นออกจากล็อคทั้งหมด
-            for (let i = selectedStalls.length - 1; i >= 0; i--) {
-                const stall = selectedStalls[i];
-                if (stall.days && stall.days.includes(day)) {
-                    // กรองเอาเฉพาะวันที่ไม่ใช่วันที่ถูกยกเลิก
-                    stall.days = stall.days.filter(d => d !== day);
-                    
-                    // ถ้าร้านนี้ไม่เหลือวันลงขายเลย ให้เตะออกจาก Array
-                    if (stall.days.length === 0) {
-                        selectedStalls.splice(i, 1);
-                    }
-                }
-            }
-        }
-        
-        // อัปเดตหน้าจอและการคำนวณราคา
-        renderStallTagsMonthly();
-        if (typeof calcTotalMonthly === 'function') calcTotalMonthly();
-    }
 
     function toggleAddStallDropdownMonthly(targetDay = null) {
         const dropdown = document.getElementById('addStallDropdown');
@@ -112,6 +89,7 @@
               
         const available = stallsData.filter(function(s) {
             const name = String(s.name).trim();
+            // FIX: Problem #2 - Filter out empty/blank names
             if (!name || name === "" || s.type === 'ทางเดิน' || s.type === 'อื่นๆ') return false;
             
             if (occupiedMap[s.name]) {
@@ -253,6 +231,13 @@
                     selectedStalls.forEach(s => {
                         if (s.days && s.days.includes(dayVal)) {
                             hasStalls = true;
+                            // Check disabled state from container class (set by loadMonthlyEditForm)
+                            // OR check if global edit mode is active? 
+                            // Actually, removing stall should always be allowed in Edit mode.
+                            // The problem #3 requested "Disable list selection", which usually means adding new ones.
+                            // But usually users want to remove existing ones.
+                            // If "Disable list selection" implies READ ONLY for stalls, then hide 'x'.
+                            // Assuming "Disable list selection" means CANNOT CHANGE (Add/Remove).
                             
                             const isDisabled = monthlyContainer.classList.contains('pointer-events-none');
                             const removeBtn = isDisabled ? '' : `<button type="button" onclick="removeStallMonthly('${s.name}', ${dayVal})" class="ml-1 text-red-400 hover:text-red-600 font-bold">×</button>`;
@@ -271,6 +256,7 @@
                     }
                     html += `</div>`; 
 
+                    // Check disabled state for Add Button
                     const isDisabled = monthlyContainer.classList.contains('pointer-events-none');
                     if (!isDisabled) {
                         html += `

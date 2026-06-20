@@ -1,9 +1,6 @@
 <script>
     // --- Scripts_Monthly ---
     // Update: Replaced all alerts with showAlert/showConfirm
-    // FIX: Exact Name matching prevention & strict Year-Month filtering
-    // FIX: Group debts by Month to prevent duplicate lines in alert
-    // FIX: Compare exact Billing Month string instead of startDate to prevent future month overlap
 
     let currentSortColumn = null;
     let currentSortDir = 'asc';
@@ -18,6 +15,7 @@
                 } catch(e) {}
             }
             if(!currentAdmin) {
+                // FIX: Use Custom Alert
                 showAlert("กรุณาเข้าสู่ระบบก่อนใช้งานเมนูนี้", "แจ้งเตือน", true);
                 toggleAdminPanel();
                 return;
@@ -242,130 +240,14 @@
         });
     }
 
-    // --- HELPER: แปลง "เดือน ปี" เป็นตัวเลขสำหรับเปรียบเทียบ (เช่น "พฤศจิกายน 2568" -> 256810) ---
-    // วิธีนี้เสถียรที่สุด เพราะอ่านจากรอบบิลจริงๆ ไม่ใช่วันที่คลิกสร้างเอกสาร
-    function getBillingMonthValue(monthStr) {
-        if (!monthStr || monthStr === '-' || monthStr === '') return 0;
-        const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-        
-        const parts = monthStr.trim().split(/\s+/);
-        if (parts.length >= 2) {
-            const mName = parts[0];
-            const yStr = parts[parts.length - 1]; // เผื่อมีเว้นวรรคเกิน
-            const mIndex = thaiMonths.indexOf(mName);
-            if (mIndex > -1) {
-                const year = parseInt(yStr);
-                // นำปีมาคูณ 100 แล้วบวกด้วย index ของเดือน (0-11)
-                // จะได้ค่าที่เรียงลำดับได้ถูกต้องเป๊ะๆ เช่น 256810 < 256811
-                return (year * 100) + mIndex; 
-            }
-        }
-        return 0;
-    }
-
-    // --- FIX: ระบบแจ้งเตือนหนี้เก่า (จัดกลุ่มและกรองอย่างแม่นยำ) ---
     function handlePaymentClick(id) {
         const item = monthlyDataCache.find(x => x.id === id);
-        
-        if (item) {
-            const currentName = String(item.bookerName).trim();
-            
-            // 1. ป้องกันดึงข้อมูลมั่ว ถ้าชื่อลูกค้าว่าง สั้นเกินไป หรือเป็นค่าแปลกๆ ให้ข้ามการแจ้งเตือนไปเลย
-            if (!currentName || currentName.length < 2 || ['-', 'ว่าง', 'null', 'undefined', 'ยกเลิก'].includes(currentName.toLowerCase())) {
-                proceedToPayment(item);
-                return;
-            }
-
-            // 2. ดึงค่ารอบบิล (เช่น 256810) ของบิลที่กำลังจะจ่าย เพื่อเป็นเกณฑ์
-            const currentItemBillValue = getBillingMonthValue(item.bookingMonth);
-
-            // 3. ค้นหาประวัติค้างชำระที่เป็น "อดีต" (คนละรอบบิล)
-            const oldDebts = monthlyDataCache.filter(x => {
-                if (x.id === id) return false; 
-                
-                const checkName = String(x.bookerName).trim();
-                if (checkName !== currentName) return false; // ชื่อต้องตรงกันเป๊ะ
-                if (x.status !== 'ค้างชำระ') return false; 
-                if (x.customerType === 'Regular') return false; 
-
-                // เทียบด้วย รอบบิล (ตัดปัญหาการสร้างบิลก่อน/หลัง)
-                const checkBillValue = getBillingMonthValue(x.bookingMonth);
-                
-                // ต้องมีข้อมูลรอบบิล และ รอบบิลต้อง "เก่ากว่า" บิลปัจจุบันจริงๆ
-                return checkBillValue > 0 && checkBillValue < currentItemBillValue;
-            });
-
-            // 4. ถ้าเจอหนี้เก่าอดีต ทำการ "จัดกลุ่ม (Group by Month)" ก่อนเตือน
-            if (oldDebts.length > 0) {
-                let totalOldDebt = 0;
-                const monthMap = {}; // ใช้จัดกลุ่มยอดหนี้ตามชื่อเดือน
-
-                oldDebts.forEach(d => {
-                    // ป้องกันเผื่อยอดเงินมาเป็น String ที่มีลูกน้ำ (,)
-                    const rawTotal = String(d.totalPrice || "0").replace(/,/g, '');
-                    const rawPaid = String(d.paid || "0").replace(/,/g, '');
-                    
-                    const debtAmt = parseFloat(rawTotal) - parseFloat(rawPaid);
-                    if (debtAmt > 0) {
-                        totalOldDebt += debtAmt;
-                        const mLabel = d.bookingMonth || "ไม่ระบุเดือน";
-                        if (!monthMap[mLabel]) monthMap[mLabel] = 0;
-                        monthMap[mLabel] += debtAmt;
-                    }
-                });
-
-                // กรณีมีหนี้ แต่ยอดที่ค้างจริงๆ เป็น 0 ให้ข้ามไป
-                if (totalOldDebt <= 0) {
-                     proceedToPayment(item);
-                     return;
-                }
-
-                // เรียงลำดับเดือนจากเก่าไปใหม่ตามหลักการเวลา
-                const uniqueMonths = Object.keys(monthMap).sort((a, b) => {
-                    return getBillingMonthValue(a) - getBillingMonthValue(b);
-                });
-                
-                let displayList = [];
-
-                uniqueMonths.forEach((m, index) => {
-                    if (index < 3) {
-                        displayList.push(`• เดือน ${m} : ค้าง ${monthMap[m].toLocaleString()} บ.`);
-                    }
-                });
-
-                // ถ้ารายการเยอะกว่า 3 เดือน ให้ใช้คำว่า และอื่นๆ แทน
-                if (uniqueMonths.length > 3) {
-                    const moreCount = uniqueMonths.length - 3;
-                    displayList.push(`• ...และเดือนอื่นๆ อีก ${moreCount} เดือน`);
-                }
-
-                const finalMessage = `ลูกค้ารายนี้มียอดค้างชำระเก่ารวม ${uniqueMonths.length} เดือน!\n\n` + 
-                                     `${displayList.join('\n')}\n` +
-                                     `------------------------\n` +
-                                     `ยอดค้างสะสมรวม: ${totalOldDebt.toLocaleString()} บาท\n\n` +
-                                     `คุณต้องการดำเนินการรับชำระของเดือนปัจจุบันต่อหรือไม่?`;
-
-                showConfirm(
-                    finalMessage, 
-                    "⚠️ พบยอดค้างชำระเดือนก่อน", 
-                    () => {
-                        // ถ้ายืนยันจะจ่ายของเดือนนี้ต่อ
-                        proceedToPayment(item);
-                    }
-                );
+        if(item) {
+            if (typeof openPaymentModal === 'function') {
+                openPaymentModal(item.id, item.bookerName, item.product);
             } else {
-                // ถ้าไม่มีหนี้เก่า ไปต่อได้เลย
-                proceedToPayment(item);
+                showAlert("ระบบชำระเงินยังไม่พร้อมใช้งาน", "แจ้งเตือน", true);
             }
-        }
-    }
-
-    // ฟังก์ชันย่อยสำหรับเปิดหน้าต่างชำระเงิน
-    function proceedToPayment(item) {
-        if (typeof openPaymentModal === 'function') {
-            openPaymentModal(item.id, item.bookerName, item.product);
-        } else {
-            showAlert("ระบบชำระเงินยังไม่พร้อมใช้งาน", "แจ้งเตือน", true);
         }
     }
 
@@ -457,6 +339,7 @@
                 renewalTitle = "ยกเลิกแจ้งออก (กลับมาต่อสัญญา)";
             }
             
+            // FIX: VIEW BILL Button (Eye Icon) instead of Delete
             tr.innerHTML = `
                 <td class="px-4 py-2 font-bold text-gray-600 whitespace-nowrap text-xs">${item.bookingMonth || '-'}</td>
                 <td class="px-4 py-2 whitespace-nowrap text-center">${typeBadge}</td>
@@ -482,6 +365,7 @@
                         <button onclick="editMonthlyBooking('${item.id}')" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 p-1.5 rounded-full shadow-sm border border-blue-100" title="แก้ไข">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
+                        <!-- FIX: View Bill Button -->
                         <button onclick="openBillPreview('${item.id}')" class="text-purple-500 hover:text-purple-700 transition-colors bg-purple-50 p-1.5 rounded-full shadow-sm border border-purple-100" title="ดูใบแจ้งยอด">
                             <i class="fa-solid fa-eye"></i>
                         </button>

@@ -2,20 +2,23 @@
     /**
      * Scripts_Print_Monthly
      * Logic การเตรียมข้อมูลและพิมพ์ตั๋วรายเดือน
-     * FIX 3: Update display method string to handle "ส่วนลด" gracefully
+     * FIX: Add Preview Functionality
      */
 
     function printMonthlyTicket(bookingId, currentPaymentId, currentPaymentAmount, currentPaymentDate, currentPaymentTime, currentPaymentMethod) {
         fetchTicketDataAndAction(bookingId, currentPaymentId, currentPaymentAmount, currentPaymentDate, currentPaymentTime, currentPaymentMethod, 'print');
     }
 
+    // FIX: New Function for Preview
     function openMonthlyTicketPreview(bookingId, currentPaymentId, currentPaymentAmount, currentPaymentDate, currentPaymentTime, currentPaymentMethod) {
         fetchTicketDataAndAction(bookingId, currentPaymentId, currentPaymentAmount, currentPaymentDate, currentPaymentTime, currentPaymentMethod, 'preview');
     }
 
+    // Shared logic to fetch data and perform action (print or preview)
     function fetchTicketDataAndAction(bookingId, currentPaymentId, currentPaymentAmount, currentPaymentDate, currentPaymentTime, currentPaymentMethod, action) {
         showLoader();
 
+        // 1. Validate Booking Data
         if (typeof monthlyDataCache === 'undefined' || !monthlyDataCache) {
             hideLoader();
             showAlert("ไม่พบข้อมูล Cache รายเดือน กรุณารีเฟรชหน้าเว็บ", "ข้อผิดพลาด", true);
@@ -29,6 +32,7 @@
             return;
         }
 
+        // 2. Fetch History & Process
         google.script.run.withSuccessHandler(function(res) {
             try {
                 if (!res.success) {
@@ -167,8 +171,7 @@
                             hDate = `${hParts[2]} ${thaiMonthsShort[parseInt(hParts[1])-1]} ${parseInt(hParts[0]) + 543}`;
                         }
                     }
-                    // FIX 3: Display 'ส่วนลด' beautifully
-                    const methodTxt = h.method === 'Cash' ? 'เงินสด' : (h.method === 'ส่วนลด' ? 'ปรับลดหนี้' : 'โอนจ่าย');
+                    const methodTxt = h.method === 'Cash' ? 'เงินสด' : 'โอนจ่าย';
                     return {
                         date: hDate,
                         method: methodTxt,

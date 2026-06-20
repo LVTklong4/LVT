@@ -13,69 +13,35 @@
             <input type="date" id="pay_date" class="w-full border p-2 rounded text-center text-sm font-bold text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
         </div>
 
-        <!-- NEW: ยอดเงินและปุ่มคำนวณแบบมีตัวเลขกำกับ (UX Improvement) -->
-        <div class="mb-4 bg-blue-50/40 p-3 rounded-lg border border-blue-100">
-            <div class="flex justify-between items-center mb-2 pb-2 border-b border-blue-200/60">
-                <div class="text-xs text-gray-600">ยอดเต็ม: <span id="pay_info_total" class="font-bold text-gray-800">0.00</span></div>
-                <div class="text-xs text-red-600">ค้างชำระ: <span id="pay_info_remain" class="font-bold text-sm">0.00</span></div>
-            </div>
-            
-            <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider text-center">ตัวช่วยคำนวณยอดชำระ</label>
-            <div class="grid grid-cols-4 gap-2" id="pay_quick_buttons">
-                <button type="button" onclick="setPaymentPercent(25)" class="flex flex-col items-center justify-center bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg py-1.5 transition shadow-sm group">
-                    <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-700">25%</span>
-                    <span id="lbl_pct_25" class="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium mt-0.5">0.00</span>
-                </button>
-                <button type="button" onclick="setPaymentPercent(50)" class="flex flex-col items-center justify-center bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg py-1.5 transition shadow-sm group">
-                    <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-700">50%</span>
-                    <span id="lbl_pct_50" class="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium mt-0.5">0.00</span>
-                </button>
-                <button type="button" onclick="setPaymentPercent(75)" class="flex flex-col items-center justify-center bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg py-1.5 transition shadow-sm group">
-                    <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-700">75%</span>
-                    <span id="lbl_pct_75" class="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium mt-0.5">0.00</span>
-                </button>
-                <button type="button" onclick="setPaymentPercent(100)" class="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 border border-blue-300 hover:border-blue-500 rounded-lg py-1.5 transition shadow-sm group">
-                    <span class="text-[11px] font-bold text-blue-700">ปิดยอด</span>
-                    <span id="lbl_pct_100" class="text-[10px] text-blue-600 font-bold mt-0.5">0.00</span>
-                </button>
-            </div>
-        </div>
-
         <div class="mb-4">
-            <label class="block text-xs font-bold text-gray-700 mb-1" id="pay_amount_label">ยอดชำระ (บาท)</label>
-            <input type="number" id="pay_amount" class="w-full border border-gray-300 p-2 rounded-lg text-center text-2xl font-bold text-green-600 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-400 shadow-inner" placeholder="0.00">
+            <label class="block text-xs font-bold text-gray-700 mb-1">ยอดชำระ (บาท)</label>
+            <input type="number" id="pay_amount" class="w-full border p-2 rounded text-center text-xl font-bold text-green-600" placeholder="0.00">
         </div>
-        
-        <!-- FIX 3: Add Discount Option -->
         <div class="mb-4">
-            <label class="block text-xs font-bold text-gray-700 mb-2">ประเภทการบันทึก</label>
-            <div class="flex gap-2">
-                <label class="flex-1 flex items-center justify-center cursor-pointer border rounded py-1.5 bg-white hover:bg-gray-50">
-                    <input type="radio" name="pay_method" value="Cash" checked class="form-radio text-green-600 h-3 w-3" onchange="toggleSlipInput()">
-                    <span class="ml-1 text-xs text-gray-700 font-bold"><i class="fa-solid fa-money-bill text-green-500 mr-1"></i> เงินสด</span>
+            <label class="block text-xs font-bold text-gray-700 mb-2">ช่องทางชำระเงิน</label>
+            <div class="flex gap-4">
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="pay_method" value="Cash" checked class="form-radio text-blue-600 h-4 w-4" onchange="toggleSlipInput()">
+                    <span class="ml-2 text-sm text-gray-700"><i class="fa-solid fa-money-bill text-green-500 mr-1"></i> เงินสด</span>
                 </label>
-                <label class="flex-1 flex items-center justify-center cursor-pointer border rounded py-1.5 bg-white hover:bg-gray-50">
-                    <input type="radio" name="pay_method" value="Transfer" class="form-radio text-blue-600 h-3 w-3" onchange="toggleSlipInput()">
-                    <span class="ml-1 text-xs text-gray-700 font-bold"><i class="fa-solid fa-mobile-screen text-blue-500 mr-1"></i> โอนจ่าย</span>
-                </label>
-                <label class="flex-1 flex items-center justify-center cursor-pointer border border-orange-200 bg-orange-50 rounded py-1.5 hover:bg-orange-100">
-                    <input type="radio" name="pay_method" value="Discount" class="form-radio text-orange-500 h-3 w-3" onchange="toggleSlipInput()">
-                    <span class="ml-1 text-xs text-orange-700 font-bold"><i class="fa-solid fa-tags"></i> ส่วนลด</span>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="pay_method" value="Transfer" class="form-radio text-blue-600 h-4 w-4" onchange="toggleSlipInput()">
+                    <span class="ml-2 text-sm text-gray-700"><i class="fa-solid fa-mobile-screen text-blue-500 mr-1"></i> โอนจ่าย</span>
                 </label>
             </div>
         </div>
-
         <div id="slipUploadSection" class="mb-4 hidden p-3 bg-gray-50 border border-gray-200 rounded-lg animate-bounce-in">
             <label class="block text-xs font-bold text-blue-700 mb-1">แนบสลิปโอนเงิน (บังคับ)</label>
             <input type="file" id="pay_slip" accept="image/*" class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" onchange="previewSlip(this)">
             <div id="slipPreviewContainer" class="mt-2 hidden text-center">
                 <p class="text-[10px] text-gray-400 mb-1">ตัวอย่างสลิป <span class="text-blue-500">(คลิกที่รูปเพื่อขยาย)</span></p>
+                <!-- FIX: Added click event and zoom cursor -->
                 <img id="slipPreview" class="max-h-48 mx-auto rounded shadow border border-gray-200 object-contain cursor-zoom-in hover:opacity-90 transition" onclick="viewFullSlip()">
             </div>
         </div>
         <div class="mb-4">
-            <label class="block text-xs text-gray-500 mb-1">โน้ต / หมายเหตุ</label>
-            <textarea id="pay_note" class="w-full border border-gray-300 p-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" rows="2"></textarea>
+            <label class="block text-xs text-gray-500 mb-1">โน้ต</label>
+            <textarea id="pay_note" class="w-full border p-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" rows="2"></textarea>
         </div>
         <div class="flex gap-2">
             <button onclick="closePaymentModal()" class="flex-1 py-2 bg-gray-100 rounded text-gray-600 text-sm font-bold hover:bg-gray-200 transition">ยกเลิก</button>
@@ -84,7 +50,7 @@
     </div>
 </div>
 
-<!-- Full Screen Image Viewer (Lightbox) -->
+<!-- FIX: Added Full Screen Image Viewer (Lightbox) -->
 <div id="slipLightbox" class="hidden fixed inset-0 bg-black bg-opacity-95 z-[200] flex items-center justify-center p-2 animate-fade-in" onclick="closeFullSlip()">
     <div class="relative w-full h-full flex items-center justify-center">
          <img id="slipLightboxImg" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-300 transform scale-100">

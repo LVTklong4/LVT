@@ -1,0 +1,20 @@
+# Ignore everything by default
+**/*
+
+# Allow Apps Script source files in root
+!*.js
+!*.gs
+!*.html
+!appsscript.json
+!.clasp.json
+
+# Ignore node_modules and Next.js project subfolder
+node_modules/**
+ladsawai-vintage-app/**
+.next/**
+.git/**
+bun.lock
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

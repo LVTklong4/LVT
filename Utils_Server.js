@@ -2,24 +2,16 @@
  * ------------------------------------------------------------------
  * UTILITIES (SERVER)
  * ฟังก์ชันกลางสำหรับจัดการวันที่, ID และการแปลงข้อมูล
- * File: Utils_Server.gs
  * ------------------------------------------------------------------
  */
 
 const Utils = {
-  // สร้าง Booking ID ใหม่ (ลดโอกาสซ้ำด้วย Timestamp ละเอียด)
+  // สร้าง Booking ID ใหม่
   generateBookingId: function() {
     const now = new Date();
     const year = now.getFullYear().toString().substr(-2);
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const hour = now.getHours().toString().padStart(2, '0');
-    const minute = now.getMinutes().toString().padStart(2, '0');
-    const second = now.getSeconds().toString().padStart(2, '0');
-    const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    
-    // Format: BK-YYMMdd-HHmmss-Rand (Ex: BK-240209-134512-999)
-    return `BK-${year}${month}${day}-${hour}${minute}${second}-${rand}`;
+    return `BK-${year}${month}${Math.floor(Math.random() * 10000)}`;
   },
 
   // สร้าง Payment ID ใหม่

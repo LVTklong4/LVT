@@ -1,0 +1,18 @@
+# Node dependencies
+node_modules/
+bun.lock
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Apps Script IDE config
+.clasp.json
+
+# Next.js subdirectory ignores (duplicated for root safety)
+ladsawai-vintage-app/node_modules/
+ladsawai-vintage-app/.next/
+ladsawai-vintage-app/out/
+ladsawai-vintage-app/build/
+ladsawai-vintage-app/.env*.local
+ladsawai-vintage-app/.vercel/

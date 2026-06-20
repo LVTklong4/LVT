@@ -2,13 +2,13 @@
     /**
      * TEMPLATE: DAILY TICKET (80mm)
      * โครงสร้าง HTML สำหรับตั๋วรายวัน
-     * Update: Removed VAT breakdown rows
+     * Update: Use Hardcoded URL for Images
      */
     function generateDailyTicketHtml(data) {
         const {
             bookerName, productName, tradeDateStr, elecUnit,
             stallNames, stallTotal, elecTotal, grandTotal,
-            paidAmount, paymentMethodDisplay,
+            priceExVat, vat, paidAmount, paymentMethodDisplay,
             timestampStr, tradeDateDisplay, officerName,
             storageTotal
         } = data;
@@ -61,7 +61,14 @@
 
                 <div style="margin-top: 2px;">
                     <table style="width: 100%; border-collapse: collapse;">
-                        <!-- VAT Rows Removed -->
+                        <tr>
+                            <td style="text-align: right; padding-right: 5px; white-space: nowrap;">ราคาไม่รวมภาษีมูลค่าเพิ่ม :</td>
+                            <td style="text-align: right; width: 90px;">${fmtMoney(priceExVat)}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: right; padding-right: 5px; white-space: nowrap;">ภาษีมูลค่าเพิ่ม 7% :</td>
+                            <td style="text-align: right;">${fmtMoney(vat)}</td>
+                        </tr>
                         <tr>
                             <td style="text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;">รวมเป็นเงินทั้งสิ้น :</td>
                             <td style="text-align: right; font-weight: bold; font-size: 16px;">${fmtMoney(grandTotal)}</td>
@@ -77,7 +84,7 @@
                 
                 <div style="margin-top: 15px; text-align: center;">
                     <div style="font-size: 12px; margin-bottom: 5px;">ติดต่อสอบถามเพิ่มเติมได้ที่</div>
-                  //<img src="https://img5.pic.in.th/file/secure-sv1/S_gainfriends_2dbarcodes_BW73c64bbdc0272b36.png" style="width: 100px; height: auto; margin: 0 auto; display: block;" loading="eager">
+                    <img src="https://img5.pic.in.th/file/secure-sv1/S_gainfriends_2dbarcodes_BW73c64bbdc0272b36.png" style="width: 100px; height: auto; margin: 0 auto; display: block;" loading="eager">
                     <div style="font-size: 12px; margin-top: 5px;">@ladsawaivintage</div>
                     <div style="height: 4px;"></div>
                     <div style="font-size: 8px;">Power by PJMJK</div>

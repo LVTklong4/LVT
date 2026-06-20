@@ -3,26 +3,6 @@
     let renewalCandidates = [];
     let renewalState = []; 
 
-    // --- LOGIC สำหรับช่องค้นหาในหน้าต่อสัญญา ---
-    function filterRenewalTable() {
-        const input = document.getElementById('renewalSearchInput');
-        if (!input) return;
-        
-        const filter = input.value.toLowerCase().trim();
-        const container = document.getElementById('renewalListContainer');
-        const rows = container.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-            // ดึงข้อความในแถวนั้นมาเช็ค (รวมทั้งชื่อและชื่อล็อค)
-            const text = row.innerText.toLowerCase();
-            if (text.includes(filter)) {
-                row.style.display = ''; // แสดงปกติ
-            } else {
-                row.style.display = 'none'; // ซ่อน
-            }
-        });
-    }
-
     // --- UI FUNCTIONS ---
 
     function openRenewalModal() {
@@ -56,10 +36,6 @@
             }
         });
 
-        // ล้างช่องค้นหาทุกครั้งที่เปิด Modal
-        const searchInput = document.getElementById('renewalSearchInput');
-        if (searchInput) searchInput.value = '';
-
         document.getElementById('renewalModal').classList.remove('hidden');
         fetchRenewalCandidates();
     }
@@ -89,9 +65,6 @@
                     renewalCandidates = res.data;
                     initRenewalState(res.data);
                     renderRenewalTable();
-                    
-                    // สั่ง Apply ฟิลเตอร์ซ้ำ กรณีที่พิมพ์ค้างไว้แล้วกด Refresh ตาราง
-                    filterRenewalTable();
                 } else {
                     container.innerHTML = `<div class="flex items-center justify-center h-full text-red-400">${res.message}</div>`;
                 }
@@ -110,9 +83,6 @@
                 days: [...item.defaultDays], 
                 dayStalls: { 3: [], 6: [], 0: [] },
                 targetType: item.customerType || 'Standard',
-                // ดึงค่าไฟและค่าฝากของเดือนปัจจุบันมาตั้งต้นให้
-                elecUnit: item.elecUnit || 0,
-                storageFee: item.storageFee || 0,
                 isEditing: false 
             };
 
@@ -164,18 +134,16 @@
             return;
         }
 
-        // ปรับปรุง Header ของตารางใหม่
         let html = `
             <table class="w-full text-sm text-left border-collapse">
                 <thead class="bg-gray-100 text-gray-600 font-bold sticky top-0 z-10 shadow-sm border-b border-gray-200">
                     <tr>
-                        <th class="px-2 py-3 text-center w-10"><input type="checkbox" onchange="toggleAllRenewal(this)" checked class="form-checkbox h-4 w-4 text-blue-600 rounded"></th>
-                        <th class="px-2 py-3 w-1/6">ลูกค้า/สินค้า</th>
-                        <th class="px-2 py-3 text-left w-24">ประเภทลูกค้า</th>
-                        <th class="px-2 py-3 text-left w-20">วันลงขาย</th>
-                        <th class="px-2 py-3 w-1/4">ล็อค</th>
-                        <th class="px-2 py-3 text-center w-28">บริการเสริม</th>
-                        <th class="px-2 py-3 text-center w-24">สถานะ/จัดการ</th>
+                        <th class="px-3 py-3 text-center w-10"><input type="checkbox" onchange="toggleAllRenewal(this)" checked class="form-checkbox h-4 w-4 text-blue-600 rounded"></th>
+                        <th class="px-3 py-3 w-1/5">ลูกค้า/สินค้า</th>
+                        <th class="px-3 py-3 w-2/5">ล็อค</th>
+                        <th class="px-3 py-3 text-left w-1/6">ประเภทลูกค้า</th>
+                        <th class="px-3 py-3 text-center w-1/6">วันลงขาย</th>
+                        <th class="px-3 py-3 text-center w-24">สถานะ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
@@ -227,9 +195,9 @@
                     }
 
                     dayStallsHtml += `
-                        <div class="flex items-start mb-1.5 last:mb-0">
-                            <span class="text-xs font-bold w-6 pt-1 shrink-0 ${dayColors[day].split(' ')[0]}">${dayLabels[day]}</span>
-                            <div class="flex flex-wrap items-center bg-gray-50 rounded px-1 py-1 flex-1 border border-gray-200 min-h-[26px]">
+                        <div class="flex items-center mb-1 last:mb-0">
+                            <span class="text-xs font-bold w-6 shrink-0 ${dayColors[day].split(' ')[0]}">${dayLabels[day]}</span>
+                            <div class="flex flex-wrap items-center bg-gray-50 rounded px-1 py-0.5 flex-1 border border-gray-200 min-h-[24px]">
                                 ${stallTags}
                             </div>
                         </div>
@@ -237,101 +205,75 @@
                 }
             });
 
-            // --- Type Column (Vertical) ---
+            // --- Type Column ---
             const types = [
                 {val: 'Standard', label: 'รายเดือน', color: 'text-purple-700'},
                 {val: 'Regular', label: 'ประจำ', color: 'text-blue-700'},
                 {val: 'VIP', label: 'VIP', color: 'text-yellow-600'}
             ];
             
-            let typeOptions = `<div class="flex flex-col gap-2 items-start ${opacityClass}">`;
+            let typeOptions = `
+                <div class="flex items-center justify-between mb-1">
+                     <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Setting</span>
+                     <button onclick="toggleEditRenewal(${index})" class="text-xs p-1 rounded hover:bg-gray-100 ${isEditing ? 'text-blue-600 bg-blue-50' : 'text-gray-400'}" title="${isEditing ? 'ล็อคข้อมูล' : 'แก้ไขข้อมูล'}" ${isDisabled ? 'disabled hidden' : ''}>
+                        <i class="fa-solid ${isEditing ? 'fa-lock-open' : 'fa-pen'}"></i>
+                     </button>
+                </div>
+                <div class="flex flex-col gap-1 items-start ${opacityClass}">
+            `;
+            
             types.forEach(t => {
                  const isChecked = state.targetType === t.val ? 'checked' : '';
                  typeOptions += `
                     <label class="inline-flex items-center cursor-pointer ${settingsDisabled ? 'cursor-not-allowed' : ''}">
                         <input type="radio" name="renew_type_${index}" value="${t.val}" class="form-radio h-3 w-3 ${t.color}" ${isChecked} onchange="updateRenewalType(${index}, '${t.val}')" ${settingsDisabledAttr}>
-                        <span class="ml-1.5 text-[10px] ${t.color} font-bold">${t.label}</span>
+                        <span class="ml-1 text-[10px] ${t.color} font-bold">${t.label}</span>
                     </label>
                  `;
             });
             typeOptions += `</div>`;
 
-            // --- Days Column (Vertical) ---
-            let daysOptions = `<div class="flex flex-col gap-2 items-start pl-1 ${opacityClass}">`;
+            // --- Days Column ---
+            let daysOptions = `<div class="flex justify-center gap-2 ${opacityClass}">`;
             const dayCheckboxes = [
-                { val: 3, label: "พุธ", color: "text-green-600" },
-                { val: 6, label: "เสาร์", color: "text-purple-600" },
-                { val: 0, label: "อาทิตย์", color: "text-red-600" }
+                { val: 3, label: "พ.", color: "text-green-600" },
+                { val: 6, label: "ส.", color: "text-purple-600" },
+                { val: 0, label: "อา.", color: "text-red-600" }
             ];
             
             dayCheckboxes.forEach(d => {
                 const isChecked = state.days.includes(d.val) ? 'checked' : '';
                 daysOptions += `
-                    <label class="inline-flex items-center cursor-pointer ${settingsDisabled ? 'cursor-not-allowed' : ''}">
-                        <input type="checkbox" class="form-checkbox h-3 w-3 ${d.color} rounded border-gray-300 focus:ring-${d.color}" onchange="toggleRenewalDay(${index}, ${d.val}, this.checked)" ${isChecked} ${settingsDisabledAttr}>
-                        <span class="ml-1.5 text-[10px] font-bold text-gray-600">${d.label}</span>
+                    <label class="inline-flex items-center cursor-pointer ${settingsDisabled ? 'cursor-not-allowed' : ''} flex-col">
+                        <span class="text-[10px] font-bold text-gray-500 mb-0.5">${d.label}</span>
+                        <input type="checkbox" class="form-checkbox h-4 w-4 ${d.color} rounded border-gray-300 focus:ring-${d.color}" onchange="toggleRenewalDay(${index}, ${d.val}, this.checked)" ${isChecked} ${settingsDisabledAttr}>
                     </label>
                 `;
             });
             daysOptions += `</div>`;
 
-            // --- Services Column (New Dedicated Column) ---
-            let servicesOptions = `
-                <div class="flex flex-col gap-2 items-center w-full px-1 ${opacityClass}">
-                    <div class="flex flex-col w-full text-center bg-yellow-50/50 p-1 rounded border border-yellow-100">
-                        <span class="text-[9px] text-yellow-700 font-bold mb-0.5" title="ค่าไฟ (หน่วย)"><i class="fa-solid fa-bolt"></i> ค่าไฟ (หน่วย)</span>
-                        <input type="number" min="0" step="1" class="w-full text-center border border-yellow-200 bg-white rounded text-xs py-0.5 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-yellow-800" value="${state.elecUnit}" onchange="updateRenewalElec(${index}, this.value)" ${settingsDisabledAttr}>
-                    </div>
-                    <div class="flex flex-col w-full text-center bg-orange-50/50 p-1 rounded border border-orange-100">
-                        <span class="text-[9px] text-orange-700 font-bold mb-0.5" title="ค่าฝากของ (บาท)"><i class="fa-solid fa-box-open"></i> ค่าฝาก (บาท)</span>
-                        <input type="number" min="0" step="10" class="w-full text-center border border-orange-200 bg-white rounded text-xs py-0.5 focus:ring-1 focus:ring-orange-400 outline-none font-bold text-orange-800" value="${state.storageFee}" onchange="updateRenewalStorage(${index}, this.value)" ${settingsDisabledAttr}>
-                    </div>
-                </div>
-            `;
-
             html += `
                 <tr class="${trClass} border-b border-gray-50">
-                    <!-- 1. Checkbox -->
-                    <td class="px-2 py-3 text-center align-middle">
+                    <td class="px-3 py-3 text-center align-middle">
                         <input type="checkbox" class="renewal-check form-checkbox h-4 w-4 text-blue-600 rounded" data-index="${index}" onchange="updateRenewalCheck(${index}, this.checked)" ${checkAttr} ${disabledAttr}>
                     </td>
-                    
-                    <!-- 2. Customer -->
-                    <td class="px-2 py-3 align-top">
+                    <td class="px-3 py-3 align-top">
                         <div class="font-bold text-gray-800 text-sm leading-tight">${item.bookerName}</div>
                         <div class="text-xs text-gray-500 mt-0.5">(${item.product})</div>
                     </td>
-                    
-                    <!-- 3. Type -->
-                    <td class="px-2 py-3 align-top">
-                        ${typeOptions}
-                    </td>
-                    
-                    <!-- 4. Days -->
-                    <td class="px-2 py-3 align-top">
-                         ${daysOptions}
-                    </td>
-
-                    <!-- 5. Stalls -->
-                    <td class="px-2 py-3 align-top">
+                    <td class="px-3 py-3 align-top">
                         <div class="w-full">
                             ${dayStallsHtml}
                         </div>
                     </td>
-                    
-                    <!-- 6. Services (Elec/Storage) -->
-                    <td class="px-2 py-3 align-top">
-                         ${servicesOptions}
+                    <td class="px-3 py-3 align-top">
+                        ${typeOptions}
                     </td>
-                    
-                    <!-- 7. Status & Manage -->
-                    <td class="px-2 py-3 text-center align-top">
-                        <div class="flex flex-col items-center gap-1.5">
-                            ${statusBadge}
-                            <button onclick="toggleEditRenewal(${index})" class="mt-1 flex items-center justify-center gap-1 w-full text-[10px] px-2 py-1 rounded border font-bold transition-colors ${isEditing ? 'text-blue-700 bg-blue-100 border-blue-300 shadow-inner' : 'text-gray-600 bg-white border-gray-300 hover:bg-gray-100 shadow-sm'}" title="${isEditing ? 'ล็อกข้อมูลเพื่อเตรียมบันทึก' : 'กดเพื่อแก้ไขข้อมูล'}" ${isDisabled ? 'disabled hidden' : ''}>
-                                <i class="fa-solid ${isEditing ? 'fa-lock-open' : 'fa-pen'}"></i> ${isEditing ? 'เปิดแก้ไข' : 'แก้ไข'}
-                            </button>
-                        </div>
+                    <td class="px-3 py-3 align-middle">
+                         ${daysOptions}
+                    </td>
+                    <td class="px-3 py-3 text-center align-middle">
+                        ${statusBadge}
                     </td>
                 </tr>
             `;
@@ -353,9 +295,6 @@
             });
         }
         updateRenewalStats();
-        
-        // FIX: รักษาการค้นหา (Search State) เอาไว้หลังจาก Re-render ตารางใหม่
-        filterRenewalTable();
     }
 
     // --- STATE & UTILS ---
@@ -372,18 +311,6 @@
 
     function updateRenewalType(index, newType) {
         renewalState[index].targetType = newType;
-        updateRenewalStats();
-    }
-    
-    // อัปเดตค่าไฟเมื่อมีการแก้ไข
-    function updateRenewalElec(index, val) {
-        renewalState[index].elecUnit = parseFloat(val) || 0;
-        updateRenewalStats();
-    }
-
-    // อัปเดตค่าฝากเมื่อมีการแก้ไข
-    function updateRenewalStorage(index, val) {
-        renewalState[index].storageFee = parseFloat(val) || 0;
         updateRenewalStats();
     }
 
@@ -429,6 +356,7 @@
         return true;
     }
 
+    // FIX 3: Update Footer Stats
     function updateRenewalStats() {
         const selectedCount = renewalState.filter(s => s.checked).length;
         const readyCount = renewalCandidates.filter(item => item.status !== 'conflict' && item.status !== 'renewed').length;
@@ -439,10 +367,7 @@
              if (state.checked) {
                  const isTypeChanged = state.targetType !== original.customerType;
                  const isDaysChanged = !arraysEqual(state.days, original.defaultDays);
-                 const isElecChanged = String(state.elecUnit) !== String(original.elecUnit || 0);
-                 const isStorageChanged = String(state.storageFee) !== String(original.storageFee || 0);
-
-                 if (isTypeChanged || isDaysChanged || isElecChanged || isStorageChanged) {
+                 if (isTypeChanged || isDaysChanged) {
                      changedCount++;
                  }
              }
@@ -487,6 +412,7 @@
         const dd = document.getElementById('renewalStallSearchDropdown');
         dd.innerHTML = '';
         
+        // FIX 1: Smart Positioning for Dropdown
         const rect = event.target.getBoundingClientRect();
         const dropdownHeight = 220; // Approx max height
         const spaceBelow = window.innerHeight - rect.bottom;
@@ -496,9 +422,11 @@
         dd.style.width = '180px'; 
         
         if (spaceBelow < dropdownHeight) {
+            // Not enough space below, show ABOVE
             dd.style.top = 'auto';
             dd.style.bottom = (window.innerHeight - rect.top) + 'px';
         } else {
+            // Show BELOW
             dd.style.top = (rect.bottom) + 'px';
             dd.style.bottom = 'auto';
         }
@@ -572,6 +500,7 @@
         renderRenewalTable();
     }
 
+    // FIX: Include storageFee in batch
     function submitRenewalBatch() {
         const targetJson = document.getElementById('renewalTargetMonth').value;
         const targetObj = JSON.parse(targetJson); 
@@ -614,9 +543,8 @@
                     selectedDays: state.days,
                     stallDetailsObj: detailedStalls,
                     targetType: state.targetType,
-                    // ดึงยอดค่าไฟและค่าฝากที่ถูกตั้งค่าใหม่(ถ้ามี)
-                    elecUnit: state.elecUnit,
-                    storageFee: state.storageFee
+                    elecUnit: item.elecUnit,
+                    storageFee: item.storageFee // Pass storage fee
                 });
             }
         });
