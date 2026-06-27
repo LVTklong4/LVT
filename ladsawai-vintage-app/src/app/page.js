@@ -1379,22 +1379,28 @@ export default function BookingPage() {
                 style={{ 
                   gridRow: "23 / span 4", 
                   gridColumn: "2 / span 6",
-                  border: "3px solid #DC2626",
-                  backgroundColor: "#FEE2E2"
+                  zIndex: 10
                 }}
-                className="rounded-md flex items-center justify-center text-red-900 font-extrabold text-sm shadow-sm text-center p-1 border-2 pointer-events-none z-10"
+                className="relative w-full h-full min-h-[152px] pointer-events-none"
               >
-                ร้านน้ำ
+                <svg 
+                  viewBox="0 0 100 100" 
+                  preserveAspectRatio="none" 
+                  className="absolute inset-0 w-full h-full overflow-visible"
+                >
+                  <path 
+                    d="M 0.5,0.5 L 83.33,0.5 L 83.33,25 L 99.5,25 L 99.5,99.5 L 0.5,99.5 Z" 
+                    fill="#FEE2E2" 
+                    stroke="#DC2626" 
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center text-red-900 font-extrabold text-sm pointer-events-none">
+                  ร้านน้ำ
+                </div>
               </div>
-
-              {/* Walkway Mask for Row 23 Col 7 (to cover the corner of the red block) */}
-              <div 
-                style={{ 
-                  gridRow: "23", 
-                  gridColumn: "7"
-                }}
-                className="bg-[#9E9E9E] border border-[#757575] opacity-80 w-full h-full min-h-[38px] z-20 pointer-events-none rounded-sm"
-              />
             </div>
           )}
 
