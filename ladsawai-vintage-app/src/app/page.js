@@ -1249,6 +1249,12 @@ export default function BookingPage() {
                   const stall = stalls.find(s => s.row === r && s.col === c);
                   
                   if (!stall) {
+                    const isInsideYellow = r >= 1 && r <= 2 && c >= 12 && c <= 15;
+                    const isInsideBlue = r >= 1 && r <= 2 && c >= 16 && c <= 19;
+                    const isInsideRed = r >= 23 && r <= 26 && c >= 1 && c <= 8;
+                    if (isInsideYellow || isInsideBlue || isInsideRed) {
+                      return null;
+                    }
                     return <div key={`empty-${r}-${c}`} style={{ gridRow: r, gridColumn: c }} className="invisible" />;
                   }
 
@@ -1342,6 +1348,43 @@ export default function BookingPage() {
                   );
                 });
               })}
+
+              {/* Custom Highlight Zones */}
+              <div 
+                style={{ 
+                  gridRow: "1 / span 2", 
+                  gridColumn: "12 / span 4",
+                  border: "3px solid #EAB308",
+                  backgroundColor: "rgba(254, 249, 195, 0.95)"
+                }}
+                className="rounded-md flex items-center justify-center text-amber-900 font-extrabold text-[11px] shadow-md text-center p-1 border-2"
+              >
+                ร้านขายของชำ
+              </div>
+              
+              <div 
+                style={{ 
+                  gridRow: "1 / span 2", 
+                  gridColumn: "16 / span 4",
+                  border: "3px solid #2563EB",
+                  backgroundColor: "rgba(219, 234, 254, 0.95)"
+                }}
+                className="rounded-md flex items-center justify-center text-blue-900 font-extrabold text-[11px] shadow-md text-center p-1 border-2"
+              >
+                ห้องน้ำ
+              </div>
+              
+              <div 
+                style={{ 
+                  gridRow: "23 / span 4", 
+                  gridColumn: "1 / span 8",
+                  border: "3px solid #DC2626",
+                  backgroundColor: "rgba(254, 226, 226, 0.95)"
+                }}
+                className="rounded-md flex items-center justify-center text-red-900 font-extrabold text-xs shadow-md text-center p-1 border-2"
+              >
+                ร้านน้ำ
+              </div>
             </div>
           )}
 
