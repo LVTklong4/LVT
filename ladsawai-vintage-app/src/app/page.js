@@ -25,7 +25,12 @@ import {
   Zap,
   Phone,
   Store,
-  Info
+  Info,
+  Sun,
+  Leaf,
+  ShoppingBag,
+  PlusCircle,
+  DollarSign
 } from 'lucide-react';
 
 // Date and formatting helpers for Thai locale
@@ -103,6 +108,60 @@ export default function BookingPage() {
   const [addUtilityUnit, setAddUtilityUnit] = useState(1);
   const [addUtilityPrice, setAddUtilityPrice] = useState(20);
   const [addUtilityMethod, setAddUtilityMethod] = useState('โอนเงิน');
+  
+  // Storage Management Modal States
+  const [showStorageMgmtModal, setShowStorageMgmtModal] = useState(false);
+  const [storageList, setStorageList] = useState([]);
+  const [loadingStorage, setLoadingStorage] = useState(false);
+  const [storageForm, setStorageForm] = useState({
+    id: '',
+    stall_name: '',
+    owner_name: '',
+    phone: '',
+    start_date: '',
+    end_date: '',
+    status: 'Active',
+    note: ''
+  });
+
+  // Monthly Management Modal States
+  const [showMonthlyMgmtModal, setShowMonthlyMgmtModal] = useState(false);
+  const [monthlyList, setMonthlyList] = useState([]);
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
+  const [selectedMonthlyItem, setSelectedMonthlyItem] = useState(null);
+
+  // Finance Modal States
+  const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
+  const [expenseList, setExpenseList] = useState([]);
+  const [incomeList, setIncomeList] = useState([]);
+  const [loadingFinance, setLoadingFinance] = useState(false);
+  const [financeTab, setFinanceTab] = useState('income');
+  const [incomeForm, setIncomeForm] = useState({
+    date: '',
+    category: 'ค่าปรับ',
+    description: '',
+    amount: '',
+    method: 'โอนเงิน'
+  });
+  const [expenseForm, setExpenseForm] = useState({
+    date: '',
+    category: 'ค่าน้ำค่าไฟ',
+    item: '',
+    amount: '',
+    method: 'โอนเงิน'
+  });
+
+  // Settings Modal States
+  const [showSettingsMgmtModal, setShowSettingsMgmtModal] = useState(false);
+  const [adminRolesList, setAdminRolesList] = useState([]);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [adminForm, setAdminForm] = useState({
+    email: '',
+    name: '',
+    role: 'Staff',
+    status: 'เปิด',
+    employee_id: ''
+  });
   
   // Alert/Toast State
   const [alertInfo, setAlertInfo] = useState(null);
@@ -676,6 +735,266 @@ export default function BookingPage() {
     }
   };
 
+  // --- STORAGE CRUD HANDLERS ---
+  const fetchAllStorage = async () => {
+    setLoadingStorage(true);
+    try {
+      const { data, error } = await supabase
+        .from('storage')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      if (error) throw error;
+      setStorageList(data || []);
+    } catch (e) {
+      console.error(e);
+      showAlert("ดึงข้อมูลฝากของไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingStorage(false);
+    }
+  };
+
+  const handleSaveStorage = async (e) => {
+    e.preventDefault();
+    if (!storageForm.stall_name || !storageForm.owner_name) {
+      showAlert("โปรดกรอกเลขล็อคและชื่อผู้ฝาก", "แจ้งเตือน", true);
+      return;
+    }
+    setLoadingStorage(true);
+    try {
+      const id = storageForm.id || `ST-${Date.now()}`;
+      const payload = {
+        id,
+        stall_name: storageForm.stall_name.trim(),
+        owner_name: storageForm.owner_name.trim(),
+        phone: storageForm.phone.trim(),
+        start_date: storageForm.start_date || null,
+        end_date: storageForm.end_date || null,
+        status: storageForm.status,
+        note: storageForm.note,
+        timestamp: new Date().toISOString()
+      };
+      const { error } = await supabase.from('storage').upsert(payload);
+      if (error) throw error;
+      
+      showAlert("บันทึกข้อมูลฝากของสำเร็จ", "สำเร็จ");
+      setStorageForm({ id: '', stall_name: '', owner_name: '', phone: '', start_date: '', end_date: '', status: 'Active', note: '' });
+      fetchAllStorage();
+      fetchBookingsAndStorage();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingStorage(false);
+    }
+  };
+
+  const handleToggleStorageStatus = async (item) => {
+    const newStatus = item.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      const { error } = await supabase
+        .from('storage')
+        .update({ status: newStatus })
+        .eq('id', item.id);
+      if (error) throw error;
+      showAlert(`อัปเดตสถานะเป็น ${newStatus} สำเร็จ`, "สำเร็จ");
+      fetchAllStorage();
+      fetchBookingsAndStorage();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", "ข้อผิดพลาด", true);
+    }
+  };
+
+  // --- MONTHLY BOOKING CRUD HANDLERS ---
+  const fetchAllMonthly = async () => {
+    setLoadingMonthly(true);
+    try {
+      const { data, error } = await supabase
+        .from('monthly_bookings')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      if (error) throw error;
+      setMonthlyList(data || []);
+    } catch (e) {
+      console.error(e);
+      showAlert("ดึงข้อมูลรายเดือนไม่สำเร็จ", "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
+  const handleUpdateMonthlyItem = async (e) => {
+    e.preventDefault();
+    if (!selectedMonthlyItem) return;
+    setLoadingMonthly(true);
+    try {
+      const { error } = await supabase
+        .from('monthly_bookings')
+        .update({
+          paid_amount: parseNumber(selectedMonthlyItem.paid_amount),
+          status: selectedMonthlyItem.status,
+          renewal_status: selectedMonthlyItem.renewal_status,
+          note: selectedMonthlyItem.note
+        })
+        .eq('id', selectedMonthlyItem.id);
+      if (error) throw error;
+      
+      showAlert("อัปเดตข้อมูลผู้เช่ารายเดือนสำเร็จ", "สำเร็จ");
+      setSelectedMonthlyItem(null);
+      fetchAllMonthly();
+      fetchBookingsAndStorage();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการอัปเดต: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
+  // --- FINANCE CRUD HANDLERS ---
+  const fetchFinanceData = async () => {
+    setLoadingFinance(true);
+    try {
+      const { data: inc, error: incErr } = await supabase.from('other_income').select('*').order('timestamp', { ascending: false });
+      const { data: exp, error: expErr } = await supabase.from('expenses').select('*').order('timestamp', { ascending: false });
+      if (incErr) throw incErr;
+      if (expErr) throw expErr;
+      setIncomeList(inc || []);
+      setExpenseList(exp || []);
+    } catch (e) {
+      console.error(e);
+      showAlert("ดึงข้อมูลการเงินไม่สำเร็จ", "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingFinance(false);
+    }
+  };
+
+  const handleAddIncome = async (e) => {
+    e.preventDefault();
+    if (!incomeForm.amount || !incomeForm.description) {
+      showAlert("กรุณากรอกข้อมูลจำนวนเงินและรายละเอียดให้ครบถ้วน", "แจ้งเตือน", true);
+      return;
+    }
+    setLoadingFinance(true);
+    try {
+      const payload = {
+        id: `INC-${Date.now()}`,
+        date: incomeForm.date || new Date().toISOString().split('T')[0],
+        category: incomeForm.category,
+        description: incomeForm.description.trim(),
+        amount: parseNumber(incomeForm.amount),
+        method: incomeForm.method,
+        officer: adminUser?.name || 'Admin',
+        timestamp: new Date().toISOString()
+      };
+      const { error } = await supabase.from('other_income').insert([payload]);
+      if (error) throw error;
+      
+      showAlert("บันทึกรายได้อื่น ๆ สำเร็จ", "สำเร็จ");
+      setIncomeForm({ date: '', category: 'ค่าปรับ', description: '', amount: '', method: 'โอนเงิน' });
+      fetchFinanceData();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingFinance(false);
+    }
+  };
+
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    if (!expenseForm.amount || !expenseForm.item) {
+      showAlert("กรุณากรอกข้อมูลจำนวนเงินและรายการจ่ายให้ครบถ้วน", "แจ้งเตือน", true);
+      return;
+    }
+    setLoadingFinance(true);
+    try {
+      const payload = {
+        id: `EXP-${Date.now()}`,
+        date: expenseForm.date || new Date().toISOString().split('T')[0],
+        category: expenseForm.category,
+        item: expenseForm.item.trim(),
+        amount: parseNumber(expenseForm.amount),
+        method: expenseForm.method,
+        officer: adminUser?.name || 'Admin',
+        timestamp: new Date().toISOString()
+      };
+      const { error } = await supabase.from('expenses').insert([payload]);
+      if (error) throw error;
+      
+      showAlert("บันทึกรายจ่ายสำเร็จ", "สำเร็จ");
+      setExpenseForm({ date: '', category: 'ค่าน้ำค่าไฟ', item: '', amount: '', method: 'โอนเงิน' });
+      fetchFinanceData();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingFinance(false);
+    }
+  };
+
+  // --- SETTINGS / ADMIN ROLES CRUD HANDLERS ---
+  const fetchAdminRolesData = async () => {
+    setLoadingSettings(true);
+    try {
+      const { data, error } = await supabase.from('admin_roles').select('*').order('email');
+      if (error) throw error;
+      setAdminRolesList(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const handleSaveAdminRole = async (e) => {
+    e.preventDefault();
+    if (!adminForm.email || !adminForm.name) {
+      showAlert("กรุณากรอกอีเมลและชื่อแอดมิน", "แจ้งเตือน", true);
+      return;
+    }
+    setLoadingSettings(true);
+    try {
+      const payload = {
+        email: adminForm.email.trim().toLowerCase(),
+        name: adminForm.name.trim(),
+        role: adminForm.role,
+        status: adminForm.status,
+        employee_id: adminForm.employee_id.trim() || null,
+        created_at: new Date().toISOString()
+      };
+      const { error } = await supabase.from('admin_roles').upsert(payload);
+      if (error) throw error;
+      
+      showAlert("บันทึกสิทธิ์ผู้ดูแลระบบสำเร็จ", "สำเร็จ");
+      setAdminForm({ email: '', name: '', role: 'Staff', status: 'เปิด', employee_id: '' });
+      fetchAdminRolesData();
+      fetchAdminRoles(); // refresh global admin roles list
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  // Trigger data load when modals open
+  useEffect(() => {
+    if (showStorageMgmtModal) fetchAllStorage();
+  }, [showStorageMgmtModal]);
+
+  useEffect(() => {
+    if (showMonthlyMgmtModal) fetchAllMonthly();
+  }, [showMonthlyMgmtModal]);
+
+  useEffect(() => {
+    if (showFinanceMgmtModal) fetchFinanceData();
+  }, [showFinanceMgmtModal]);
+
+  useEffect(() => {
+    if (showSettingsMgmtModal) fetchAdminRolesData();
+  }, [showSettingsMgmtModal]);
+
   // Helper utility parse
   const parseNumber = (val) => {
     const num = parseFloat(String(val));
@@ -734,27 +1053,32 @@ export default function BookingPage() {
               {quickDates.map((d) => {
                 const isActive = d.dateStr === selectedDate;
                 let btnStyle = "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100";
+                let Icon = CalendarDays;
                 
                 if (d.dayOfWeek === 3) { // Wednesday (Green)
                   btnStyle = isActive 
                     ? "bg-green-700 text-white border-green-800 shadow-md font-bold scale-105" 
                     : "bg-green-50 text-green-800 border-green-200 hover:bg-green-100";
+                  Icon = Leaf;
                 } else if (d.dayOfWeek === 6) { // Saturday (Purple)
                   btnStyle = isActive 
                     ? "bg-purple-700 text-white border-purple-800 shadow-md font-bold scale-105" 
                     : "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100";
+                  Icon = ShoppingBag;
                 } else if (d.dayOfWeek === 0) { // Sunday (Red)
                   btnStyle = isActive 
                     ? "bg-red-700 text-white border-red-800 shadow-md font-bold scale-105" 
                     : "bg-red-50 text-red-800 border-red-200 hover:bg-red-100";
+                  Icon = Sun;
                 }
 
                 return (
                   <button
                     key={d.dateStr}
                     onClick={() => setSelectedDate(d.dateStr)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1 transition-all duration-200 ${btnStyle}`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all duration-200 w-[145px] ${btnStyle}`}
                   >
+                    <Icon className="w-3.5 h-3.5" />
                     <span>{d.formattedLabel}</span>
                   </button>
                 );
@@ -803,10 +1127,45 @@ export default function BookingPage() {
                 </div>
 
                 {/* Navigation buttons */}
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <a href="/dashboard" className="p-1.5 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" title="แดชบอร์ดสรุปผล">
                     <LayoutDashboard className="w-5 h-5" />
                   </a>
+
+                  {/* Admin Management Dropdown */}
+                  <div className="relative group">
+                    <button className="px-2.5 py-1.5 text-amber-900 bg-amber-50/80 hover:bg-amber-100/90 border border-amber-250 rounded-lg transition-all flex items-center gap-1 font-bold text-xs shadow-sm">
+                      <Settings className="w-3.5 h-3.5 text-amber-800" />
+                      <span>จัดการระบบ</span>
+                    </button>
+                    <div className="absolute right-0 top-full mt-1 hidden group-hover:block hover:block bg-white border border-amber-200 rounded-lg shadow-xl py-1 w-44 z-[50] divide-y divide-amber-50 animate-pop-in">
+                      <button 
+                        onClick={() => setShowStorageMgmtModal(true)} 
+                        className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors"
+                      >
+                        <span>📦</span> จัดการฝากของ
+                      </button>
+                      <button 
+                        onClick={() => setShowMonthlyMgmtModal(true)} 
+                        className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors"
+                      >
+                        <span>🗓️</span> จัดการรายเดือน
+                      </button>
+                      <button 
+                        onClick={() => setShowFinanceMgmtModal(true)} 
+                        className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors"
+                      >
+                        <span>💸</span> รายรับ/รายจ่าย
+                      </button>
+                      <button 
+                        onClick={() => setShowSettingsMgmtModal(true)} 
+                        className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors"
+                      >
+                        <span>⚙️</span> จัดการสิทธิ์แอดมิน
+                      </button>
+                    </div>
+                  </div>
+
                   <button 
                     onClick={() => fetchBookingsAndStorage()}
                     className="p-1.5 text-green-700 hover:bg-green-50 rounded-lg transition-colors" 
@@ -876,10 +1235,15 @@ export default function BookingPage() {
             </div>
           ) : (
             <div 
-              className="grid gap-1.5"
+              className="grid"
               style={{
-                gridTemplateColumns: `repeat(${maxCol}, minmax(50px, 1fr))`,
-                gridAutoRows: 'minmax(50px, auto)'
+                gridTemplateColumns: Array.from({ length: maxCol })
+                  .map((_, i) => (i + 1 === 2 || i + 1 === 17) ? '24px' : 'minmax(52px, 1fr)')
+                  .join(' '),
+                gridTemplateRows: Array.from({ length: maxRow })
+                  .map((_, i) => [2, 5, 8, 11, 14, 17, 20, 23, 26].includes(i + 1) ? '24px' : 'minmax(52px, auto)')
+                  .join(' '),
+                gap: '3px'
               }}
             >
               {Array.from({ length: maxRow }).map((_, rIdx) => {
@@ -1361,6 +1725,702 @@ export default function BookingPage() {
               >
                 บันทึกหน่วยไฟและออกใบเสร็จ
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📦 1. Storage Management Modal */}
+      {showStorageMgmtModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl border-2 border-amber-800 overflow-hidden animate-pop-in flex flex-col max-h-[90vh]">
+            <div className="bg-amber-800 text-white px-4 py-3 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">📦 จัดการฝากของ (Storage Management)</h3>
+              <button onClick={() => setShowStorageMgmtModal(false)} className="text-amber-200 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto flex flex-col md:flex-row gap-5">
+              {/* Form panel */}
+              <form onSubmit={handleSaveStorage} className="flex flex-col gap-3 w-full md:w-80 shrink-0 bg-amber-50/40 p-4 border border-amber-200 rounded-lg">
+                <h4 className="font-bold text-xs text-[#8B4513] border-b pb-1">เพิ่ม/แก้ไข รายการฝากของ</h4>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">เลขล็อค *</label>
+                  <input 
+                    type="text" 
+                    value={storageForm.stall_name} 
+                    onChange={(e) => setStorageForm({ ...storageForm, stall_name: e.target.value })}
+                    placeholder="เช่น A01, B04"
+                    className="p-1.5 border border-amber-300 rounded text-xs focus:ring-1 focus:ring-amber-500 bg-white" 
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">ชื่อผู้ฝาก *</label>
+                  <input 
+                    type="text" 
+                    value={storageForm.owner_name} 
+                    onChange={(e) => setStorageForm({ ...storageForm, owner_name: e.target.value })}
+                    placeholder="ชื่อจริง/ชื่อร้าน"
+                    className="p-1.5 border border-amber-300 rounded text-xs focus:ring-1 focus:ring-amber-500 bg-white" 
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">เบอร์โทรศัพท์</label>
+                  <input 
+                    type="text" 
+                    value={storageForm.phone} 
+                    onChange={(e) => setStorageForm({ ...storageForm, phone: e.target.value })}
+                    placeholder="08xxxxxxxx"
+                    className="p-1.5 border border-amber-300 rounded text-xs focus:ring-1 focus:ring-amber-500 bg-white" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">วันที่เริ่มฝาก</label>
+                    <input 
+                      type="date" 
+                      value={storageForm.start_date} 
+                      onChange={(e) => setStorageForm({ ...storageForm, start_date: e.target.value })}
+                      className="p-1 border border-amber-300 rounded text-xs bg-white text-center" 
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">วันที่สิ้นสุด</label>
+                    <input 
+                      type="date" 
+                      value={storageForm.end_date} 
+                      onChange={(e) => setStorageForm({ ...storageForm, end_date: e.target.value })}
+                      className="p-1 border border-amber-300 rounded text-xs bg-white text-center" 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">สถานะ</label>
+                  <select 
+                    value={storageForm.status} 
+                    onChange={(e) => setStorageForm({ ...storageForm, status: e.target.value })}
+                    className="p-1.5 border border-amber-300 rounded text-xs bg-white focus:outline-none"
+                  >
+                    <option value="Active">กำลังฝาก (Active)</option>
+                    <option value="Inactive">นำของออกแล้ว (Inactive)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">หมายเหตุ</label>
+                  <textarea 
+                    value={storageForm.note} 
+                    onChange={(e) => setStorageForm({ ...storageForm, note: e.target.value })}
+                    rows="2"
+                    placeholder="รายละเอียดสิ่งของฝาก..."
+                    className="p-1.5 border border-amber-300 rounded text-xs bg-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 mt-1">
+                  <button 
+                    type="submit" 
+                    className="flex-1 py-1.5 bg-green-700 hover:bg-green-800 text-white rounded text-xs font-bold transition-all shadow"
+                  >
+                    บันทึกข้อมูล
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setStorageForm({ id: '', stall_name: '', owner_name: '', phone: '', start_date: '', end_date: '', status: 'Active', note: '' })}
+                    className="px-2 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all"
+                  >
+                    ล้างค่า
+                  </button>
+                </div>
+              </form>
+
+              {/* List panel */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center">
+                  <span>รายการฝากของทั้งหมด ({storageList.length} รายการ)</span>
+                  {loadingStorage && <Loader2 className="w-4 h-4 text-amber-800 animate-spin" />}
+                </h4>
+                
+                <div className="overflow-x-auto border rounded-lg max-h-[50vh]">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-amber-50 text-amber-900 border-b font-bold">
+                      <tr>
+                        <th className="p-2">ล็อค</th>
+                        <th className="p-2">ผู้ฝาก / เบอร์</th>
+                        <th className="p-2">วันที่เริ่ม-สิ้นสุด</th>
+                        <th className="p-2">สถานะ</th>
+                        <th className="p-2 text-center">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y bg-white">
+                      {storageList.map((item) => (
+                        <tr key={item.id} className="hover:bg-amber-50/30">
+                          <td className="p-2 font-bold text-[#8B4513]">{item.stall_name}</td>
+                          <td className="p-2">
+                            <div className="font-semibold">{item.owner_name}</div>
+                            <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
+                          </td>
+                          <td className="p-2 text-[10px]">
+                            <div>เริ่ม: {item.start_date || '-'}</div>
+                            <div>สิ้นสุด: {item.end_date || '-'}</div>
+                          </td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {item.status === 'Active' ? 'ฝากอยู่' : 'นำออกแล้ว'}
+                            </span>
+                          </td>
+                          <td className="p-2 text-center">
+                            <div className="flex gap-1.5 justify-center">
+                              <button 
+                                onClick={() => setStorageForm(item)}
+                                className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100"
+                              >
+                                แก้ไข
+                              </button>
+                              <button 
+                                onClick={() => handleToggleStorageStatus(item)}
+                                className={`px-2 py-0.5 border rounded text-[10px] font-bold ${
+                                  item.status === 'Active' 
+                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
+                                    : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                }`}
+                              >
+                                {item.status === 'Active' ? 'เช็คออก' : 'เช็คอิน'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗓️ 2. Monthly Bookings Management Modal */}
+      {showMonthlyMgmtModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl border-2 border-purple-800 overflow-hidden animate-pop-in flex flex-col max-h-[90vh]">
+            <div className="bg-purple-800 text-white px-4 py-3 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings)</h3>
+              <button onClick={() => setShowMonthlyMgmtModal(false)} className="text-purple-200 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto flex flex-col md:flex-row gap-5">
+              {/* Editor panel if selected */}
+              {selectedMonthlyItem ? (
+                <form onSubmit={handleUpdateMonthlyItem} className="flex flex-col gap-3 w-full md:w-80 shrink-0 bg-purple-50/40 p-4 border border-purple-200 rounded-lg">
+                  <h4 className="font-bold text-xs text-purple-900 border-b pb-1">แก้ไขข้อมูล: {selectedMonthlyItem.booker_name}</h4>
+                  
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-gray-500 font-bold">ล็อกที่เช่า</span>
+                    <span className="text-xs font-bold text-gray-800 bg-white p-2 rounded border">{selectedMonthlyItem.stalls}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-gray-500 font-bold">ค่าเช่าทั้งหมด</span>
+                      <span className="text-xs font-bold text-gray-800 bg-white p-2 rounded border text-center">{selectedMonthlyItem.total_price}.-</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
+                      <input 
+                        type="number" 
+                        value={selectedMonthlyItem.paid_amount || 0} 
+                        onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, paid_amount: e.target.value })}
+                        className="p-1.5 border border-purple-300 rounded text-xs bg-white text-center" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">สถานะชำระเงิน</label>
+                    <select 
+                      value={selectedMonthlyItem.status} 
+                      onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, status: e.target.value })}
+                      className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
+                      <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">สถานะต่อสัญญา</label>
+                    <select 
+                      value={selectedMonthlyItem.renewal_status || ''} 
+                      onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, renewal_status: e.target.value })}
+                      className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
+                      <option value="รอยืนยัน">รอยืนยัน</option>
+                      <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">หมายเหตุ</label>
+                    <textarea 
+                      value={selectedMonthlyItem.note || ''} 
+                      onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, note: e.target.value })}
+                      rows="2"
+                      className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 mt-1">
+                    <button 
+                      type="submit" 
+                      className="flex-1 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded text-xs font-bold transition-all shadow"
+                    >
+                      อัปเดตข้อมูล
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedMonthlyItem(null)}
+                      className="px-2 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all"
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="w-full md:w-80 shrink-0 bg-purple-50/20 p-4 border border-purple-200/60 rounded-lg flex items-center justify-center text-center text-xs text-gray-500 font-bold">
+                  คลิกปุ่ม "แก้ไข" ท้ายรายชื่อ เพื่อเริ่มปรับแก้ข้อมูลสมาชิกรายเดือน
+                </div>
+              )}
+
+              {/* List panel */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center">
+                  <span>รายชื่อลูกค้ารายเดือน ({monthlyList.length} คน)</span>
+                  {loadingMonthly && <Loader2 className="w-4 h-4 text-purple-800 animate-spin" />}
+                </h4>
+                
+                <div className="overflow-x-auto border rounded-lg max-h-[50vh]">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-purple-50 text-purple-900 border-b font-bold">
+                      <tr>
+                        <th className="p-2">ลูกค้า / เบอร์</th>
+                        <th className="p-2">ล็อค</th>
+                        <th className="p-2 text-center">ค่าเช่า / ยอดจ่าย</th>
+                        <th className="p-2">ชำระเงิน</th>
+                        <th className="p-2">ต่อสัญญา</th>
+                        <th className="p-2 text-center">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y bg-white">
+                      {monthlyList.map((item) => (
+                        <tr key={item.id} className="hover:bg-purple-50/20">
+                          <td className="p-2">
+                            <div className="font-bold text-gray-800">{item.booker_name}</div>
+                            <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
+                          </td>
+                          <td className="p-2 font-bold text-purple-800">{item.stalls}</td>
+                          <td className="p-2 text-center font-semibold">
+                            <div>{item.total_price}.-</div>
+                            <div className="text-[10px] text-green-700">จ่าย: {item.paid_amount || 0}.-</div>
+                          </td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.status === 'ชำระแล้ว' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {item.status || 'ค้างชำระ'}
+                            </span>
+                          </td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.renewal_status === 'ต่อสัญญาแล้ว' 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : item.renewal_status === 'ไม่ต่อสัญญา'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {item.renewal_status || 'รอยืนยัน'}
+                            </span>
+                          </td>
+                          <td className="p-2 text-center">
+                            <button 
+                              onClick={() => setSelectedMonthlyItem(item)}
+                              className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold hover:bg-purple-100"
+                            >
+                              แก้ไข
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 💸 3. Finance Management Modal */}
+      {showFinanceMgmtModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl border-2 border-emerald-800 overflow-hidden animate-pop-in flex flex-col max-h-[90vh]">
+            <div className="bg-emerald-800 text-white px-4 py-3 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">💸 บันทึกรายรับ/รายจ่ายตลาด (Other Income & Expenses)</h3>
+              <button onClick={() => setShowFinanceMgmtModal(false)} className="text-emerald-200 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            {/* Tabs Selector */}
+            <div className="flex border-b bg-emerald-50/40 shrink-0">
+              <button 
+                onClick={() => setFinanceTab('income')}
+                className={`flex-1 py-3 text-center text-xs font-bold transition-all ${
+                  financeTab === 'income' ? 'bg-white border-t-2 border-emerald-700 text-emerald-800' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                📥 บันทึกรายได้อื่นๆ (Other Income)
+              </button>
+              <button 
+                onClick={() => setFinanceTab('expense')}
+                className={`flex-1 py-3 text-center text-xs font-bold transition-all ${
+                  financeTab === 'expense' ? 'bg-white border-t-2 border-emerald-700 text-emerald-800' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                📤 บันทึกรายจ่าย (Expenses)
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex flex-col md:flex-row gap-5">
+              {/* Form panel based on tab */}
+              {financeTab === 'income' ? (
+                <form onSubmit={handleAddIncome} className="flex flex-col gap-3 w-full md:w-80 shrink-0 bg-emerald-50/20 p-4 border border-emerald-200 rounded-lg">
+                  <h4 className="font-bold text-xs text-emerald-950 border-b pb-1">เพิ่มรายการรายได้อื่น ๆ</h4>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">วันที่ทำรายการ</label>
+                    <input 
+                      type="date" 
+                      value={incomeForm.date} 
+                      onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
+                      className="p-1.5 border border-emerald-300 rounded text-xs bg-white text-center" 
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">หมวดหมู่รายได้</label>
+                    <select 
+                      value={incomeForm.category} 
+                      onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
+                      className="p-1.5 border border-emerald-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="ค่าปรับ">ค่าปรับ</option>
+                      <option value="ดอกเบี้ย">ดอกเบี้ย</option>
+                      <option value="รายได้ฝากของ">รายได้ฝากของ</option>
+                      <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">รายละเอียด *</label>
+                    <input 
+                      type="text" 
+                      value={incomeForm.description} 
+                      onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
+                      placeholder="เช่น ค่าปรับขยะล็อค F1"
+                      className="p-1.5 border border-emerald-300 rounded text-xs focus:ring-1 focus:ring-emerald-500 bg-white" 
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">จำนวนเงิน (บาท) *</label>
+                    <input 
+                      type="number" 
+                      value={incomeForm.amount} 
+                      onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                      placeholder="จำนวนเงินเป็นตัวเลข"
+                      className="p-1.5 border border-emerald-300 rounded text-xs focus:ring-1 focus:ring-emerald-500 bg-white text-center" 
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">วิธีการชำระ</label>
+                    <select 
+                      value={incomeForm.method} 
+                      onChange={(e) => setIncomeForm({ ...incomeForm, method: e.target.value })}
+                      className="p-1.5 border border-emerald-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="โอนเงิน">โอนเงิน</option>
+                      <option value="เงินสด">เงินสด</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    className="w-full mt-2 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold transition-all shadow"
+                  >
+                    บันทึกรายรับ
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleAddExpense} className="flex flex-col gap-3 w-full md:w-80 shrink-0 bg-red-50/30 p-4 border border-red-200 rounded-lg">
+                  <h4 className="font-bold text-xs text-red-950 border-b pb-1">เพิ่มรายการรายจ่าย</h4>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">วันที่ทำรายการ</label>
+                    <input 
+                      type="date" 
+                      value={expenseForm.date} 
+                      onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                      className="p-1.5 border border-red-300 rounded text-xs bg-white text-center" 
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">หมวดหมู่รายจ่าย</label>
+                    <select 
+                      value={expenseForm.category} 
+                      onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                      className="p-1.5 border border-red-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="ค่าน้ำค่าไฟ">ค่าน้ำค่าไฟ</option>
+                      <option value="ค่าจ้าง">ค่าจ้างพนักงาน</option>
+                      <option value="ซ่อมบำรุง">ซ่อมบำรุง</option>
+                      <option value="ค่าขยะ">ค่ากำจัดขยะ</option>
+                      <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">รายการรายจ่าย *</label>
+                    <input 
+                      type="text" 
+                      value={expenseForm.item} 
+                      onChange={(e) => setExpenseForm({ ...expenseForm, item: e.target.value })}
+                      placeholder="เช่น ซื้อหลอดไฟทางเดิน"
+                      className="p-1.5 border border-red-300 rounded text-xs focus:ring-1 focus:ring-red-500 bg-white" 
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">จำนวนเงิน (บาท) *</label>
+                    <input 
+                      type="number" 
+                      value={expenseForm.amount} 
+                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                      placeholder="จำนวนเงินจ่าย"
+                      className="p-1.5 border border-red-300 rounded text-xs focus:ring-1 focus:ring-red-500 bg-white text-center" 
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">วิธีการจ่ายเงิน</label>
+                    <select 
+                      value={expenseForm.method} 
+                      onChange={(e) => setExpenseForm({ ...expenseForm, method: e.target.value })}
+                      className="p-1.5 border border-red-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="โอนเงิน">โอนเงิน</option>
+                      <option value="เงินสด">เงินสด</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    className="w-full mt-2 py-2 bg-red-700 hover:bg-red-800 text-white rounded text-xs font-bold transition-all shadow"
+                  >
+                    บันทึกรายจ่าย
+                  </button>
+                </form>
+              )}
+
+              {/* List panel */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center">
+                  <span>รายการบันทึก {financeTab === 'income' ? 'รายรับอื่นๆ' : 'รายจ่าย'} ล่าสุด</span>
+                  {loadingFinance && <Loader2 className="w-4 h-4 text-emerald-800 animate-spin" />}
+                </h4>
+                
+                <div className="overflow-x-auto border rounded-lg max-h-[50vh]">
+                  <table className="w-full text-xs text-left">
+                    <thead className={`border-b font-bold ${financeTab === 'income' ? 'bg-emerald-50 text-emerald-900' : 'bg-red-50 text-red-900'}`}>
+                      <tr>
+                        <th className="p-2">วันที่</th>
+                        <th className="p-2">หมวดหมู่</th>
+                        <th className="p-2">รายละเอียด/รายการ</th>
+                        <th className="p-2 text-right">จำนวนเงิน</th>
+                        <th className="p-2 text-center">วิธีจ่าย</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y bg-white">
+                      {financeTab === 'income' ? (
+                        incomeList.map((item) => (
+                          <tr key={item.id} className="hover:bg-emerald-50/10">
+                            <td className="p-2">{item.date}</td>
+                            <td className="p-2 font-bold text-emerald-800">{item.category}</td>
+                            <td className="p-2">{item.description}</td>
+                            <td className="p-2 text-right font-extrabold text-emerald-800">+{item.amount.toLocaleString()}.-</td>
+                            <td className="p-2 text-center text-[10px] font-semibold text-gray-500">{item.method}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        expenseList.map((item) => (
+                          <tr key={item.id} className="hover:bg-red-50/10">
+                            <td className="p-2">{item.date}</td>
+                            <td className="p-2 font-bold text-red-800">{item.category}</td>
+                            <td className="p-2">{item.item}</td>
+                            <td className="p-2 text-right font-extrabold text-red-800">-{item.amount.toLocaleString()}.-</td>
+                            <td className="p-2 text-center text-[10px] font-semibold text-gray-500">{item.method}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚙️ 4. Settings Management Modal */}
+      {showSettingsMgmtModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl border-2 border-stone-800 overflow-hidden animate-pop-in flex flex-col max-h-[90vh]">
+            <div className="bg-stone-800 text-white px-4 py-3 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">⚙️ จัดการสิทธิ์แอดมิน (Admin Roles Settings)</h3>
+              <button onClick={() => setShowSettingsMgmtModal(false)} className="text-stone-200 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto flex flex-col md:flex-row gap-5">
+              {/* Form panel */}
+              <form onSubmit={handleSaveAdminRole} className="flex flex-col gap-3 w-full md:w-80 shrink-0 bg-stone-50 p-4 border border-stone-200 rounded-lg">
+                <h4 className="font-bold text-xs text-stone-900 border-b pb-1">เพิ่ม/แก้ไข สิทธิ์แอดมิน</h4>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">อีเมลล็อกอิน (Google Email) *</label>
+                  <input 
+                    type="email" 
+                    value={adminForm.email} 
+                    onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                    placeholder="example@gmail.com"
+                    className="p-1.5 border border-stone-300 rounded text-xs focus:ring-1 focus:ring-stone-500 bg-white" 
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">ชื่อแอดมิน/ชื่อเล่น *</label>
+                  <input 
+                    type="text" 
+                    value={adminForm.name} 
+                    onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                    placeholder="แอดมินกิ๊ก, แอดมินส้ม"
+                    className="p-1.5 border border-stone-300 rounded text-xs focus:ring-1 focus:ring-stone-500 bg-white" 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">บทบาท</label>
+                    <select 
+                      value={adminForm.role} 
+                      onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
+                      className="p-1.5 border border-stone-300 rounded text-xs bg-white focus:outline-none"
+                    >
+                      <option value="Admin">แอดมินใหญ่ (Admin)</option>
+                      <option value="Staff">พนักงาน (Staff)</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-gray-700">รหัสพนักงาน</label>
+                    <input 
+                      type="text" 
+                      value={adminForm.employee_id} 
+                      onChange={(e) => setAdminForm({ ...adminForm, employee_id: e.target.value })}
+                      placeholder="EMP01"
+                      className="p-1 border border-stone-300 rounded text-xs bg-white text-center" 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">สถานะเปิดใช้งาน</label>
+                  <select 
+                    value={adminForm.status} 
+                    onChange={(e) => setAdminForm({ ...adminForm, status: e.target.value })}
+                    className="p-1.5 border border-stone-300 rounded text-xs bg-white focus:outline-none"
+                  >
+                    <option value="เปิด">เปิดใช้งานปกติ (เปิด)</option>
+                    <option value="ปิด">ระงับสิทธิ์ชั่วคราว (ปิด)</option>
+                  </select>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full mt-2 py-2 bg-stone-700 hover:bg-stone-800 text-white rounded text-xs font-bold transition-all shadow"
+                >
+                  บันทึกข้อมูลและสิทธิ์
+                </button>
+              </form>
+
+              {/* List panel */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center">
+                  <span>ผู้มีสิทธิ์เข้าระบบทั้งหมด ({adminRolesList.length} บัญชี)</span>
+                  {loadingSettings && <Loader2 className="w-4 h-4 text-stone-800 animate-spin" />}
+                </h4>
+                
+                <div className="overflow-x-auto border rounded-lg max-h-[50vh]">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-stone-50 text-stone-900 border-b font-bold">
+                      <tr>
+                        <th className="p-2">รหัสพนักงาน</th>
+                        <th className="p-2">ชื่อผู้ใช้</th>
+                        <th className="p-2">อีเมลล็อกอิน</th>
+                        <th className="p-2">บทบาท</th>
+                        <th className="p-2">สถานะ</th>
+                        <th className="p-2 text-center">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y bg-white">
+                      {adminRolesList.map((item) => (
+                        <tr key={item.email} className="hover:bg-stone-50/30">
+                          <td className="p-2 font-mono font-bold text-gray-600">{item.employee_id || '-'}</td>
+                          <td className="p-2 font-bold text-stone-900">{item.name}</td>
+                          <td className="p-2 font-semibold text-gray-500">{item.email}</td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              item.role === 'Admin' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-blue-50 text-blue-800 border border-blue-200'
+                            }`}>
+                              {item.role === 'Admin' ? 'ผู้ดูแลหลัก' : 'พนักงาน'}
+                            </span>
+                          </td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.status === 'เปิด' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {item.status === 'เปิด' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'}
+                            </span>
+                          </td>
+                          <td className="p-2 text-center">
+                            <button 
+                              onClick={() => setAdminForm(item)}
+                              className="px-2 py-1 bg-stone-100 text-stone-700 border border-stone-200 rounded text-[10px] font-bold hover:bg-stone-200"
+                            >
+                              แก้ไข
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
