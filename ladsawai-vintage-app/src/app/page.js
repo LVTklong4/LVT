@@ -1237,8 +1237,8 @@ export default function BookingPage() {
             <div 
               className="grid"
               style={{
-                gridTemplateColumns: `repeat(${maxCol}, 30px)`,
-                gridTemplateRows: `repeat(${maxRow}, 30px)`,
+                gridTemplateColumns: `repeat(${maxCol}, 40px)`,
+                gridAutoRows: 'minmax(20px, auto)',
                 gap: '3px'
               }}
             >
