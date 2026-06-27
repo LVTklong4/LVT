@@ -1237,12 +1237,8 @@ export default function BookingPage() {
             <div 
               className="grid"
               style={{
-                gridTemplateColumns: Array.from({ length: maxCol })
-                  .map((_, i) => (i + 1 === 2 || i + 1 === 17) ? '24px' : 'minmax(52px, 1fr)')
-                  .join(' '),
-                gridTemplateRows: Array.from({ length: maxRow })
-                  .map((_, i) => [2, 5, 8, 11, 14, 17, 20, 23, 26].includes(i + 1) ? '24px' : 'minmax(52px, auto)')
-                  .join(' '),
+                gridTemplateColumns: `repeat(${maxCol}, 30px)`,
+                gridTemplateRows: `repeat(${maxRow}, 30px)`,
                 gap: '3px'
               }}
             >
@@ -1316,6 +1312,7 @@ export default function BookingPage() {
 
                   const isClickable = stall.type !== 'ทางเดิน' && stall.type !== 'อื่นๆ';
                   const isHighlighted = highlightedStall === stall.name;
+                  const displayName = stall.name.replace(/[\[\]]/g, '');
 
                   return (
                     <button
@@ -1324,18 +1321,18 @@ export default function BookingPage() {
                       style={{ gridRow: r, gridColumn: c }}
                       onClick={() => isClickable && handleStallClick(stall)}
                       disabled={!isClickable}
-                      className={`stall-box relative p-1 rounded-sm border shadow-sm flex flex-col items-center justify-center transition-all ${statusClass} ${
+                      className={`stall-box relative p-0.5 rounded-sm border shadow-sm flex flex-col items-center justify-center transition-all ${statusClass} ${
                         isClickable ? 'clickable cursor-pointer' : 'non-clickable pointer-events-none'
                       } ${isHighlighted ? 'search-highlight' : ''}`}
                     >
-                      <span className="text-[11px] font-extrabold leading-none">{stall.name}</span>
-                      <span className="text-[9px] mt-0.5 font-medium truncate w-full px-0.5 text-center leading-tight">
-                        {statusText}
-                      </span>
+                      <span className="text-[9px] font-extrabold leading-none">{displayName}</span>
+                      {statusText === 'ลา' && (
+                        <span className="text-[7px] font-bold text-red-600 leading-none mt-0.5">ลา</span>
+                      )}
                       
                       {storage && (
                         <span 
-                          className="absolute -top-1 -right-1 bg-white border border-gray-300 rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] shadow cursor-help"
+                          className="absolute -top-1 -right-1 bg-white border border-gray-300 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[7px] shadow cursor-help z-10"
                           title={`ฝากของ: ${storage.owner_name}`}
                         >
                           📦
