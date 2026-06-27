@@ -1250,7 +1250,7 @@ export default function BookingPage() {
                   
                   if (!stall) {
                     const isInsideTopRight = r >= 1 && r <= 3 && c >= 13 && c <= 19;
-                    const isInsideBottomLeft = r >= 23 && r <= 26 && c >= 2 && c <= 7;
+                    const isInsideBottomLeft = r >= 23 && r <= 26 && c >= 2 && c <= 7 && !(r === 23 && c === 7);
                     
                     if (isInsideTopRight || isInsideBottomLeft) {
                       return (
