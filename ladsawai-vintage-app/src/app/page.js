@@ -1251,34 +1251,10 @@ export default function BookingPage() {
                   if (!stall) {
                     const isInsideGrocery = r >= 1 && r <= 3 && c >= 13 && c <= 15;
                     const isInsideBathroom = r >= 1 && r <= 3 && c >= 16 && c <= 20;
-                    const isInsideWater = r >= 23 && r <= 26 && c >= 2 && c <= 7 && !(r === 23 && c === 7);
+                    const isInsideWater = r >= 23 && r <= 26 && c >= 2 && c <= 7;
                     
-                    if (isInsideGrocery) {
-                      return (
-                        <div 
-                          key={`grocery-box-${r}-${c}`} 
-                          style={{ gridRow: r, gridColumn: c }} 
-                          className="bg-[#FEF9C3] w-full h-full min-h-[38px]" 
-                        />
-                      );
-                    }
-                    if (isInsideBathroom) {
-                      return (
-                        <div 
-                          key={`bathroom-box-${r}-${c}`} 
-                          style={{ gridRow: r, gridColumn: c }} 
-                          className="bg-[#DBEAFE] w-full h-full min-h-[38px]" 
-                        />
-                      );
-                    }
-                    if (isInsideWater) {
-                      return (
-                        <div 
-                          key={`water-box-${r}-${c}`} 
-                          style={{ gridRow: r, gridColumn: c }} 
-                          className="bg-[#FEE2E2] w-full h-full min-h-[38px]" 
-                        />
-                      );
+                    if (isInsideGrocery || isInsideBathroom || isInsideWater) {
+                      return null;
                     }
                     return <div key={`empty-${r}-${c}`} style={{ gridRow: r, gridColumn: c }} className="invisible" />;
                   }
@@ -1380,7 +1356,7 @@ export default function BookingPage() {
                   gridRow: "1 / span 3", 
                   gridColumn: "13 / span 3",
                   border: "3px solid #EAB308",
-                  backgroundColor: "transparent"
+                  backgroundColor: "#FEF9C3"
                 }}
                 className="rounded-md flex items-center justify-center text-amber-900 font-extrabold text-[12px] shadow-sm text-center p-1 border-2 pointer-events-none z-10"
               >
@@ -1392,7 +1368,7 @@ export default function BookingPage() {
                   gridRow: "1 / span 3", 
                   gridColumn: "16 / span 5",
                   border: "3px solid #2563EB",
-                  backgroundColor: "transparent"
+                  backgroundColor: "#DBEAFE"
                 }}
                 className="rounded-md flex items-center justify-center text-blue-900 font-extrabold text-[12px] shadow-sm text-center p-1 border-2 pointer-events-none z-10"
               >
@@ -1404,12 +1380,21 @@ export default function BookingPage() {
                   gridRow: "23 / span 4", 
                   gridColumn: "2 / span 6",
                   border: "3px solid #DC2626",
-                  backgroundColor: "transparent"
+                  backgroundColor: "#FEE2E2"
                 }}
                 className="rounded-md flex items-center justify-center text-red-900 font-extrabold text-sm shadow-sm text-center p-1 border-2 pointer-events-none z-10"
               >
                 ร้านน้ำ
               </div>
+
+              {/* Walkway Mask for Row 23 Col 7 (to cover the corner of the red block) */}
+              <div 
+                style={{ 
+                  gridRow: "23", 
+                  gridColumn: "7"
+                }}
+                className="bg-[#9E9E9E] border border-[#757575] opacity-80 w-full h-full min-h-[38px] z-20 pointer-events-none rounded-sm"
+              />
             </div>
           )}
 
