@@ -1249,8 +1249,8 @@ export default function BookingPage() {
                   const stall = stalls.find(s => s.row === r && s.col === c);
                   
                   if (!stall) {
-                    const isInsideTopRight = r >= 1 && r <= 3 && c >= 12 && c <= 19;
-                    const isInsideBottomLeft = r >= 22 && r <= 27 && c >= 2 && c <= 8;
+                    const isInsideTopRight = r >= 1 && r <= 3 && c >= 13 && c <= 19;
+                    const isInsideBottomLeft = r >= 23 && r <= 26 && c >= 2 && c <= 7;
                     
                     if (isInsideTopRight || isInsideBottomLeft) {
                       return (
@@ -1359,7 +1359,7 @@ export default function BookingPage() {
               <div 
                 style={{ 
                   gridRow: "1 / span 3", 
-                  gridColumn: "12 / span 4",
+                  gridColumn: "13 / span 3",
                   border: "3px solid #EAB308",
                   backgroundColor: "rgba(254, 249, 195, 0.15)"
                 }}
@@ -1382,8 +1382,8 @@ export default function BookingPage() {
               
               <div 
                 style={{ 
-                  gridRow: "22 / span 6", 
-                  gridColumn: "2 / span 7",
+                  gridRow: "23 / span 4", 
+                  gridColumn: "2 / span 6",
                   border: "3px solid #DC2626",
                   backgroundColor: "rgba(254, 226, 226, 0.15)"
                 }}
