@@ -1002,7 +1002,7 @@ export default function BookingPage() {
   };
 
   // Dynamic grid column setup
-  let maxCol = 20;
+  let maxCol = 24;
   let maxRow = 26;
   stalls.forEach(s => {
     if (s.row > maxRow) maxRow = s.row;
@@ -1076,7 +1076,7 @@ export default function BookingPage() {
                   <button
                     key={d.dateStr}
                     onClick={() => setSelectedDate(d.dateStr)}
-                    className={`px-2 py-1.5 rounded-full text-xs font-semibold border flex items-center justify-center gap-1 transition-all duration-200 w-[115px] md:w-[120px] ${btnStyle}`}
+                    className={`px-2 py-1.5 rounded-full text-xs font-semibold border flex items-center justify-center gap-1 transition-all duration-200 whitespace-nowrap w-[130px] ${btnStyle}`}
                   >
                     <Icon className="w-3.5 h-3.5" />
                     <span>{d.formattedLabel}</span>
@@ -1134,9 +1134,8 @@ export default function BookingPage() {
 
                   {/* Admin Management Dropdown */}
                   <div className="relative group">
-                    <button className="px-2.5 py-1.5 text-amber-900 bg-amber-50/80 hover:bg-amber-100/90 border border-amber-250 rounded-lg transition-all flex items-center gap-1 font-bold text-xs shadow-sm">
-                      <Settings className="w-3.5 h-3.5 text-amber-800" />
-                      <span>จัดการระบบ</span>
+                    <button className="p-1.5 text-amber-800 hover:bg-amber-50 rounded-lg transition-colors" title="จัดการระบบ">
+                      <Settings className="w-5 h-5" />
                     </button>
                     <div className="absolute right-0 top-full mt-1 hidden group-hover:block hover:block bg-white border border-amber-200 rounded-lg shadow-xl py-1 w-44 z-[50] divide-y divide-amber-50 animate-pop-in">
                       <button 
@@ -1204,17 +1203,17 @@ export default function BookingPage() {
       </header>
 
       {/* Main content grid area */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 mb-24">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-1 mb-24">
         
         {/* Colors Legend */}
-        <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-2 mb-4">
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[10px] md:text-xs font-semibold justify-center text-gray-700">
-            <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-[#DCEDC8] border border-[#AED581] rounded"></span>อาหาร (ว่าง)</div>
-            <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-[#B3E5FC] border border-[#81D4FA] rounded"></span>เสื้อผ้า (ว่าง)</div>
-            <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-[#FFE0B2] border border-[#FFB74D] rounded"></span>ค้างชำระ</div>
-            <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-[#FFCDD2] border border-[#E57373] rounded"></span>จองแล้ว</div>
-            <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-[#E1BEE7] border border-[#BA68C8] rounded"></span>รายเดือน</div>
-            <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-white border rounded flex items-center justify-center text-[10px] shadow-sm">📦</span>มีฝากของ</div>
+        <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-1.5 mb-2">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] md:text-[10px] font-bold justify-center text-gray-700">
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#DCEDC8] border border-[#AED581] rounded-sm"></span>อาหาร (ว่าง)</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#B3E5FC] border border-[#81D4FA] rounded-sm"></span>เสื้อผ้า (ว่าง)</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFE0B2] border border-[#FFB74D] rounded-sm"></span>ค้างชำระ</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFCDD2] border border-[#E57373] rounded-sm"></span>จองแล้ว</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#E1BEE7] border border-[#BA68C8] rounded-sm"></span>รายเดือน</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-white border rounded flex items-center justify-center text-[8px] shadow-sm">📦</span>มีฝากของ</div>
           </div>
         </div>
 
@@ -1252,8 +1251,9 @@ export default function BookingPage() {
                     const isInsideGrocery = r >= 1 && r <= 3 && c >= 13 && c <= 15;
                     const isInsideBathroom = r >= 1 && r <= 3 && c >= 16 && c <= 20;
                     const isInsideWater = r >= 23 && r <= 26 && c >= 2 && c <= 7;
+                    const isInsideParking = r >= 1 && r <= 25 && c >= 21 && c <= 24;
                     
-                    if (isInsideGrocery || isInsideBathroom || isInsideWater) {
+                    if (isInsideGrocery || isInsideBathroom || isInsideWater || isInsideParking) {
                       return null;
                     }
                     return <div key={`empty-${r}-${c}`} style={{ gridRow: r, gridColumn: c }} className="invisible" />;
@@ -1399,6 +1399,48 @@ export default function BookingPage() {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center text-red-900 font-extrabold text-sm pointer-events-none">
                   ร้านน้ำ
+                </div>
+              </div>
+
+              {/* Khlong Thom Parking Zone (Green border) */}
+              <div 
+                style={{ 
+                  gridRow: "1 / span 25", 
+                  gridColumn: "21 / span 4",
+                  border: "3px solid #84CC16",
+                  backgroundColor: "#E5DDD9"
+                }}
+                className="rounded-md p-2.5 flex flex-col items-center justify-start gap-3 z-10 pointer-events-none"
+              >
+                {/* Title */}
+                <div className="text-[#5D4037] font-extrabold text-[11px] border-b-2 border-lime-500 pb-1 w-full text-center tracking-wider bg-white/60 rounded py-1 px-1.5 shadow-sm">
+                  ที่จอดรถคลองถม
+                </div>
+
+                {/* Parking Slots */}
+                <div className="flex flex-col gap-3.5 w-full items-center py-0.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="border-2 border-dashed border-[#8B4513]/30 rounded-lg p-1.5 flex items-center justify-between bg-white/75 shadow-sm w-full max-w-[120px] h-[98px] flex-col relative">
+                      <div className="absolute top-0.5 left-1.5 text-[8px] font-bold text-gray-500">
+                        Slot {i+1}
+                      </div>
+                      
+                      <div className="flex items-center justify-center w-full mt-2">
+                        <svg className="w-8 h-8 text-[#5D4037]/80 drop-shadow-xs" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 10l1.5-4.5h11L19 10H5z"/>
+                        </svg>
+                      </div>
+                      
+                      <div className="w-full flex flex-col items-center justify-center gap-0.5 border-t border-dashed border-gray-300 pt-1 mt-0.5">
+                        <span className="text-[7.5px] font-bold text-[#8B4513]">แผงขายของข้างรถ</span>
+                        <div className="flex gap-1.5 items-center justify-center">
+                          <span className="text-[9px]" title="สินค้าวางพื้น">🧺</span>
+                          <span className="text-[9px]" title="ร่มขายของ">⛱️</span>
+                          <span className="text-[9px]" title="กล่องสินค้า">📦</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
