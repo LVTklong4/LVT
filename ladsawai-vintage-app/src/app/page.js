@@ -1076,7 +1076,7 @@ export default function BookingPage() {
                   <button
                     key={d.dateStr}
                     onClick={() => setSelectedDate(d.dateStr)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all duration-200 w-[145px] ${btnStyle}`}
+                    className={`px-2 py-1.5 rounded-full text-xs font-semibold border flex items-center justify-center gap-1 transition-all duration-200 w-[115px] md:w-[120px] ${btnStyle}`}
                   >
                     <Icon className="w-3.5 h-3.5" />
                     <span>{d.formattedLabel}</span>
@@ -1099,7 +1099,7 @@ export default function BookingPage() {
             {adminUser && (
               <>
                 {/* Search inputs */}
-                <div className="relative max-w-[180px] w-full">
+                <div className="relative max-w-[140px] md:max-w-[150px] w-full">
                   <input 
                     type="text" 
                     placeholder="ค้นหาล็อค/ลูกค้า..."
