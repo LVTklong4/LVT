@@ -1249,11 +1249,17 @@ export default function BookingPage() {
                   const stall = stalls.find(s => s.row === r && s.col === c);
                   
                   if (!stall) {
-                    const isInsideYellow = r >= 1 && r <= 2 && c >= 12 && c <= 15;
-                    const isInsideBlue = r >= 1 && r <= 2 && c >= 16 && c <= 19;
-                    const isInsideRed = r >= 23 && r <= 26 && c >= 1 && c <= 8;
-                    if (isInsideYellow || isInsideBlue || isInsideRed) {
-                      return null;
+                    const isInsideTopRight = r >= 1 && r <= 3 && c >= 12 && c <= 19;
+                    const isInsideBottomLeft = r >= 22 && r <= 27 && c >= 2 && c <= 8;
+                    
+                    if (isInsideTopRight || isInsideBottomLeft) {
+                      return (
+                        <div 
+                          key={`other-box-${r}-${c}`} 
+                          style={{ gridRow: r, gridColumn: c }} 
+                          className="bg-[#FFF9C4] border border-dashed border-[#FBC02D] rounded-sm w-full h-full min-h-[38px] opacity-80" 
+                        />
+                      );
                     }
                     return <div key={`empty-${r}-${c}`} style={{ gridRow: r, gridColumn: c }} className="invisible" />;
                   }
@@ -1352,36 +1358,36 @@ export default function BookingPage() {
               {/* Custom Highlight Zones */}
               <div 
                 style={{ 
-                  gridRow: "1 / span 2", 
+                  gridRow: "1 / span 3", 
                   gridColumn: "12 / span 4",
                   border: "3px solid #EAB308",
-                  backgroundColor: "rgba(254, 249, 195, 0.95)"
+                  backgroundColor: "rgba(254, 249, 195, 0.15)"
                 }}
-                className="rounded-md flex items-center justify-center text-amber-900 font-extrabold text-[11px] shadow-md text-center p-1 border-2"
+                className="rounded-md flex items-center justify-center text-amber-900 font-extrabold text-[12px] shadow-sm text-center p-1 border-2 pointer-events-none z-10"
               >
                 ร้านขายของชำ
               </div>
               
               <div 
                 style={{ 
-                  gridRow: "1 / span 2", 
+                  gridRow: "1 / span 3", 
                   gridColumn: "16 / span 4",
                   border: "3px solid #2563EB",
-                  backgroundColor: "rgba(219, 234, 254, 0.95)"
+                  backgroundColor: "rgba(219, 234, 254, 0.15)"
                 }}
-                className="rounded-md flex items-center justify-center text-blue-900 font-extrabold text-[11px] shadow-md text-center p-1 border-2"
+                className="rounded-md flex items-center justify-center text-blue-900 font-extrabold text-[12px] shadow-sm text-center p-1 border-2 pointer-events-none z-10"
               >
                 ห้องน้ำ
               </div>
               
               <div 
                 style={{ 
-                  gridRow: "23 / span 4", 
-                  gridColumn: "1 / span 8",
+                  gridRow: "22 / span 6", 
+                  gridColumn: "2 / span 7",
                   border: "3px solid #DC2626",
-                  backgroundColor: "rgba(254, 226, 226, 0.95)"
+                  backgroundColor: "rgba(254, 226, 226, 0.15)"
                 }}
-                className="rounded-md flex items-center justify-center text-red-900 font-extrabold text-xs shadow-md text-center p-1 border-2"
+                className="rounded-md flex items-center justify-center text-red-900 font-extrabold text-sm shadow-sm text-center p-1 border-2 pointer-events-none z-10"
               >
                 ร้านน้ำ
               </div>
