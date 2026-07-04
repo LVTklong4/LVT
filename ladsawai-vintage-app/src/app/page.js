@@ -30,7 +30,8 @@ import {
   Leaf,
   ShoppingBag,
   PlusCircle,
-  DollarSign
+  DollarSign,
+  Printer
 } from 'lucide-react';
 
 // Date and formatting helpers for Thai locale
@@ -668,6 +669,237 @@ export default function BookingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Print thermal 80mm ticket
+  const handlePrintReceipt = (bookingObj = selectedBooking, stallObj = selectedStall) => {
+    if (!bookingObj || !stallObj) return;
+
+    // Get current date time for transaction date
+    const now = new Date();
+    const formattedTransaction = now.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+
+    // Format employee code
+    const empCode = adminUser?.employee_id || adminUser?.name || 'lvt-admin';
+
+    // Format trading date
+    const tradingDateObj = new Date(selectedDate || bookingObj.date);
+    const dayName = dayNamesShort[tradingDateObj.getDay()] || '';
+    const tradingDateFormatted = `${dayName} ที่ ${tradingDateObj.getDate()} ${monthNamesFull[tradingDateObj.getMonth()]} ${tradingDateObj.getFullYear() + 543}`;
+
+    // Format stall name list with brackets
+    const formattedStallName = `[${stallObj.name}]`;
+
+    const stallPriceVal = parseNumber(bookingObj.stall_price);
+    const elecPriceVal = parseNumber(bookingObj.elec_price);
+    const storageFeeVal = parseNumber(bookingObj.storage_fee);
+    const totalAmountVal = stallPriceVal + elecPriceVal + storageFeeVal;
+    
+    const paymentMethodText = bookingObj.payment_method === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) {
+      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>พิมพ์ตั๋ว/ใบเสร็จ</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Sarabun', sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              background: #fff;
+              color: #000;
+              font-size: 11pt;
+              line-height: 1.4;
+            }
+            .center {
+              text-align: center;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .logo {
+              width: 32mm;
+              height: auto;
+              margin: 0 auto 2mm auto;
+              display: block;
+            }
+            .divider {
+              border-top: 1.5px dashed #000;
+              margin: 3mm 0;
+            }
+            .title {
+              font-size: 13pt;
+              font-weight: 800;
+              margin: 2mm 0 1mm 0;
+            }
+            .subtitle {
+              font-size: 9.5pt;
+              font-weight: bold;
+              color: #000;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .info-table td {
+              padding: 1.2mm 0;
+              vertical-align: top;
+              font-size: 10.5pt;
+            }
+            .info-table td.label {
+              width: 32%;
+              white-space: nowrap;
+            }
+            .info-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .price-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .price-table td {
+              padding: 1.2mm 0;
+              font-size: 10.5pt;
+            }
+            .price-table td.label {
+              text-align: left;
+            }
+            .price-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .total-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .total-table td {
+              padding: 1.5mm 0;
+            }
+            .total-table td.label {
+              text-align: right;
+              font-size: 11pt;
+              font-weight: bold;
+              padding-right: 2mm;
+            }
+            .total-table td.val {
+              text-align: right;
+              font-size: 13pt;
+              font-weight: 800;
+            }
+            .footer {
+              margin-top: 4mm;
+              font-size: 9.5pt;
+              text-align: center;
+              line-height: 1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
+            <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
+            <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
+            <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (รายวัน)</div>
+          
+          <table class="info-table">
+            <tr>
+              <td class="label">วันที่ทำรายการ :</td>
+              <td style="text-align: right;">${formattedTransaction}</td>
+            </tr>
+            <tr>
+              <td class="label">รหัสพนักงาน :</td>
+              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
+            </tr>
+            <tr>
+              <td class="label">วันที่ทำการค้า :</td>
+              <td style="text-align: right;" class="bold">${tradingDateFormatted}</td>
+            </tr>
+            <tr>
+              <td class="label">สินค้า :</td>
+              <td style="text-align: right;" class="bold">${bookingObj.product || '-'}</td>
+            </tr>
+            <tr>
+              <td class="label">ล็อค :</td>
+              <td style="text-align: right;" class="bold">${formattedStallName}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="price-table">
+            <tr>
+              <td class="label">ค่าล็อครวม :</td>
+              <td class="val">${stallPriceVal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="label">ค่าไฟฟ้ารวม :</td>
+              <td class="val">${elecPriceVal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="label">ค่าฝากของ :</td>
+              <td class="val">${storageFeeVal.toFixed(2)}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="total-table">
+            <tr>
+              <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
+              <td class="val">${totalAmountVal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="label">การชำระเงิน [${paymentMethodText}] :</td>
+              <td class="val">${totalAmountVal.toFixed(2)}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">
+            <div>ติดต่อสอบถามเพิ่มเติมได้ที่</div>
+            <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
+            <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   // Add electricity (Utility charge)
@@ -1719,12 +1951,20 @@ export default function BookingPage() {
                     <span className="text-xs font-bold text-gray-600">เครื่องมือผู้ดูแลระบบ:</span>
                     <div className="flex flex-wrap gap-2">
                       {selectedBooking && (
-                        <button
-                          onClick={() => setShowAddUtilityModal(true)}
-                          className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow"
-                        >
-                          <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setShowAddUtilityModal(true)}
+                            className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow"
+                          >
+                            <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
+                          </button>
+                          <button
+                            onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
+                            className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow"
+                          >
+                            <Printer className="w-3.5 h-3.5" /> พิมพ์ตั๋ว (80mm)
+                          </button>
+                        </>
                       )}
                       
                       <button
@@ -1741,12 +1981,20 @@ export default function BookingPage() {
                 {/* Modal Footer Controls */}
                 <div className="bg-gray-50 border-t px-4 py-3 flex flex-wrap justify-between items-center gap-2">
                   {selectedBooking ? (
-                    <button
-                      onClick={handleDeleteBooking}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow"
-                    >
-                      <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDeleteBooking}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow"
+                      >
+                        <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
+                      </button>
+                      <button
+                        onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow"
+                      >
+                        <Printer className="w-4 h-4" /> พิมพ์ตั๋ว (80mm)
+                      </button>
+                    </div>
                   ) : (
                     <div />
                   )}
