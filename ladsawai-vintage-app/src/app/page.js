@@ -2193,7 +2193,7 @@ export default function BookingPage() {
                         statusText = booking.product || "จองแล้ว";
                       } else if (booking.status === 'ค้างชำระ') {
                         statusClass = "bg-unpaid text-amber-900";
-                        statusText = "ค้างชำระ";
+                        statusText = booking.product || "จองแล้ว";
                       } else {
                         statusClass = "bg-monthly-stall";
                         statusText = "รายเดือน";
@@ -2212,7 +2212,7 @@ export default function BookingPage() {
                         statusText = booking.product || "จองแล้ว";
                       } else {
                         statusClass = "bg-unpaid text-amber-900";
-                        statusText = "ค้างชำระ";
+                        statusText = booking.product || "จองแล้ว";
                       }
                     } else {
                       statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
