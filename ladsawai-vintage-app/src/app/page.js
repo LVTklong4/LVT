@@ -2329,27 +2329,22 @@ export default function BookingPage() {
                 </div>
 
                 {/* Parking Slots */}
-                <div className="flex flex-col gap-3.5 w-full items-center py-0.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="border-2 border-dashed border-[#8B4513]/30 rounded-lg p-1.5 flex items-center justify-between bg-white/75 shadow-sm w-full max-w-[120px] h-[98px] flex-col relative">
-                      <div className="absolute top-0.5 left-1.5 text-[8px] font-bold text-gray-500">
-                        Slot {i+1}
+                <div className="flex flex-col gap-2.5 w-full items-center py-0.5">
+                  {[
+                    'text-slate-600',  // Gray
+                    'text-blue-700',   // Blue
+                    'text-emerald-700',// Green
+                    'text-red-700',    // Red
+                    'text-amber-700',  // Bronze
+                    'text-zinc-500'    // Silver
+                  ].map((colorClass, i) => (
+                    <div key={i} className="border-2 border-dashed border-[#8B4513]/20 rounded-lg p-2 flex items-center justify-center bg-white/70 shadow-sm w-full max-w-[110px] h-[64px] relative">
+                      <div className="absolute top-0.5 left-1 text-[7px] font-bold text-gray-400">
+                        P{i+1}
                       </div>
-                      
-                      <div className="flex items-center justify-center w-full mt-2">
-                        <svg className="w-8 h-8 text-[#5D4037]/80 drop-shadow-xs" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 10l1.5-4.5h11L19 10H5z"/>
-                        </svg>
-                      </div>
-                      
-                      <div className="w-full flex flex-col items-center justify-center gap-0.5 border-t border-dashed border-gray-300 pt-1 mt-0.5">
-                        <span className="text-[7.5px] font-bold text-[#8B4513]">แผงขายของข้างรถ</span>
-                        <div className="flex gap-1.5 items-center justify-center">
-                          <span className="text-[9px]" title="สินค้าวางพื้น">🧺</span>
-                          <span className="text-[9px]" title="ร่มขายของ">⛱️</span>
-                          <span className="text-[9px]" title="กล่องสินค้า">📦</span>
-                        </div>
-                      </div>
+                      <svg className={`w-9 h-9 ${colorClass} drop-shadow-sm`} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 10l1.5-4.5h11L19 10H5z"/>
+                      </svg>
                     </div>
                   ))}
                 </div>
