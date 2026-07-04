@@ -31,7 +31,9 @@ import {
   ShoppingBag,
   PlusCircle,
   DollarSign,
-  Printer
+  Printer,
+  Utensils,
+  Shirt
 } from 'lucide-react';
 
 // Date and formatting helpers for Thai locale
@@ -2438,69 +2440,87 @@ export default function BookingPage() {
             {/* Modal Body */}
             {!adminUser ? (
               // Customer / Guest Modal View
-              <div className="p-5 flex flex-col gap-4">
-                {/* Date */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-gray-500 font-bold">วันที่</span>
-                  <span className="text-sm font-extrabold text-gray-800 bg-amber-50/50 p-2.5 rounded border border-amber-200/60">
-                    {getModalDateFormat(selectedDate)}
+              <div className="p-6 flex flex-col gap-4 text-center">
+                {/* Large centered stall identifier card */}
+                <div className="bg-gradient-to-br from-[#FAEBD7] to-amber-50/40 p-6 rounded-2xl border border-amber-200/80 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
+                  <div className="absolute -top-10 -right-10 w-24 h-24 bg-amber-200/20 rounded-full blur-xl pointer-events-none" />
+                  <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-[#8B4513]/5 rounded-full blur-xl pointer-events-none" />
+                  
+                  {/* Category Circle Icon */}
+                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-sm border border-amber-100 flex-shrink-0">
+                    {selectedStall.type === 'อาหาร' ? (
+                      <Utensils className="w-8 h-8 text-[#8B4513]" />
+                    ) : selectedStall.type === 'เสื้อผ้า' ? (
+                      <Shirt className="w-8 h-8 text-[#8B4513]" />
+                    ) : (
+                      <Store className="w-8 h-8 text-[#8B4513]" />
+                    )}
+                  </div>
+                  
+                  <span className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest">หมายเลขล็อค</span>
+                  <h2 className="text-4xl font-black text-[#4A3B32] mt-0.5 tracking-tight">{selectedStall.name}</h2>
+                  
+                  <span className="text-[10px] text-amber-900 font-extrabold bg-[#FAEBD7] border border-amber-250 px-3 py-1 rounded-full mt-3 shadow-xs">
+                    โซน {selectedStall.type}
                   </span>
                 </div>
 
-                {/* Stall Name */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-gray-500 font-bold">ชื่อล็อค</span>
-                  <span className="text-base font-extrabold text-[#8B4513] bg-amber-50/50 p-2.5 rounded border border-amber-200/60">
-                    {selectedStall.name} ({selectedStall.type})
-                  </span>
+                {/* Centered Date Badge */}
+                <div className="flex items-center justify-center gap-1.5 text-xs text-gray-700 font-extrabold bg-gray-50/80 p-3 rounded-xl border border-gray-200/50">
+                  <CalendarDays className="w-4 h-4 text-amber-800" />
+                  <span>วันที่ทำการค้า: {getModalDateFormat(selectedDate)}</span>
                 </div>
 
-                {/* Status / Product */}
+                {/* Status Section */}
                 {(() => {
                   const statusInfo = getStallStatus(selectedStall, selectedBooking);
                   return (
                     <>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500 font-bold">สถานะ</span>
-                        <div className={`p-3 rounded-lg border text-sm font-bold flex items-center justify-between ${
-                          statusInfo.isVacant 
-                            ? 'bg-green-50 border-green-200 text-green-800' 
-                            : 'bg-red-50 border-red-200 text-red-800'
-                        }`}>
-                          <span>{statusInfo.isVacant ? 'สถานะว่าง' : 'ไม่ว่าง'}</span>
-                          {statusInfo.isVacant && (
-                            <span className="text-xs font-extrabold text-green-700 bg-green-100/60 px-2.5 py-1 rounded-full border border-green-200">
-                              {statusInfo.price} บาท
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* If not vacant, show product name */}
-                      {!statusInfo.isVacant && (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs text-gray-500 font-bold">สินค้าที่ขาย</span>
-                          <span className="text-sm font-extrabold text-gray-800 bg-amber-50/50 p-2.5 rounded border border-amber-200/60">
-                            {statusInfo.product || 'ไม่มีข้อมูลสินค้า'}
+                      {/* Centered Status Box */}
+                      {statusInfo.isVacant ? (
+                        <div className="flex flex-col items-center gap-2 p-5 bg-green-50/50 border-2 border-dashed border-green-200 rounded-2xl text-center">
+                          <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700">
+                            <CheckCircle className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs text-green-800 font-extrabold">สถานะ: ล็อคว่างพร้อมจอง</span>
+                          <span className="text-2xl font-black text-green-700 mt-0.5">
+                            {statusInfo.price} <span className="text-xs font-bold text-gray-500">บาท / วัน</span>
                           </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 p-5 bg-red-50/50 border-2 border-dashed border-red-200 rounded-2xl text-center">
+                          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center text-red-700">
+                            <AlertCircle className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs text-red-800 font-extrabold">สถานะ: ล็อคไม่ว่าง (จองแล้ว)</span>
+                          
+                          <div className="mt-1 border-t border-dashed border-red-200/60 pt-2 w-full text-center">
+                            <span className="text-[9px] text-gray-500 font-extrabold uppercase block mb-0.5">ประเภทสินค้า</span>
+                            <span className="text-sm font-extrabold text-gray-800 bg-white/70 px-4 py-1.5 rounded-lg border border-red-100 inline-block">
+                              {statusInfo.product || 'ไม่มีข้อมูลสินค้า'}
+                            </span>
+                          </div>
                         </div>
                       )}
 
                       {/* If vacant, show LINE LIFF button */}
                       {statusInfo.isVacant && (
-                        <a 
-                          href="https://liff.line.me/2008895416-3c35BsXZ"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 w-full py-3 bg-[#06C755] hover:bg-[#05b34c] text-white font-extrabold rounded-lg shadow-md transition-all flex items-center justify-center gap-2 text-sm"
-                        >
-                          <img 
-                            src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" 
-                            alt="LINE" 
-                            className="w-5 h-5 filter invert" 
-                          />
-                          จองล็อคนี้ผ่าน LINE
-                        </a>
+                        <div className="flex flex-col gap-2 mt-1">
+                          <a 
+                            href="https://liff.line.me/2008895416-3c35BsXZ"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full py-3.5 bg-[#06C755] hover:bg-[#05b34c] active:scale-98 text-white font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2.5 text-sm hover:shadow-lg"
+                          >
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" 
+                              alt="LINE" 
+                              className="w-5 h-5 filter invert" 
+                            />
+                            จองล็อคนี้ผ่าน LINE
+                          </a>
+                          <span className="text-[9px] text-gray-400 font-bold">* ระบบจะนำคุณไปยังห้องแชท LINE เพื่อลงทะเบียนและชำระเงิน</span>
+                        </div>
                       )}
                     </>
                   );
