@@ -142,6 +142,17 @@ export default function BookingPage() {
   const [monthlyPrintTxnNo, setMonthlyPrintTxnNo] = useState('');
   const [monthlyPrintPayments, setMonthlyPrintPayments] = useState([]);
 
+  // Storage Print Settings States
+  const [showStoragePrintModal, setShowStoragePrintModal] = useState(false);
+  const [storagePrintItem, setStoragePrintItem] = useState(null);
+  const [storagePrintStartDate, setStoragePrintStartDate] = useState('');
+  const [storagePrintEndDate, setStoragePrintEndDate] = useState('');
+  const [storagePrintOwner, setStoragePrintOwner] = useState('');
+  const [storagePrintStall, setStoragePrintStall] = useState('');
+  const [storagePrintNote, setStoragePrintNote] = useState('');
+  const [storagePrintFee, setStoragePrintFee] = useState(0);
+  const [storagePrintPayment, setStoragePrintPayment] = useState('เงินสด');
+
   // Finance Modal States
   const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
   const [expenseList, setExpenseList] = useState([]);
@@ -1293,6 +1304,271 @@ export default function BookingPage() {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     setShowMonthlyPrintModal(false);
+  };
+
+  // Open storage print modal and compute default values
+  const handleOpenStoragePrintModal = (item) => {
+    setStoragePrintItem(item);
+    setStoragePrintStartDate(item.start_date || '');
+    setStoragePrintEndDate(item.end_date || '');
+    setStoragePrintOwner(item.owner_name || '');
+    setStoragePrintStall(item.stall_name || '');
+    setStoragePrintNote(item.note || '-');
+    setStoragePrintPayment('เงินสด');
+
+    // Calculate days count
+    let days = 1;
+    if (item.start_date && item.end_date) {
+      const start = new Date(item.start_date);
+      const end = new Date(item.end_date);
+      const diffTime = Math.abs(end - start);
+      days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+    }
+    setStoragePrintFee(days * 40); // default 40 baht/day
+    setShowStoragePrintModal(true);
+  };
+
+  // Print storage receipt
+  const handlePrintStorageReceipt = () => {
+    if (!storagePrintItem) return;
+
+    // Get current date time for transaction date
+    const now = new Date();
+    const formattedTransaction = now.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+
+    const empCode = adminUser?.employee_id || adminUser?.name || 'lvt-admin';
+
+    // Format start & end date
+    const formatDateWithDay = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      const dayName = dayNamesShort[d.getDay()] || '';
+      return `${dayName} ที่ ${d.getDate()} ${monthNamesFull[d.getMonth()]} ${d.getFullYear() + 543}`;
+    };
+
+    const startFormatted = formatDateWithDay(storagePrintStartDate);
+    const endFormatted = formatDateWithDay(storagePrintEndDate);
+    const feeVal = parseNumber(storagePrintFee);
+    const paymentText = storagePrintPayment === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) {
+      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>พิมพ์ตั๋วฝากของ</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Sarabun', sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              background: #fff;
+              color: #000;
+              font-size: 11pt;
+              line-height: 1.4;
+            }
+            .center {
+              text-align: center;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .logo {
+              width: 32mm;
+              height: auto;
+              margin: 0 auto 2mm auto;
+              display: block;
+            }
+            .divider {
+              border-top: 1.5px dashed #000;
+              margin: 3mm 0;
+            }
+            .title {
+              font-size: 13pt;
+              font-weight: 800;
+              margin: 2mm 0 1mm 0;
+            }
+            .subtitle {
+              font-size: 9.5pt;
+              font-weight: bold;
+              color: #000;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .info-table td {
+              padding: 1.2mm 0;
+              vertical-align: top;
+              font-size: 10.5pt;
+            }
+            .info-table td.label {
+              width: 32%;
+              white-space: nowrap;
+            }
+            .info-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .total-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .total-table td {
+              padding: 1.5mm 0;
+            }
+            .total-table td.label {
+              text-align: right;
+              font-size: 11pt;
+              font-weight: bold;
+              padding-right: 2mm;
+            }
+            .total-table td.val {
+              text-align: right;
+              font-size: 13pt;
+              font-weight: 800;
+            }
+            .terms {
+              font-size: 8.5pt;
+              line-height: 1.35;
+              text-align: left;
+              margin: 3mm 0;
+            }
+            .terms-title {
+              font-weight: bold;
+              margin-bottom: 1mm;
+            }
+            .terms ol {
+              margin: 0;
+              padding-left: 4.5mm;
+            }
+            .terms li {
+              margin-bottom: 1mm;
+            }
+            .footer {
+              margin-top: 4mm;
+              font-size: 9.5pt;
+              text-align: center;
+              line-height: 1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
+            <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
+            <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
+            <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (ฝากของ)</div>
+          
+          <table class="info-table">
+            <tr>
+              <td class="label">วันที่ทำรายการ :</td>
+              <td style="text-align: right;">${formattedTransaction}</td>
+            </tr>
+            <tr>
+              <td class="label">รหัสพนักงาน :</td>
+              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
+            </tr>
+            <tr>
+              <td class="label">วันที่เริ่ม :</td>
+              <td style="text-align: right;" class="bold">${startFormatted}</td>
+            </tr>
+            <tr>
+              <td class="label">วันที่สิ้นสุด :</td>
+              <td style="text-align: right;" class="bold">${endFormatted}</td>
+            </tr>
+            <tr>
+              <td class="label">ชื่อผู้ฝาก :</td>
+              <td style="text-align: right;" class="bold">${storagePrintOwner}</td>
+            </tr>
+            <tr>
+              <td class="label">วางของไว้ล็อค :</td>
+              <td style="text-align: right;" class="bold">[${storagePrintStall}]</td>
+            </tr>
+            <tr>
+              <td class="label">ค่าฝากของ :</td>
+              <td style="text-align: right;" class="bold">${feeVal.toFixed(2)}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="info-table">
+            <tr>
+              <td class="label" style="width: 25%;">รายการที่ฝาก :</td>
+              <td style="text-align: left;" class="bold">${storagePrintNote}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="total-table">
+            <tr>
+              <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
+              <td class="val">${feeVal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="label">การชำระเงิน [${paymentText}] :</td>
+              <td class="val">${feeVal.toFixed(2)}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="terms">
+            <div class="terms-title">รายละเอียดและเงื่อนไขการฝากของมีดังต่อไปนี้</div>
+            <ol>
+              <li>การฝากของในที่นี้หมายถึง การเช่าพื้นที่วางของเท่านั้น</li>
+              <li>ทางตลาดฯ ไม่รับผิดชอบความเสียหาย สูญหายที่เกิดขึ้นทุกกรณี</li>
+              <li>ในวันที่มีนัด หากลูกค้าไม่มาทำการค้า ทางตลาดมีสิทธิ์ในการย้ายของไปไว้ที่อื่นทุกกรณี และหากของที่ฝากมีขนาดใหญ่ ไม่สามารถเคลื่อนย้ายได้สะดวก ทางตลาดฯ คิดค่าล็อคในนัดนั้น</li>
+              <li>เมื่อสิ้นสุดระยะเวลาฝากของ และไม่ได้ทำการต่อระยะเวลาฝากของ หากลูกค้าไม่มารับหรือมารับในภายหลัง ทางตลาดฯ คิดค่าฝากของย้อนหลัง</li>
+              <li>การชำระค่าฝากของ ถือว่าลูกค้าได้รับทราบรายละเอียดและเงื่อนไขการฝากของดังกล่าวแล้ว และจะปฏิบัติตามอย่างเคร่งครัด</li>
+            </ol>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">
+            <div class="bold">สอบถามข้อมูลการฝากของได้ที่</div>
+            <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
+            <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    setShowStoragePrintModal(false);
   };
 
   // Add electricity (Utility charge)
@@ -2615,7 +2891,7 @@ export default function BookingPage() {
                             </span>
                           </td>
                           <td className="p-2 text-center">
-                            <div className="flex gap-1.5 justify-center">
+                            <div className="flex gap-1 justify-center">
                               <button 
                                 onClick={() => setStorageForm(item)}
                                 className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100"
@@ -2631,6 +2907,12 @@ export default function BookingPage() {
                                 }`}
                               >
                                 {item.status === 'Active' ? 'เช็คออก' : 'เช็คอิน'}
+                              </button>
+                              <button 
+                                onClick={() => handleOpenStoragePrintModal(item)}
+                                className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5"
+                              >
+                                <Printer className="w-3 h-3" /> พิมพ์
                               </button>
                             </div>
                           </td>
@@ -2976,6 +3258,121 @@ export default function BookingPage() {
                 type="button"
                 onClick={handlePrintMonthlyReceipt}
                 className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded text-xs flex items-center gap-1 shadow animate-pulse-subtle"
+              >
+                <Printer className="w-4 h-4" /> สั่งพิมพ์ (80mm)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📦 1.1 Storage Print Parameters Modal */}
+      {showStoragePrintModal && storagePrintItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border-2 border-amber-800 overflow-hidden animate-pop-in">
+            <div className="bg-amber-800 text-white px-4 py-3 flex justify-between items-center">
+              <h3 className="font-bold text-sm flex items-center gap-1.5"><Printer className="w-5 h-5" /> ตั้งค่าการพิมพ์ตั๋วฝากของ</h3>
+              <button onClick={() => setShowStoragePrintModal(false)} className="text-amber-100 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-4 flex flex-col gap-3 max-h-[75vh] overflow-y-auto custom-scrollbar text-xs">
+              <div className="bg-amber-50 border border-amber-200 rounded p-2.5">
+                <div className="font-bold text-amber-900">ผู้ฝาก: {storagePrintOwner}</div>
+                <div className="text-gray-600 mt-0.5">ล็อก: {storagePrintStall}</div>
+              </div>
+
+              {/* Start Date */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">วันที่เริ่มฝาก</label>
+                <input 
+                  type="date"
+                  value={storagePrintStartDate}
+                  onChange={(e) => setStoragePrintStartDate(e.target.value)}
+                  className="p-2 border rounded text-xs bg-white"
+                />
+              </div>
+
+              {/* End Date */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">วันที่สิ้นสุด</label>
+                <input 
+                  type="date"
+                  value={storagePrintEndDate}
+                  onChange={(e) => setStoragePrintEndDate(e.target.value)}
+                  className="p-2 border rounded text-xs bg-white"
+                />
+              </div>
+
+              {/* Owner Name */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">ชื่อผู้ฝาก</label>
+                <input 
+                  type="text"
+                  value={storagePrintOwner}
+                  onChange={(e) => setStoragePrintOwner(e.target.value)}
+                  className="p-2 border rounded text-xs"
+                />
+              </div>
+
+              {/* Stall Name */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">วางของไว้ล็อค</label>
+                <input 
+                  type="text"
+                  value={storagePrintStall}
+                  onChange={(e) => setStoragePrintStall(e.target.value)}
+                  className="p-2 border rounded text-xs font-mono"
+                />
+              </div>
+
+              {/* Fee */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">ค่าฝากของ (บาท)</label>
+                <input 
+                  type="number"
+                  value={storagePrintFee}
+                  onChange={(e) => setStoragePrintFee(parseNumber(e.target.value))}
+                  className="p-2 border rounded text-xs"
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">การชำระเงิน</label>
+                <select 
+                  value={storagePrintPayment}
+                  onChange={(e) => setStoragePrintPayment(e.target.value)}
+                  className="p-2 border rounded text-xs bg-white"
+                >
+                  <option value="เงินสด">เงินสด</option>
+                  <option value="โอนเงิน">โอนเงิน (โอนจ่าย)</option>
+                </select>
+              </div>
+
+              {/* Note */}
+              <div className="flex flex-col gap-1">
+                <label className="font-bold text-gray-700">รายการที่ฝาก</label>
+                <textarea 
+                  value={storagePrintNote}
+                  onChange={(e) => setStoragePrintNote(e.target.value)}
+                  rows="2"
+                  className="p-2 border rounded text-xs bg-white"
+                />
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 px-4 py-3 border-t flex justify-end gap-2 shrink-0">
+              <button 
+                type="button"
+                onClick={() => setShowStoragePrintModal(false)}
+                className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded text-xs"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                type="button"
+                onClick={handlePrintStorageReceipt}
+                className="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded text-xs flex items-center gap-1 shadow"
               >
                 <Printer className="w-4 h-4" /> สั่งพิมพ์ (80mm)
               </button>
