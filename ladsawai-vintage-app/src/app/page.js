@@ -2236,6 +2236,14 @@ export default function BookingPage() {
                       } ${isHighlighted ? 'search-highlight' : ''}`}
                     >
                       <span className="text-[9px] font-extrabold leading-none">{displayName}</span>
+                      {statusText && (
+                        <span 
+                          className="text-[6.5px] font-bold leading-none mt-0.5 max-w-full truncate px-0.5 text-center block"
+                          title={statusText}
+                        >
+                          {statusText}
+                        </span>
+                      )}
                       {statusText === 'ลา' && (
                         <span className="text-[7px] font-bold text-red-600 leading-none mt-0.5">ลา</span>
                       )}
