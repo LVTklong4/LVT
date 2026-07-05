@@ -155,6 +155,11 @@ export default function BookingPage() {
   const [storagePrintFee, setStoragePrintFee] = useState(0);
   const [storagePrintPayment, setStoragePrintPayment] = useState('เงินสด');
 
+  // Multi-Stall Admin Booking States
+  const [selectedStallsList, setSelectedStallsList] = useState([]);
+  const [cashReceived, setCashReceived] = useState('');
+  const [showAddStallSelect, setShowAddStallSelect] = useState(false);
+
   // Finance Modal States
   const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
   const [expenseList, setExpenseList] = useState([]);
@@ -503,13 +508,27 @@ export default function BookingPage() {
     }
   };
 
+  // Calculate stall prices for selectedStallsList based on trading day
+  const calculateDefaultStallPrice = (stallsList) => {
+    const dateObj = new Date(selectedDate);
+    const day = dateObj.getDay();
+    return stallsList.reduce((sum, s) => {
+      let p = s.price_wed;
+      if (day === 6) p = s.price_sat;
+      if (day === 0) p = s.price_sun;
+      return sum + parseNumber(p);
+    }, 0);
+  };
+
   // Click Stall handler
   const handleStallClick = (stall) => {
     if (stall.type === 'ทางเดิน' || stall.type === 'อื่นๆ') return;
     
-    const booking = bookings.find(b => b.stall_name === stall.name);
+    const booking = bookings.find(b => b.stall_name === stall.name || (b.stall_name && b.stall_name.split(',').map(s => s.trim()).includes(stall.name)));
     setSelectedStall(stall);
     setSelectedBooking(booking || null);
+    setCashReceived('');
+    setShowAddStallSelect(false);
 
     // Get price based on day of week
     const dateObj = new Date(selectedDate);
@@ -529,6 +548,15 @@ export default function BookingPage() {
       setElecUnit(booking.elec_unit || 0);
       setElecPrice(booking.elec_price || 0);
       setNote(booking.note || '');
+      
+      // Parse multi-stall list
+      if (booking.stall_name) {
+        const names = booking.stall_name.split(',').map(s => s.trim());
+        const matched = stalls.filter(s => names.includes(s.name));
+        setSelectedStallsList(matched.length > 0 ? matched : [stall]);
+      } else {
+        setSelectedStallsList([stall]);
+      }
     } else {
       setBookerName('');
       setProduct('');
@@ -539,6 +567,7 @@ export default function BookingPage() {
       setElecUnit(0);
       setElecPrice(0);
       setNote('');
+      setSelectedStallsList([stall]);
     }
 
     setShowBookingModal(true);
@@ -560,10 +589,11 @@ export default function BookingPage() {
       const bookingId = selectedBooking?.id || `B-${Date.now()}`;
       const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
 
+      const stallNames = selectedStallsList.map(s => s.name).join(', ');
       const bookingData = {
         id: bookingId,
         date: selectedDate,
-        stall_name: selectedStall.name,
+        stall_name: stallNames,
         booker_name: bookerName,
         product: product,
         type: bookingType,
@@ -593,7 +623,7 @@ export default function BookingPage() {
           category: bookingType === 'รายวัน' ? 'ค่าล็อครายวัน' : 'ค่าล็อครายเดือน',
           total_amount: totalVal,
           method: paymentMethod,
-          note: `ชำระเงินล็อค ${selectedStall.name}`,
+          note: `ชำระเงินล็อค ${stallNames}`,
           officer: adminUser.name,
           timestamp: new Date().toISOString(),
           stall_amt: parseNumber(stallPrice),
@@ -627,7 +657,8 @@ export default function BookingPage() {
     }
     if (!selectedBooking) return;
 
-    if (!confirm(`ยืนยันการลบการจองล็อค ${selectedStall.name} หรือไม่?`)) return;
+    const stallNames = selectedStallsList.map(s => s.name).join(', ');
+    if (!confirm(`ยืนยันการลบการจองล็อค ${stallNames} หรือไม่?`)) return;
 
     setLoading(true);
     try {
@@ -716,7 +747,9 @@ export default function BookingPage() {
     const tradingDateFormatted = `${dayName} ที่ ${tradingDateObj.getDate()} ${monthNamesFull[tradingDateObj.getMonth()]} ${tradingDateObj.getFullYear() + 543}`;
 
     // Format stall name list with brackets
-    const formattedStallName = `[${stallObj.name}]`;
+    const formattedStallName = bookingObj.stall_name 
+      ? bookingObj.stall_name.split(',').map(s => `[${s.trim()}]`).join(', ') 
+      : `[${stallObj.name}]`;
 
     const stallPriceVal = parseNumber(bookingObj.stall_price);
     const elecPriceVal = parseNumber(bookingObj.elec_price);
@@ -2162,7 +2195,7 @@ export default function BookingPage() {
                     return <div key={`empty-${r}-${c}`} style={{ gridRow: r, gridColumn: c }} className="invisible" />;
                   }
 
-                  const booking = bookings.find(b => b.stall_name === stall.name);
+                  const booking = bookings.find(b => b.stall_name === stall.name || (b.stall_name && b.stall_name.split(',').map(s => s.trim()).includes(stall.name)));
                   const storage = storageMap[stall.name];
                   
                   // Setup classes based on status
@@ -2532,16 +2565,96 @@ export default function BookingPage() {
             ) : (
               // Admin View (Form & Controls)
               <>
-                <div className="p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <div className="p-4 flex flex-col gap-3.5 max-h-[80vh] overflow-y-auto custom-scrollbar text-xs">
                   
-                  {/* Stall Details Tag */}
-                  <div className="bg-amber-50/60 border border-amber-200 rounded p-2 flex flex-wrap gap-y-1 gap-x-4 text-xs font-semibold text-gray-700">
-                    <span>แถว: {selectedStall.row}</span>
-                    <span>คอลัมน์: {selectedStall.col}</span>
-                    <span>ประเภทล็อค: {selectedStall.type}</span>
+                  {/* 1. Date (Highly Visible) */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3 shadow-xs">
+                    <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-800 flex-shrink-0">
+                      <CalendarDays className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-500 font-bold block uppercase tracking-wider">วันที่ทำการค้า</span>
+                      <span className="text-sm font-black text-amber-900">{getModalDateFormat(selectedDate)}</span>
+                    </div>
                   </div>
 
-                  {/* Form Input fields */}
+                  {/* 2. Stall Selector (Multi-Stall support) */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-700 flex items-center justify-between">
+                      <span>ล็อคที่จอง ({selectedStallsList.length} ล็อค)</span>
+                      <span className="text-[10px] text-gray-400 font-medium">* คิดยอดรวมในบิลใบเดียว</span>
+                    </label>
+                    
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50 border border-gray-200 rounded-lg min-h-[44px] items-center relative">
+                      {selectedStallsList.map((st) => (
+                        <span key={st.name} className="inline-flex items-center gap-1 bg-amber-100 border border-amber-255 text-[#8B4513] font-mono font-extrabold text-xs px-2.5 py-1 rounded-md shadow-xs">
+                          {st.name}
+                          {selectedStallsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = selectedStallsList.filter(item => item.name !== st.name);
+                                setSelectedStallsList(updated);
+                                setStallPrice(calculateDefaultStallPrice(updated));
+                              }}
+                              className="text-amber-600 hover:text-red-600 font-black ml-1 text-[10px] transition-colors"
+                              title="ลบออก"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </span>
+                      ))}
+
+                      {/* Dropdown to add more stalls */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddStallSelect(!showAddStallSelect)}
+                          className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center gap-0.5"
+                        >
+                          + เพิ่มล็อค
+                        </button>
+                        
+                        {showAddStallSelect && (
+                          <div className="absolute left-0 mt-1.5 w-48 bg-white border border-gray-250 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[160px] overflow-y-auto custom-scrollbar">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider px-1 pb-1 border-b">เลือกบล็อกเพื่อจองเพิ่ม</span>
+                            {(() => {
+                              const vacantStalls = stalls.filter(s => 
+                                s.type !== 'ทางเดิน' && 
+                                s.type !== 'อื่นๆ' && 
+                                !bookings.some(b => b.stall_name === s.name || (b.stall_name && b.stall_name.split(',').map(name => name.trim()).includes(s.name))) && 
+                                !selectedStallsList.some(item => item.name === s.name)
+                              );
+                              
+                              if (vacantStalls.length === 0) {
+                                return <span className="text-[10px] text-gray-400 text-center py-2">ไม่มีล็อคว่างแล้ว</span>;
+                              }
+                              
+                              return vacantStalls.map((vSt) => (
+                                <button
+                                  key={vSt.name}
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...selectedStallsList, vSt];
+                                    setSelectedStallsList(updated);
+                                    setStallPrice(calculateDefaultStallPrice(updated));
+                                    setShowAddStallSelect(false);
+                                  }}
+                                  className="w-full text-left px-2 py-1.5 hover:bg-amber-50 rounded text-xs font-mono font-bold text-gray-700 flex justify-between items-center transition-colors"
+                                >
+                                  <span>{vSt.name}</span>
+                                  <span className="text-[9px] text-gray-400 font-medium">({vSt.type})</span>
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Booker Name */}
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-bold text-gray-700">ชื่อผู้ค้า / เบอร์โทรศัพท์ *</label>
                     <input 
@@ -2549,10 +2662,11 @@ export default function BookingPage() {
                       value={bookerName}
                       onChange={(e) => setBookerName(e.target.value)}
                       placeholder="กรอกชื่อผู้ค้า และเบอร์ติดต่อ"
-                      className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
 
+                  {/* 4. Product */}
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-bold text-gray-700">สินค้าที่ขาย</label>
                     <input 
@@ -2560,52 +2674,51 @@ export default function BookingPage() {
                       value={product}
                       onChange={(e) => setProduct(e.target.value)}
                       placeholder="เช่น เสื้อผ้าวินเทจ, ส้มตำ"
-                      className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
 
+                  {/* Dynamic Pricing / Rent Type Selector */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-bold text-gray-700">ประเภทการเช่า</label>
                       <select
                         value={bookingType}
                         onChange={(e) => setBookingType(e.target.value)}
-                        className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 focus:outline-none"
+                        className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 focus:outline-none"
                       >
                         <option value="รายวัน">รายวัน</option>
                         <option value="รายเดือน">รายเดือน</option>
                       </select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-gray-700">วิธีการชำระ</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 focus:outline-none"
-                      >
-                        <option value="เงินสด">เงินสด</option>
-                        <option value="โอนเงิน">โอนเงิน</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-gray-700">ค่าล็อค (บาท)</label>
+                      <label className="text-xs font-bold text-gray-700">ค่าล็อคสะสม (บาท)</label>
                       <input 
                         type="number" 
                         value={stallPrice}
                         onChange={(e) => setStallPrice(e.target.value)}
-                        className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 text-center"
+                        className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 text-center font-bold"
                       />
                     </div>
+                  </div>
+
+                  {/* 5. Electric Unit & Price */}
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-gray-700">ค่าไฟ (บาท)</label>
+                      <label className="text-xs font-bold text-gray-700 flex items-center justify-between">
+                        <span>ค่าไฟ (หน่วย)</span>
+                        {elecPrice > 0 && <span className="text-[10px] text-gray-400">({elecPrice} บาท)</span>}
+                      </label>
                       <input 
                         type="number" 
-                        value={elecPrice}
-                        onChange={(e) => setElecPrice(e.target.value)}
-                        className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 text-center"
+                        value={elecUnit}
+                        onChange={(e) => {
+                          const val = parseNumber(e.target.value);
+                          setElecUnit(val);
+                          setElecPrice(val * 20); // 20 Baht per unit
+                        }}
+                        className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 text-center"
+                        placeholder="0 หน่วย"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -2614,59 +2727,103 @@ export default function BookingPage() {
                         type="number" 
                         value={storageFee}
                         onChange={(e) => setStorageFee(e.target.value)}
-                        className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 text-center"
+                        className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 text-center"
+                        placeholder="0"
                       />
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-gray-700">หมายเหตุเพิ่มเติม</label>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="ข้อมูลเพิ่มเติม เช่น ล็อคประจำ"
-                      rows="2"
-                      className="p-2 border border-amber-300 rounded text-xs text-gray-800 bg-amber-50/20 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-
-                  {/* Total Calculation Display */}
-                  <div className="bg-[#FAEBD7] border border-[#8B4513]/40 rounded p-3 flex justify-between items-center mt-1">
-                    <span className="text-xs font-bold text-[#4A3B32]">ยอดรวมทั้งหมด:</span>
-                    <span className="text-base font-extrabold text-red-800">
-                      {parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee)} บาท
-                    </span>
-                  </div>
-
-                  {/* Extra tools inside booking modal */}
-                  <div className="mt-2 border-t pt-3 flex flex-col gap-2">
-                    <span className="text-xs font-bold text-gray-600">เครื่องมือผู้ดูแลระบบ:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedBooking && (
-                        <>
-                          <button
-                            onClick={() => setShowAddUtilityModal(true)}
-                            className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow"
-                          >
-                            <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
-                          </button>
-                          <button
-                            onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
-                            className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow"
-                          >
-                            <Printer className="w-3.5 h-3.5" /> พิมพ์ตั๋ว (80mm)
-                          </button>
-                        </>
-                      )}
-                      
+                  {/* 7. Payment Method (Cash, Transfer Buttons) */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-700">วิธีการชำระเงิน</label>
+                    <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={handleMarkAbsent}
-                        className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow"
+                        type="button"
+                        onClick={() => setPaymentMethod('เงินสด')}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                          paymentMethod === 'เงินสด'
+                            ? 'bg-amber-800 text-white border-amber-850 shadow-sm'
+                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                        }`}
                       >
-                        <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
+                        เงินสด
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('โอนเงิน')}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                          paymentMethod === 'โอนเงิน'
+                            ? 'bg-amber-800 text-white border-amber-850 shadow-sm'
+                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        โอนจ่าย
                       </button>
                     </div>
                   </div>
+
+                  {/* 6. Total Box & 8. Cash Received Input */}
+                  <div className="bg-[#FAEBD7] border border-[#8B4513]/40 rounded-xl p-3 flex flex-col gap-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-[#4A3B32]">6. รวมทั้งสิ้น (บาท):</span>
+                      <span className="text-lg font-black text-red-800">
+                        {(parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee)).toFixed(2)} บาท
+                      </span>
+                    </div>
+
+                    <div className="border-t border-[#8B4513]/20 pt-2.5 flex items-center justify-between gap-4">
+                      <span className="text-xs font-bold text-[#4A3B32] shrink-0">8. รับเงินมา (บาท):</span>
+                      <div className="flex flex-col items-end gap-1 flex-1 max-w-[140px]">
+                        <input
+                          type="number"
+                          value={cashReceived}
+                          onChange={(e) => setCashReceived(e.target.value)}
+                          placeholder="กรอกยอดเงินสด"
+                          className="w-full p-1.5 border border-amber-400 rounded-lg text-xs text-right text-gray-800 bg-white font-extrabold"
+                        />
+                        {cashReceived && parseNumber(cashReceived) >= (parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee)) && (
+                          <span className="text-[10px] font-extrabold text-green-700">
+                            เงินทอน: {(parseNumber(cashReceived) - (parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee))).toFixed(2)} บ.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 9. Note (Note input field) */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-gray-700">โน้ตกรอกข้อความ</label>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="กรอกข้อความหมายเหตุเพิ่มเติม..."
+                      rows="2"
+                      className="p-2 border border-amber-300 rounded-lg text-xs text-gray-800 bg-amber-50/20 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  {/* Extra Admin tools */}
+                  {selectedBooking && (
+                    <div className="mt-1.5 border-t pt-3 flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">เครื่องมือบริการลูกค้า:</span>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddUtilityModal(true)}
+                          className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                        >
+                          <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleMarkAbsent}
+                          className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                        >
+                          <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
 
@@ -2675,14 +2832,16 @@ export default function BookingPage() {
                   {selectedBooking ? (
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={handleDeleteBooking}
-                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow"
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
                       >
                         <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
                       </button>
                       <button
+                        type="button"
                         onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
-                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow"
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
                       >
                         <Printer className="w-4 h-4" /> พิมพ์ตั๋ว (80mm)
                       </button>
@@ -2693,14 +2852,16 @@ export default function BookingPage() {
                   
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => handleSaveBooking('ค้างชำระ')}
-                      className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded font-bold text-xs shadow"
+                      className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded-lg font-bold text-xs shadow"
                     >
                       บันทึก (ค้างจ่าย)
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleSaveBooking('ชำระแล้ว')}
-                      className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded font-bold text-xs flex items-center gap-1 shadow"
+                      className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
                     >
                       <CreditCard className="w-4 h-4" /> บันทึกการจ่ายเงิน
                     </button>
@@ -3039,7 +3200,7 @@ export default function BookingPage() {
                 </form>
               ) : (
                 <div className="w-full md:w-80 shrink-0 bg-purple-50/20 p-4 border border-purple-200/60 rounded-lg flex items-center justify-center text-center text-xs text-gray-500 font-bold">
-                  คลิกปุ่ม "แก้ไข" ท้ายรายชื่อ เพื่อเริ่มปรับแก้ข้อมูลสมาชิกรายเดือน
+                  คลิกปุ่ม &quot;แก้ไข&quot; ท้ายรายชื่อ เพื่อเริ่มปรับแก้ข้อมูลสมาชิกรายเดือน
                 </div>
               )}
 
