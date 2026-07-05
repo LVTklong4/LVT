@@ -33,7 +33,8 @@ import {
   DollarSign,
   Printer,
   Utensils,
-  Shirt
+  Shirt,
+  Banknote
 } from 'lucide-react';
 
 // Date and formatting helpers for Thai locale
@@ -159,6 +160,9 @@ export default function BookingPage() {
   const [selectedStallsList, setSelectedStallsList] = useState([]);
   const [cashReceived, setCashReceived] = useState('');
   const [showAddStallSelect, setShowAddStallSelect] = useState(false);
+  const [stallFilter, setStallFilter] = useState('');
+  const [paymentList, setPaymentList] = useState([]);
+  const addStallDropdownRef = useRef(null);
 
   // Finance Modal States
   const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
@@ -557,6 +561,21 @@ export default function BookingPage() {
       } else {
         setSelectedStallsList([stall]);
       }
+
+      // Parse payment splits
+      if (booking.payment_method) {
+        if (booking.payment_method.includes(':') || booking.payment_method.includes('+')) {
+          const splits = booking.payment_method.split('+').map(item => {
+            const parts = item.split(':');
+            return { method: parts[0]?.trim() || '', amount: parts[1]?.trim() || '' };
+          });
+          setPaymentList(splits);
+        } else {
+          setPaymentList([{ method: booking.payment_method, amount: booking.total_price || '' }]);
+        }
+      } else {
+        setPaymentList([{ method: '', amount: '' }]);
+      }
     } else {
       setBookerName('');
       setProduct('');
@@ -568,6 +587,7 @@ export default function BookingPage() {
       setElecPrice(0);
       setNote('');
       setSelectedStallsList([stall]);
+      setPaymentList([{ method: '', amount: '' }]);
     }
 
     setShowBookingModal(true);
@@ -584,10 +604,23 @@ export default function BookingPage() {
       return;
     }
 
+    if (status === 'ชำระแล้ว') {
+      const incomplete = paymentList.some(p => p.amount && !p.method);
+      if (incomplete) {
+        showAlert("กรุณาเลือกวิธีการชำระเงิน (เงินสด/โอนจ่าย) สำหรับยอดเงินที่ระบุไว้", "แจ้งเตือน", true);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const bookingId = selectedBooking?.id || `B-${Date.now()}`;
       const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
+
+      const finalPaymentMethod = paymentList
+        .filter(p => p.method && p.amount)
+        .map(p => `${p.method}:${p.amount}`)
+        .join(' + ') || 'เงินสด';
 
       const stallNames = selectedStallsList.map(s => s.name).join(', ');
       const bookingData = {
@@ -601,7 +634,7 @@ export default function BookingPage() {
         elec_price: parseNumber(elecPrice),
         stall_price: parseNumber(stallPrice),
         total_price: totalVal,
-        payment_method: paymentMethod,
+        payment_method: finalPaymentMethod,
         status: status,
         note: note,
         storage_fee: parseNumber(storageFee)
@@ -622,7 +655,7 @@ export default function BookingPage() {
           date: selectedDate,
           category: bookingType === 'รายวัน' ? 'ค่าล็อครายวัน' : 'ค่าล็อครายเดือน',
           total_amount: totalVal,
-          method: paymentMethod,
+          method: finalPaymentMethod,
           note: `ชำระเงินล็อค ${stallNames}`,
           officer: adminUser.name,
           timestamp: new Date().toISOString(),
@@ -1931,6 +1964,19 @@ export default function BookingPage() {
     if (showSettingsMgmtModal) fetchAdminRolesData();
   }, [showSettingsMgmtModal]);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (addStallDropdownRef.current && !addStallDropdownRef.current.contains(event.target)) {
+        setShowAddStallSelect(false);
+        setStallFilter('');
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.remove("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Helper utility parse
   const parseNumber = (val) => {
     const num = parseFloat(String(val));
@@ -2564,286 +2610,361 @@ export default function BookingPage() {
               </div>
             ) : (
               // Admin View (Form & Controls)
-              <>
-                <div className="p-4 flex flex-col gap-3.5 max-h-[80vh] overflow-y-auto custom-scrollbar text-xs bg-[#FAF6EE]">
-                  
-                  {/* 1. Date (Highly Visible - Vintage Ticket Style) */}
-                  <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-xl p-3 flex items-center gap-3 shadow-xs">
-                    <div className="w-9 h-9 rounded-full bg-[#F5E6D3] flex items-center justify-center text-[#8B4513] flex-shrink-0">
-                      <CalendarDays className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-gray-500 font-extrabold block uppercase tracking-wider">วันที่ทำการค้า</span>
-                      <span className="text-sm font-black text-[#5D4037]">{getModalDateFormat(selectedDate)}</span>
-                    </div>
-                  </div>
+              (() => {
+                const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
+                const transferTotal = paymentList
+                  .filter(p => p.method === 'โอนเงิน')
+                  .reduce((sum, p) => sum + parseNumber(p.amount), 0);
+                const cashTotal = paymentList
+                  .filter(p => p.method === 'เงินสด')
+                  .reduce((sum, p) => sum + parseNumber(p.amount), 0);
 
-                  {/* 2. Stall Selector (Multi-Stall support - Vintage Badges) */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#5D4037] flex items-center justify-between">
-                      <span>ล็อคที่จอง ({selectedStallsList.length} ล็อค)</span>
-                      <span className="text-[10px] text-[#8B4513]/60 font-semibold">* คิดยอดรวมในบิลใบเดียว</span>
-                    </label>
-                    
-                    <div className="flex flex-wrap gap-1.5 p-2 bg-[#FFFDF9] border border-[#8B4513]/25 rounded-lg min-h-[44px] items-center relative">
-                      {selectedStallsList.map((st) => (
-                        <span key={st.name} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2.5 py-1 rounded-md shadow-xs">
-                          {st.name}
-                          {selectedStallsList.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = selectedStallsList.filter(item => item.name !== st.name);
-                                setSelectedStallsList(updated);
-                                setStallPrice(calculateDefaultStallPrice(updated));
-                              }}
-                              className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors"
-                              title="ลบออก"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </span>
-                      ))}
+                const cashNeeded = totalVal - transferTotal;
+                const changeVal = (cashTotal > cashNeeded && cashNeeded >= 0) ? (cashTotal - cashNeeded) : 0;
 
-                      {/* Dropdown to add more stalls */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setShowAddStallSelect(!showAddStallSelect)}
-                          className="px-2.5 py-1 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center gap-0.5"
-                        >
-                          + เพิ่มล็อค
-                        </button>
+                return (
+                  <>
+                    <div className="p-4 flex flex-col gap-3.5 max-h-[80vh] overflow-y-auto custom-scrollbar text-xs bg-[#FAF6EE]">
+                      
+                      {/* 1. Date (Highly Visible - Vintage Ticket Style) */}
+                      <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-xl p-3 flex items-center gap-3 shadow-xs">
+                        <div className="w-9 h-9 rounded-full bg-[#F5E6D3] flex items-center justify-center text-[#8B4513] flex-shrink-0">
+                          <CalendarDays className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-gray-500 font-extrabold block uppercase tracking-wider">วันที่ทำการค้า</span>
+                          <span className="text-sm font-black text-[#5D4037]">{getModalDateFormat(selectedDate)}</span>
+                        </div>
+                      </div>
+
+                      {/* 2. Stall Selector (Multi-Stall support - Vintage Badges) */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#5D4037] flex items-center justify-between">
+                          <span>ล็อคที่จอง ({selectedStallsList.length} ล็อค)</span>
+                          <span className="text-[10px] text-[#8B4513]/60 font-semibold">* คิดยอดรวมในบิลใบเดียว</span>
+                        </label>
                         
-                        {showAddStallSelect && (
-                          <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[160px] overflow-y-auto custom-scrollbar">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider px-1 pb-1 border-b">เลือกบล็อกเพื่อจองเพิ่ม</span>
-                            {(() => {
-                              const vacantStalls = stalls.filter(s => 
-                                s.type !== 'ทางเดิน' && 
-                                s.type !== 'อื่นๆ' && 
-                                !bookings.some(b => b.stall_name === s.name || (b.stall_name && b.stall_name.split(',').map(name => name.trim()).includes(s.name))) && 
-                                !selectedStallsList.some(item => item.name === s.name)
-                              );
-                              
-                              if (vacantStalls.length === 0) {
-                                return <span className="text-[10px] text-gray-400 text-center py-2">ไม่มีล็อคว่างแล้ว</span>;
-                              }
-                              
-                              return vacantStalls.map((vSt) => (
+                        <div className="flex flex-wrap gap-1.5 p-2 bg-[#FFFDF9] border border-[#8B4513]/25 rounded-lg min-h-[44px] items-center relative">
+                          {selectedStallsList.map((st) => (
+                            <span key={st.name} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2.5 py-1 rounded-md shadow-xs">
+                              {st.name}
+                              {selectedStallsList.length > 1 && (
                                 <button
-                                  key={vSt.name}
                                   type="button"
                                   onClick={() => {
-                                    const updated = [...selectedStallsList, vSt];
+                                    const updated = selectedStallsList.filter(item => item.name !== st.name);
                                     setSelectedStallsList(updated);
                                     setStallPrice(calculateDefaultStallPrice(updated));
-                                    setShowAddStallSelect(false);
                                   }}
-                                  className="w-full text-left px-2 py-1.5 hover:bg-amber-50 rounded text-xs font-mono font-bold text-gray-700 flex justify-between items-center transition-colors"
+                                  className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors"
+                                  title="ลบออก"
                                 >
-                                  <span>{vSt.name}</span>
-                                  <span className="text-[9px] text-gray-400 font-medium">({vSt.type})</span>
+                                  ✕
                                 </button>
-                              ));
-                            })()}
+                              )}
+                            </span>
+                          ))}
+
+                          {/* Dropdown to add more stalls */}
+                          <div className="relative" ref={addStallDropdownRef}>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddStallSelect(!showAddStallSelect)}
+                              className="px-2.5 py-1 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center gap-0.5"
+                            >
+                              + เพิ่มล็อค
+                            </button>
+                            
+                            {showAddStallSelect && (
+                              <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                                {/* Red search input inside dropdown */}
+                                <input
+                                  type="text"
+                                  value={stallFilter}
+                                  onChange={(e) => setStallFilter(e.target.value)}
+                                  placeholder="ค้นหาชื่อล็อค..."
+                                  className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                                  autoFocus
+                                />
+                                {(() => {
+                                  const vacantStalls = stalls.filter(s => 
+                                    s.type !== 'ทางเดิน' && 
+                                    s.type !== 'อื่นๆ' && 
+                                    !bookings.some(b => b.stall_name === s.name || (b.stall_name && b.stall_name.split(',').map(name => name.trim()).includes(s.name))) && 
+                                    !selectedStallsList.some(item => item.name === s.name)
+                                  );
+                                  const filteredVacant = vacantStalls.filter(s => 
+                                    s.name.toLowerCase().includes(stallFilter.toLowerCase())
+                                  );
+                                  
+                                  if (filteredVacant.length === 0) {
+                                    return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อคที่ตรงกัน</span>;
+                                  }
+                                  
+                                  return filteredVacant.map((vSt) => (
+                                    <button
+                                      key={vSt.name}
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = [...selectedStallsList, vSt];
+                                        setSelectedStallsList(updated);
+                                        setStallPrice(calculateDefaultStallPrice(updated));
+                                        setShowAddStallSelect(false);
+                                        setStallFilter('');
+                                      }}
+                                      className="w-full text-left px-2 py-1.5 hover:bg-amber-50 rounded text-xs font-mono font-bold text-gray-700 flex justify-between items-center transition-colors border-b border-gray-100 last:border-b-0"
+                                    >
+                                      <span>{vSt.name}</span>
+                                      <span className="text-[9px] text-gray-400 font-medium">({vSt.type})</span>
+                                    </button>
+                                  ));
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Booker Name and 4. Product Name side-by-side */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-[#8B4513] shrink-0" /> ชื่อผู้ค้า / เบอร์โทร *
+                          </label>
+                          <input 
+                            type="text" 
+                            value={bookerName}
+                            onChange={(e) => setBookerName(e.target.value)}
+                            placeholder="ชื่อและเบอร์ติดต่อ"
+                            className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1">
+                            <Store className="w-3.5 h-3.5 text-[#8B4513] shrink-0" /> สินค้าที่ขาย
+                          </label>
+                          <input 
+                            type="text" 
+                            value={product}
+                            onChange={(e) => setProduct(e.target.value)}
+                            placeholder="เช่น เสื้อผ้าวินเทจ"
+                            className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 5. Electric Unit & Total Price side-by-side */}
+                      <div className="grid grid-cols-2 gap-2 items-end">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-[#5D4037] flex items-center justify-between">
+                            <span className="flex items-center gap-1">
+                              <Zap className="w-3.5 h-3.5 text-[#8B4513] shrink-0" /> ค่าไฟ (หน่วย)
+                            </span>
+                            {elecPrice > 0 && <span className="text-[10px] text-[#8B4513] font-bold">({elecPrice} บ.)</span>}
+                          </label>
+                          <input 
+                            type="number" 
+                            value={elecUnit}
+                            onChange={(e) => {
+                              const val = parseNumber(e.target.value);
+                              setElecUnit(val);
+                              setElecPrice(val * 20); // 20 Baht per unit
+                            }}
+                            className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] text-center"
+                            placeholder="0 หน่วย"
+                          />
+                        </div>
+                        <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-lg p-2 flex flex-col justify-center h-[32px] text-center shadow-xs">
+                          <div className="flex justify-between items-center text-[10px] font-extrabold text-[#5D4037] px-1">
+                            <span>รวมทั้งสิ้น:</span>
+                            <span className="text-xs font-black text-red-800 font-mono">
+                              {totalVal.toFixed(2)} บ.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Redesigned Payment Section */}
+                      <div className="flex flex-col gap-2 bg-[#FFFDF9] border border-[#8B4513]/25 rounded-xl p-3 shadow-xs">
+                        <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1 border-b border-[#8B4513]/10 pb-1.5">
+                          <Banknote className="w-3.5 h-3.5 text-[#8B4513] shrink-0" /> รับเงินชำระ (บาท)
+                        </label>
+                        
+                        <div className="flex flex-col gap-2">
+                          {paymentList.map((entry, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              {/* Amount input */}
+                              <div className="flex-1 relative">
+                                <input
+                                  type="number"
+                                  value={entry.amount}
+                                  onChange={(e) => {
+                                    const updated = [...paymentList];
+                                    updated[index].amount = e.target.value;
+                                    setPaymentList(updated);
+                                  }}
+                                  placeholder="กรอกยอดเงินชำระ"
+                                  className="w-full p-2 border border-[#8B4513]/30 rounded-lg text-xs text-right text-gray-800 bg-white font-mono font-extrabold focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
+                                />
+                              </div>
+
+                              {/* Method buttons (visible only when amount is entered) */}
+                              {entry.amount && parseNumber(entry.amount) > 0 && (
+                                <div className="flex gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...paymentList];
+                                      updated[index].method = 'เงินสด';
+                                      setPaymentList(updated);
+                                    }}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                      entry.method === 'เงินสด'
+                                        ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
+                                        : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
+                                    }`}
+                                  >
+                                    เงินสด
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...paymentList];
+                                      updated[index].method = 'โอนเงิน';
+                                      setPaymentList(updated);
+                                    }}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                      entry.method === 'โอนเงิน'
+                                        ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
+                                        : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
+                                    }`}
+                                  >
+                                    โอนจ่าย
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Delete Split button */}
+                              {paymentList.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = paymentList.filter((_, idx) => idx !== index);
+                                    setPaymentList(updated);
+                                  }}
+                                  className="p-1 rounded text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors shrink-0"
+                                  title="ลบช่องทางนี้"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Add split payment method button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentList([...paymentList, { method: '', amount: '' }]);
+                          }}
+                          className="w-full mt-1 py-1.5 bg-[#FAF6EE] hover:bg-[#F5E6D3] text-[#8B4513] rounded-lg text-xs font-bold border border-dashed border-[#8B4513]/40 transition-all flex items-center justify-center gap-1 shadow-xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> เพิ่มการชำระเงิน
+                        </button>
+
+                        {/* Change Display */}
+                        {changeVal > 0 && (
+                          <div className="mt-2 pt-2 border-t border-dashed border-gray-200 text-right">
+                            <span className="inline-block bg-green-50 border border-green-200 text-green-700 font-mono font-extrabold text-[11px] px-3 py-1 rounded-lg">
+                              เงินทอน: {changeVal.toFixed(2)} บาท
+                            </span>
                           </div>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  {/* 3. Booker Name */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-[#8B4513]" /> ชื่อผู้ค้า / เบอร์โทรศัพท์ *
-                    </label>
-                    <input 
-                      type="text" 
-                      value={bookerName}
-                      onChange={(e) => setBookerName(e.target.value)}
-                      placeholder="กรอกชื่อผู้ค้า และเบอร์ติดต่อ"
-                      className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] focus:outline-none focus:ring-2 focus:ring-[#8B4513]"
-                    />
-                  </div>
-
-                  {/* 4. Product */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1.5">
-                      <Store className="w-3.5 h-3.5 text-[#8B4513]" /> สินค้าที่ขาย
-                    </label>
-                    <input 
-                      type="text" 
-                      value={product}
-                      onChange={(e) => setProduct(e.target.value)}
-                      placeholder="เช่น เสื้อผ้าวินเทจ, ส้มตำ"
-                      className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] focus:outline-none focus:ring-2 focus:ring-[#8B4513]"
-                    />
-                  </div>
-
-                  {/* 5. Electric Unit */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#5D4037] flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-[#8B4513]" /> ค่าไฟ (หน่วย)
-                      </span>
-                      {elecPrice > 0 && <span className="text-[10px] text-[#8B4513] font-bold">({elecPrice} บาท)</span>}
-                    </label>
-                    <input 
-                      type="number" 
-                      value={elecUnit}
-                      onChange={(e) => {
-                        const val = parseNumber(e.target.value);
-                        setElecUnit(val);
-                        setElecPrice(val * 20); // 20 Baht per unit
-                      }}
-                      className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] text-center"
-                      placeholder="0 หน่วย"
-                    />
-                  </div>
-
-                  {/* 7. Payment Method (Cash, Transfer Buttons) */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1.5">
-                      <CreditCard className="w-3.5 h-3.5 text-[#8B4513]" /> วิธีการชำระเงิน
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('เงินสด')}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all border ${
-                          paymentMethod === 'เงินสด'
-                            ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-sm'
-                            : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
-                        }`}
-                      >
-                        เงินสด
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('โอนเงิน')}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all border ${
-                          paymentMethod === 'โอนเงิน'
-                            ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-sm'
-                            : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
-                        }`}
-                      >
-                        โอนจ่าย
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 6. Total Box & 8. Cash Received Input (Vintage Receipt Styling) */}
-                  <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-xl p-3 flex flex-col gap-2.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-extrabold text-[#5D4037]">รวมทั้งสิ้น (บาท):</span>
-                      <span className="text-xl font-black text-red-800 font-mono">
-                        {(parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee)).toFixed(2)} บาท
-                      </span>
-                    </div>
-
-                    <div className="border-t border-dashed border-[#8B4513]/20 pt-2.5 flex items-center justify-between gap-4">
-                      <span className="text-xs font-extrabold text-[#5D4037] shrink-0 flex items-center gap-1">
-                        <DollarSign className="w-3.5 h-3.5 text-[#8B4513]" /> รับเงินมา (บาท):
-                      </span>
-                      <div className="flex flex-col items-end gap-1 flex-1 max-w-[140px]">
-                        <input
-                          type="number"
-                          value={cashReceived}
-                          onChange={(e) => setCashReceived(e.target.value)}
-                          placeholder="กรอกยอดเงินสด"
-                          className="w-full p-1.5 border border-[#8B4513]/30 rounded-lg text-xs text-right text-gray-800 bg-white font-extrabold"
+                      {/* 9. Note (Note input field) */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-[#8B4513]" /> โน้ตกรอกข้อความ
+                        </label>
+                        <textarea
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          placeholder="กรอกข้อความหมายเหตุเพิ่มเติม..."
+                          rows="2"
+                          className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] focus:outline-none focus:ring-2 focus:ring-[#8B4513]"
                         />
-                        {cashReceived && parseNumber(cashReceived) >= (parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee)) && (
-                          <span className="text-[10px] font-extrabold text-green-700 font-mono">
-                            เงินทอน: {(parseNumber(cashReceived) - (parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee))).toFixed(2)} บ.
-                          </span>
-                        )}
                       </div>
+
+                      {/* Extra Admin tools */}
+                      {selectedBooking && (
+                        <div className="mt-1.5 border-t pt-3 flex flex-col gap-2">
+                          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">เครื่องมือบริการลูกค้า:</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowAddUtilityModal(true)}
+                              className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                            >
+                              <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleMarkAbsent}
+                              className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                            >
+                              <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                     </div>
-                  </div>
 
-                  {/* 9. Note (Note input field) */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#8B4513]" /> โน้ตกรอกข้อความ
-                    </label>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="กรอกข้อความหมายเหตุเพิ่มเติม..."
-                      rows="2"
-                      className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] focus:outline-none focus:ring-2 focus:ring-[#8B4513]"
-                    />
-                  </div>
-
-                  {/* Extra Admin tools */}
-                  {selectedBooking && (
-                    <div className="mt-1.5 border-t pt-3 flex flex-col gap-2">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">เครื่องมือบริการลูกค้า:</span>
-                      <div className="flex flex-wrap gap-2">
+                    {/* Modal Footer Controls */}
+                    <div className="bg-gray-50 border-t px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+                      {selectedBooking ? (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleDeleteBooking}
+                            className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
+                          >
+                            <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
+                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
+                          >
+                            <Printer className="w-4 h-4" /> พิมพ์ตั๋ว (80mm)
+                          </button>
+                        </div>
+                      ) : (
+                        <div />
+                      )}
+                      
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => setShowAddUtilityModal(true)}
-                          className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                          onClick={() => handleSaveBooking('ค้างชำระ')}
+                          className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded-lg font-bold text-xs shadow"
                         >
-                          <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
+                          บันทึก (ค้างจ่าย)
                         </button>
                         <button
                           type="button"
-                          onClick={handleMarkAbsent}
-                          className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                          onClick={() => handleSaveBooking('ชำระแล้ว')}
+                          className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
                         >
-                          <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
+                          <CreditCard className="w-4 h-4" /> บันทึกการจ่ายเงิน
                         </button>
                       </div>
                     </div>
-                  )}
-
-                </div>
-
-                {/* Modal Footer Controls */}
-                <div className="bg-gray-50 border-t px-4 py-3 flex flex-wrap justify-between items-center gap-2">
-                  {selectedBooking ? (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleDeleteBooking}
-                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
-                      >
-                        <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
-                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
-                      >
-                        <Printer className="w-4 h-4" /> พิมพ์ตั๋ว (80mm)
-                      </button>
-                    </div>
-                  ) : (
-                    <div />
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSaveBooking('ค้างชำระ')}
-                      className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded-lg font-bold text-xs shadow"
-                    >
-                      บันทึก (ค้างจ่าย)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSaveBooking('ชำระแล้ว')}
-                      className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
-                    >
-                      <CreditCard className="w-4 h-4" /> บันทึกการจ่ายเงิน
-                    </button>
-                  </div>
-                </div>
-              </>
+                  </>
+                );
+              })()
             )}
 
           </div>
