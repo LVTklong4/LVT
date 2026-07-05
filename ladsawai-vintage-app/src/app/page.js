@@ -200,6 +200,10 @@ export default function BookingPage() {
   // Alert/Toast State
   const [alertInfo, setAlertInfo] = useState(null);
 
+  // Receipt On-screen Preview for mobile screenshots
+  const [showReceiptPreviewModal, setShowReceiptPreviewModal] = useState(false);
+  const [receiptPreviewData, setReceiptPreviewData] = useState(null);
+
   // Initialize
   useEffect(() => {
     // 1. Fetch authorized admin roles
@@ -685,7 +689,8 @@ export default function BookingPage() {
       setShowBookingModal(false);
       fetchBookingsAndStorage();
       if (autoPrint) {
-        handlePrintReceipt(bookingData, selectedStall);
+        setReceiptPreviewData({ bookingObj: bookingData, stallObj: selectedStall });
+        setShowReceiptPreviewModal(true);
       }
     } catch (e) {
       console.error(e);
@@ -2976,10 +2981,13 @@ export default function BookingPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
+                            onClick={() => {
+                              setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
+                              setShowReceiptPreviewModal(true);
+                            }}
                             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
                           >
-                            <Printer className="w-4 h-4" /> พิมพ์ตั๋ว (80mm)
+                            <Printer className="w-4 h-4" /> ดู/พิมพ์ตั๋ว
                           </button>
                         </div>
                       ) : (
@@ -3028,6 +3036,210 @@ export default function BookingPage() {
           </div>
         </div>
       )}
+
+      {/* Receipt Preview Modal for Mobile Screenshots */}
+      {showReceiptPreviewModal && receiptPreviewData && (() => {
+        const { bookingObj, stallObj } = receiptPreviewData;
+        if (!bookingObj || !stallObj) return null;
+
+        const stallPriceVal = parseNumber(bookingObj.stall_price);
+        const elecPriceVal = parseNumber(bookingObj.elec_price);
+        const storageFeeVal = parseNumber(bookingObj.storage_fee || bookingObj.storage_fee_price);
+        const totalAmountVal = stallPriceVal + elecPriceVal + storageFeeVal;
+
+        const now = new Date();
+        const formattedTransaction = now.toLocaleDateString('th-TH', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+
+        const tradingDateObj = new Date(bookingObj.date);
+        const dayName = dayNamesShort[tradingDateObj.getDay()] || '';
+        const tradingDateFormatted = `${dayName} ที่ ${tradingDateObj.getDate()} ${monthNamesFull[tradingDateObj.getMonth()]} ${tradingDateObj.getFullYear() + 543}`;
+
+        const formattedStallName = bookingObj.stall_name 
+          ? bookingObj.stall_name.split(',').map(s => `[${s.trim()}]`).join(', ') 
+          : `[${stallObj.name}]`;
+
+        const rawPayments = bookingObj.payment_method || '';
+        const paymentLines = [];
+        if (rawPayments.includes('+') || rawPayments.includes(':')) {
+          rawPayments.split('+').forEach(p => {
+            const parts = p.trim().split(':');
+            if (parts.length >= 2) {
+              paymentLines.push({ method: parts[0].trim() === 'โอนเงิน' ? 'โอนจ่าย' : parts[0].trim(), amount: parseNumber(parts[1]) });
+            } else {
+              paymentLines.push({ method: p.trim(), amount: totalAmountVal });
+            }
+          });
+        } else {
+          paymentLines.push({ method: rawPayments === 'โอนเงิน' ? 'โอนจ่าย' : rawPayments || 'เงินสด', amount: totalAmountVal });
+        }
+
+        const totalPaidVal = paymentLines.reduce((sum, p) => sum + p.amount, 0);
+        const changeVal = totalPaidVal > totalAmountVal ? (totalPaidVal - totalAmountVal) : 0;
+
+        return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in">
+              
+              <div className="bg-[#F5E6D3] border-b border-[#8B4513]/30 px-4 py-2.5 flex justify-between items-center shrink-0">
+                <span className="font-extrabold text-[#5D4037] text-xs md:text-sm flex items-center gap-1.5">
+                  <Printer className="w-4 h-4 text-[#8B4513]" /> ตั๋วใบเสร็จ/แคปหน้าจอ
+                </span>
+                <button 
+                  onClick={() => setShowReceiptPreviewModal(false)}
+                  className="p-1 rounded-full text-gray-500 hover:bg-[#8B4513]/10 transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#8B4513]" />
+                </button>
+              </div>
+
+              <div className="p-5 flex-1 overflow-y-auto bg-white flex flex-col items-center">
+                
+                <div className="w-full text-center text-[10px] text-gray-400 font-bold mb-3 border-b border-dashed pb-1.5">
+                  📸 แคปเจอร์หน้าจอนี้เพื่อส่งต่อให้ลูกค้าทาง Line
+                </div>
+
+                <div className="w-full max-w-[280px] text-black font-sans leading-relaxed text-xs">
+                  
+                  <div className="flex flex-col items-center mb-3">
+                    <img 
+                      src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" 
+                      alt="LVT Logo" 
+                      className="w-16 h-16 object-contain mb-1"
+                    />
+                    <h2 className="font-black text-sm text-center">ตลาดลาดสวายวินเทจ</h2>
+                    <p className="text-[10px] text-gray-600 text-center font-bold">Ladsawai Vintage Market</p>
+                    <p className="text-[9px] text-gray-500 text-center font-bold">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน-รายเดือน</p>
+                    <p className="text-[9px] text-gray-500 text-center font-bold">โทร. 096-841-8411</p>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+
+                  <div className="space-y-1 text-[10px] font-bold text-gray-700">
+                    <div className="flex justify-between">
+                      <span>เลขที่เอกสาร:</span>
+                      <span className="font-mono">{bookingObj.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>ผู้ทำรายการ:</span>
+                      <span>{adminUser?.employee_id || adminUser?.name || 'lvt-admin'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>วันที่ทำรายการ:</span>
+                      <span className="font-mono">{formattedTransaction}</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+
+                  <div className="space-y-1.5 py-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-600">วันที่ทำการค้า:</span>
+                      <span className="font-black text-gray-900">{tradingDateFormatted}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-600">ล็อกที่เช่า:</span>
+                      <span className="font-black text-red-800">{formattedStallName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-600">ผู้ค้า:</span>
+                      <span className="font-black text-gray-900">{bookingObj.booker_name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-600">สินค้าที่ขาย:</span>
+                      <span className="font-black text-gray-900">{bookingObj.product || '-'}</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+
+                  <table className="w-full text-left text-[11px] border-collapse">
+                    <thead>
+                      <tr className="border-b border-dashed border-gray-400 text-gray-600 font-bold">
+                        <th className="py-1">รายการ</th>
+                        <th className="py-1 text-right">จำนวนเงิน</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-bold text-gray-700">
+                      <tr>
+                        <td className="py-1">ค่าล็อกสะสม</td>
+                        <td className="py-1 text-right font-mono">{stallPriceVal.toFixed(2)} บ.</td>
+                      </tr>
+                      {elecPriceVal > 0 && (
+                        <tr>
+                          <td className="py-1">ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
+                          <td className="py-1 text-right font-mono">{elecPriceVal.toFixed(2)} บ.</td>
+                        </tr>
+                      )}
+                      {storageFeeVal > 0 && (
+                        <tr>
+                          <td className="py-1">ค่าฝากของ</td>
+                          <td className="py-1 text-right font-mono">{storageFeeVal.toFixed(2)} บ.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+
+                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between font-black text-black text-sm">
+                      <span>รวมเงินทั้งสิ้น:</span>
+                      <span className="font-mono">{totalAmountVal.toFixed(2)} บ.</span>
+                    </div>
+                    
+                    <div className="pt-1.5 space-y-0.5 text-[10px] font-bold text-gray-600">
+                      {paymentLines.map((p, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>ชำระด้วย [{p.method}]:</span>
+                          <span className="font-mono">{p.amount.toFixed(2)} บ.</span>
+                        </div>
+                      ))}
+                      {changeVal > 0 && (
+                        <div className="flex justify-between text-red-700 font-bold">
+                          <span>เงินทอน:</span>
+                          <span className="font-mono">{changeVal.toFixed(2)} บ.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+
+                  <div className="text-center text-[10px] text-gray-500 font-bold space-y-0.5 mt-2">
+                    <p>Line Official: @ladsawaivintage</p>
+                    <p className="text-black">ขอบคุณที่ใช้บริการครับ/ค่ะ</p>
+                    <p className="text-[8px] text-gray-400">Powered by PJMJK</p>
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="bg-gray-50 border-t px-4 py-3 flex gap-2 justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt(bookingObj, stallObj)}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-colors"
+                >
+                  <Printer className="w-4 h-4" /> พิมพ์ตั๋ว (80mm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReceiptPreviewModal(false)}
+                  className="px-3.5 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold text-xs shadow transition-colors"
+                >
+                  ปิดหน้าต่าง
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Electricity Register Modal */}
       {showAddUtilityModal && selectedBooking && (
