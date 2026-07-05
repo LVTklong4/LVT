@@ -604,6 +604,16 @@ export default function BookingPage() {
       return;
     }
 
+    const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
+    const totalPaid = paymentList
+      .filter(p => p.amount)
+      .reduce((sum, p) => sum + parseNumber(p.amount), 0);
+
+    if (totalPaid > totalVal) {
+      showAlert(`ยอดเงินที่ชำระ (${totalPaid} บาท) เกินกว่ายอดรวมทั้งสิ้น (${totalVal} บาท) กรุณาตรวจสอบจำนวนเงินอีกครั้ง`, "แจ้งเตือน", true);
+      return;
+    }
+
     if (status === 'ชำระแล้ว') {
       const incomplete = paymentList.some(p => p.amount && !p.method);
       if (incomplete) {
@@ -1998,7 +2008,7 @@ export default function BookingPage() {
     <div className="flex-1 flex flex-col min-h-screen">
       {/* Toast Alert */}
       {alertInfo && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in ${
+        <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in ${
           alertInfo.isError 
             ? 'bg-red-50 border-red-200 text-red-800' 
             : 'bg-green-50 border-green-200 text-green-800'
@@ -2792,7 +2802,7 @@ export default function BookingPage() {
                             onChange={(e) => {
                               const val = parseNumber(e.target.value);
                               setElecUnit(val);
-                              setElecPrice(val * 20); // 20 Baht per unit
+                              setElecPrice(val * 10); // 10 Baht per unit
                             }}
                             className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] text-center focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
                             placeholder="0 หน่วย"
@@ -3037,7 +3047,7 @@ export default function BookingPage() {
                     onChange={(e) => {
                       const u = parseNumber(e.target.value);
                       setAddUtilityUnit(u);
-                      setAddUtilityPrice(u * 20); // standard rate 20baht/unit
+                      setAddUtilityPrice(u * 10); // standard rate 10baht/unit
                     }}
                     className="p-2 border border-gray-300 rounded text-xs text-center focus:ring-2 focus:ring-yellow-500"
                   />
