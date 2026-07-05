@@ -594,7 +594,7 @@ export default function BookingPage() {
   };
 
   // Save Booking handler (Insert or Update)
-  const handleSaveBooking = async (status = 'ค้างชำระ') => {
+  const handleSaveBooking = async (status = 'ค้างชำระ', autoPrint = false) => {
     if (!adminUser) {
       showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
@@ -674,6 +674,9 @@ export default function BookingPage() {
       showAlert("บันทึกการจองสำเร็จ", "สำเร็จ");
       setShowBookingModal(false);
       fetchBookingsAndStorage();
+      if (autoPrint) {
+        handlePrintReceipt(bookingData, selectedStall);
+      }
     } catch (e) {
       console.error(e);
       showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
@@ -2619,6 +2622,12 @@ export default function BookingPage() {
                   .filter(p => p.method === 'เงินสด')
                   .reduce((sum, p) => sum + parseNumber(p.amount), 0);
 
+                const totalPaid = paymentList
+                  .filter(p => p.method && p.amount)
+                  .reduce((sum, p) => sum + parseNumber(p.amount), 0);
+
+                const isFullyPaid = totalPaid >= totalVal && totalVal > 0;
+
                 const cashNeeded = totalVal - transferTotal;
                 const changeVal = (cashTotal > cashNeeded && cashNeeded >= 0) ? (cashTotal - cashNeeded) : 0;
 
@@ -2626,14 +2635,28 @@ export default function BookingPage() {
                   <>
                     <div className="p-4 flex flex-col gap-3.5 max-h-[80vh] overflow-y-auto custom-scrollbar text-xs bg-[#FAF6EE]">
                       
-                      {/* 1. Date (Highly Visible - Vintage Ticket Style) */}
-                      <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-xl p-3 flex items-center gap-3 shadow-xs">
-                        <div className="w-9 h-9 rounded-full bg-[#F5E6D3] flex items-center justify-center text-[#8B4513] flex-shrink-0">
-                          <CalendarDays className="w-5 h-5" />
+                      {/* 1. Date (Highly Visible - Vintage Ticket Style) & Status Banner */}
+                      <div className="flex justify-between items-center bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-xl p-3 shadow-xs font-bold text-xs text-[#5D4037]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 rounded-full bg-[#F5E6D3] flex items-center justify-center text-[#8B4513] flex-shrink-0">
+                            <CalendarDays className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-gray-500 font-extrabold block uppercase tracking-wider">วันที่ทำการค้า</span>
+                            <span className="text-xs font-black text-[#5D4037]">{getModalDateFormat(selectedDate)}</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-[10px] text-gray-500 font-extrabold block uppercase tracking-wider">วันที่ทำการค้า</span>
-                          <span className="text-sm font-black text-[#5D4037]">{getModalDateFormat(selectedDate)}</span>
+                        {/* Dynamic Status Badge */}
+                        <div className="shrink-0">
+                          {isFullyPaid ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 font-black text-[10px] shadow-xs font-bold">
+                              ● ชำระครบถ้วน
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 font-black text-[10px] shadow-xs font-bold">
+                              ● ค้างชำระ (ขาด {(totalVal - totalPaid).toFixed(2)} บ.)
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -2753,7 +2776,7 @@ export default function BookingPage() {
                         </div>
                       </div>
 
-                      {/* 5. Electric Unit & Total Price side-by-side */}
+                      {/* 5. Electric Unit & Total Price side-by-side (More Prominent Banner) */}
                       <div className="grid grid-cols-2 gap-2 items-end">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-[#5D4037] flex items-center justify-between">
@@ -2765,19 +2788,20 @@ export default function BookingPage() {
                           <input 
                             type="number" 
                             value={elecUnit}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const val = parseNumber(e.target.value);
                               setElecUnit(val);
                               setElecPrice(val * 20); // 20 Baht per unit
                             }}
-                            className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] text-center"
+                            className="p-2 border border-[#8B4513]/30 rounded-lg text-xs text-gray-800 bg-[#FFFDF9] text-center focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
                             placeholder="0 หน่วย"
                           />
                         </div>
-                        <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513]/40 rounded-lg p-2 flex flex-col justify-center h-[32px] text-center shadow-xs">
-                          <div className="flex justify-between items-center text-[10px] font-extrabold text-[#5D4037] px-1">
-                            <span>รวมทั้งสิ้น:</span>
-                            <span className="text-xs font-black text-red-800 font-mono">
+                        <div className="bg-[#FFFDF9] border-2 border-dashed border-[#8B4513] rounded-lg p-2.5 flex flex-col justify-center h-[42px] text-center shadow-xs">
+                          <div className="flex justify-between items-center text-xs font-black text-[#5D4037] px-0.5 font-bold">
+                            <span>รวมเงินทั้งสิ้น:</span>
+                            <span className="text-sm md:text-base font-black text-red-800 font-mono">
                               {totalVal.toFixed(2)} บ.
                             </span>
                           </div>
@@ -2791,58 +2815,64 @@ export default function BookingPage() {
                         </label>
                         
                         <div className="flex flex-col gap-2">
-                          {paymentList.map((entry, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              {/* Amount input */}
-                              <div className="flex-1 relative">
-                                <input
-                                  type="number"
-                                  value={entry.amount}
-                                  onChange={(e) => {
-                                    const updated = [...paymentList];
-                                    updated[index].amount = e.target.value;
-                                    setPaymentList(updated);
-                                  }}
-                                  placeholder="กรอกยอดเงินชำระ"
-                                  className="w-full p-2 border border-[#8B4513]/30 rounded-lg text-xs text-right text-gray-800 bg-white font-mono font-extrabold focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
-                                />
-                              </div>
+                          {paymentList.map((entry, index) => {
+                            const isAmountEntered = entry.amount && parseNumber(entry.amount) > 0;
+                            return (
+                              <div key={index} className="flex items-center gap-2">
+                                {/* Amount input */}
+                                <div className="flex-1 relative">
+                                  <input
+                                    type="number"
+                                    value={entry.amount}
+                                    onChange={(e) => {
+                                      const updated = [...paymentList];
+                                      updated[index].amount = e.target.value;
+                                      setPaymentList(updated);
+                                    }}
+                                    placeholder="กรอกยอดเงินชำระ"
+                                    className="w-full p-2 border border-[#8B4513]/30 rounded-lg text-xs text-right text-gray-800 bg-white font-mono font-extrabold focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
+                                  />
+                                </div>
 
-                              {/* Method buttons (visible only when amount is entered) */}
-                              {entry.amount && parseNumber(entry.amount) > 0 && (
+                                {/* Method buttons (always visible, disabled if no amount) */}
                                 <div className="flex gap-1 shrink-0">
                                   <button
                                     type="button"
+                                    disabled={!isAmountEntered}
                                     onClick={() => {
                                       const updated = [...paymentList];
                                       updated[index].method = 'เงินสด';
                                       setPaymentList(updated);
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      entry.method === 'เงินสด'
-                                        ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
-                                        : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
+                                      !isAmountEntered
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-40 cursor-not-allowed pointer-events-none'
+                                        : entry.method === 'เงินสด'
+                                          ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
+                                          : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
                                     }`}
                                   >
                                     เงินสด
                                   </button>
                                   <button
                                     type="button"
+                                    disabled={!isAmountEntered}
                                     onClick={() => {
                                       const updated = [...paymentList];
                                       updated[index].method = 'โอนเงิน';
                                       setPaymentList(updated);
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      entry.method === 'โอนเงิน'
-                                        ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
-                                        : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
+                                      !isAmountEntered
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-40 cursor-not-allowed pointer-events-none'
+                                        : entry.method === 'โอนเงิน'
+                                          ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
+                                          : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
                                     }`}
                                   >
                                     โอนจ่าย
                                   </button>
                                 </div>
-                              )}
 
                               {/* Delete Split button */}
                               {paymentList.length > 1 && (
@@ -2859,8 +2889,9 @@ export default function BookingPage() {
                                 </button>
                               )}
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
+                      </div>
 
                         {/* Add split payment method button */}
                         <button
@@ -2922,7 +2953,7 @@ export default function BookingPage() {
 
                     </div>
 
-                    {/* Modal Footer Controls */}
+                    {/* Modal Footer Controls (Dynamic based on Paid status) */}
                     <div className="bg-gray-50 border-t px-4 py-3 flex flex-wrap justify-between items-center gap-2">
                       {selectedBooking ? (
                         <div className="flex gap-2">
@@ -2946,20 +2977,37 @@ export default function BookingPage() {
                       )}
                       
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSaveBooking('ค้างชำระ')}
-                          className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded-lg font-bold text-xs shadow"
-                        >
-                          บันทึก (ค้างจ่าย)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveBooking('ชำระแล้ว')}
-                          className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
-                        >
-                          <CreditCard className="w-4 h-4" /> บันทึกการจ่ายเงิน
-                        </button>
+                        {!isFullyPaid ? (
+                          // Unpaid State: Show only Save (Outstanding) button
+                          <button
+                            type="button"
+                            onClick={() => handleSaveBooking('ค้างชำระ')}
+                            className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded-lg font-bold text-xs shadow"
+                          >
+                            บันทึก (ค้างจ่าย)
+                          </button>
+                        ) : (
+                          // Fully Paid State: Save & Print replaces Save button, and Leave button is displayed
+                          <>
+                            {selectedBooking && (
+                              <button
+                                type="button"
+                                onClick={handleMarkAbsent}
+                                className="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
+                                title="แจ้งลาหยุดแต่ชำระเงินแล้ว เพื่อปล่อยล็อคว่างให้ผู้อื่น"
+                              >
+                                <X className="w-4 h-4" /> แจ้งลาหยุด (ลา)
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleSaveBooking('ชำระแล้ว', true)}
+                              className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
+                            >
+                              <Printer className="w-4 h-4" /> บันทึกและพิมพ์ตั๋ว
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </>
