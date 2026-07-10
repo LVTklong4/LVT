@@ -4106,6 +4106,322 @@ export default function BookingPage() {
           </div>
         )}
 
+        {/* 🗓️ 2.2 New Monthly Booking Modal */}
+        {showNewMonthlyModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-lg border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[90vh] animate-pop-in text-left">
+              {/* Header */}
+              <div className="bg-[#5D4037] text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-[#8B4513]">
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-white">🗓️ จัดการข้อมูลรายเดือน (จองล็อคใหม่)</h3>
+                  <p className="text-[10px] text-amber-200 font-bold mt-0.5">
+                    เริ่ม: {(() => {
+                      if (!newMonthlyStartDate) return '-';
+                      const d = new Date(newMonthlyStartDate);
+                      const day = d.getDate();
+                      const month = monthNamesFull[d.getMonth()];
+                      const year = d.getFullYear() + 543;
+                      return `${day} ${month} ${year}`;
+                    })()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] bg-[#3E2723] px-2.5 py-1 rounded-full font-bold text-amber-100 flex items-center gap-1 border border-amber-900/30">
+                    👤 ตลาดนัดลาดสวายวินเทจ
+                  </span>
+                  <button 
+                    onClick={() => setShowNewMonthlyModal(false)} 
+                    className="p-1 rounded-full bg-red-600/80 hover:bg-red-700 text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Form */}
+              <form onSubmit={handleCreateNewMonthlyBooking} className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs">
+                
+                {/* Date & Days Row */}
+                <div className="grid grid-cols-2 gap-3 bg-[#F5E6D3]/40 p-3 rounded-lg border border-[#D7CCC8]">
+                  {/* Start Date */}
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="font-bold text-gray-700 flex justify-between">
+                      <span>วันที่เริ่ม</span>
+                      <span className="text-[10px] text-[#8B4513]">
+                        {(() => {
+                          if (!newMonthlyStartDate) return '';
+                          const d = new Date(newMonthlyStartDate);
+                          const month = monthNamesFull[d.getMonth()];
+                          const year = d.getFullYear() + 543;
+                          return `รอบ: ${month} ${year}`;
+                        })()}
+                      </span>
+                    </label>
+                    <input 
+                      type="date"
+                      value={newMonthlyStartDate}
+                      onChange={(e) => setNewMonthlyStartDate(e.target.value)}
+                      className="p-2 border border-gray-300 rounded bg-white font-bold"
+                    />
+                  </div>
+
+                  {/* Trading Days */}
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="font-bold text-gray-700">วันลงขาย</label>
+                    <div className="flex gap-2 mt-1">
+                      {['wed', 'sat', 'sun'].map(day => {
+                        const label = day === 'wed' ? 'พ' : day === 'sat' ? 'ส' : 'อา';
+                        const checked = newMonthlyDays[day];
+                        return (
+                          <label 
+                            key={day} 
+                            className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer select-none transition-all ${
+                              checked 
+                                ? 'bg-amber-600 text-white border-amber-700 shadow-sm' 
+                                : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <input 
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => setNewMonthlyDays({ ...newMonthlyDays, [day]: !checked })}
+                              className="hidden"
+                            />
+                            {label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reset layout & Customer Type */}
+                <div className="flex justify-between items-center bg-[#F5E6D3]/20 p-2.5 rounded-lg border border-dashed border-[#D7CCC8]">
+                  <label className="flex items-center gap-1.5 cursor-pointer font-bold text-gray-700">
+                    <input 
+                      type="checkbox"
+                      checked={newMonthlyResetLayout}
+                      onChange={() => setNewMonthlyResetLayout(!newMonthlyResetLayout)}
+                      className="rounded text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>รีเซ็ตในผัง (ล้างการจองทับซ้อน)</span>
+                  </label>
+
+                  <div className="flex gap-2.5">
+                    {[
+                      { label: 'รายเดือน', val: 'Standard' },
+                      { label: 'ประจำ', val: 'Regular' },
+                      { label: 'VIP', val: 'VIP' }
+                    ].map(opt => (
+                      <label key={opt.val} className="flex items-center gap-1 cursor-pointer font-bold text-gray-700">
+                        <input 
+                          type="radio"
+                          name="newMonthlyCustomerTypeInPage"
+                          checked={newMonthlyCustomerType === opt.val}
+                          onChange={() => setNewMonthlyCustomerType(opt.val)}
+                          className="text-amber-600 focus:ring-amber-500"
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Stalls selection rows */}
+                <div className="bg-[#FFF] p-3 rounded-lg border border-gray-200 flex flex-col gap-2.5 text-left">
+                  <div className="font-bold text-gray-700 border-b pb-1.5 flex justify-between items-center">
+                    <span>รายการล็อค :</span>
+                    <span className="text-[10px] text-gray-400 font-bold">ระบุเลขแผงตามวันที่ลงขาย</span>
+                  </div>
+
+                  {newMonthlyDays.wed && (
+                    <div className="flex items-center gap-2 bg-green-50/40 p-2 rounded border border-green-100">
+                      <span className="w-12 font-bold text-green-700 shrink-0">วันพุธ</span>
+                      <div className="flex-1 min-w-0">
+                        <StallSelector 
+                          selectedStalls={newMonthlyStallsWed}
+                          onChange={setNewMonthlyStallsWed}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {newMonthlyDays.sat && (
+                    <div className="flex items-center gap-2 bg-purple-50/40 p-2 rounded border border-purple-100">
+                      <span className="w-12 font-bold text-purple-700 shrink-0">วันเสาร์</span>
+                      <div className="flex-1 min-w-0">
+                        <StallSelector 
+                          selectedStalls={newMonthlyStallsSat}
+                          onChange={setNewMonthlyStallsSat}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {newMonthlyDays.sun && (
+                    <div className="flex items-center gap-2 bg-red-50/40 p-2 rounded border border-red-100">
+                      <span className="w-12 font-bold text-red-700 shrink-0">วันอาทิตย์</span>
+                      <div className="flex-1 min-w-0">
+                        <StallSelector 
+                          selectedStalls={newMonthlyStallsSun}
+                          onChange={setNewMonthlyStallsSun}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Extra fees row */}
+                <div className="grid grid-cols-2 gap-3 text-left">
+                  {/* Storage Fee */}
+                  <div className="bg-[#FDFBF7] p-2.5 rounded-lg border border-gray-200">
+                    <label className="font-bold text-amber-900 block mb-1">📦 ค่าฝากของ</label>
+                    <div className="relative flex items-center">
+                      <input 
+                        type="number"
+                        value={newMonthlyStorageFee}
+                        onChange={(e) => setNewMonthlyStorageFee(e.target.value)}
+                        className="p-2 pr-6 border border-gray-300 rounded bg-white text-right font-bold w-full focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-2 text-[10px] font-bold text-gray-400">บ.</span>
+                    </div>
+                  </div>
+
+                  {/* Elec Unit */}
+                  <div className="bg-[#FDFBF7] p-2.5 rounded-lg border border-gray-200">
+                    <label className="font-bold text-yellow-850 block mb-1">⚡ ค่าไฟ (เหมา)</label>
+                    <div className="relative flex items-center">
+                      <input 
+                        type="number"
+                        value={newMonthlyElecUnit}
+                        onChange={(e) => setNewMonthlyElecUnit(e.target.value)}
+                        className="p-2 pr-12 border border-gray-300 rounded bg-white text-right font-bold w-full focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-2 text-[10px] font-bold text-gray-400">หน่วย</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing breakdown summary */}
+                {(() => {
+                  const pricing = getNewMonthlyPricing();
+                  return (
+                    <div className="bg-[#FFFDF9] border border-[#8B4513]/30 rounded-lg p-3 flex flex-col gap-2 shadow-xs text-left">
+                      <div className="font-bold text-gray-800 border-b border-dashed pb-1 mb-1">สรุปรายละเอียดราคา</div>
+                      <div className="space-y-1 text-gray-600 font-bold">
+                        {newMonthlyDays.wed && newMonthlyStallsWed.length > 0 && (
+                          <div className="flex justify-between">
+                            <span>วันพุธ: {pricing.wedCount} วัน x {pricing.wedStallsPrice.toLocaleString()}.-</span>
+                            <span className="font-bold">{pricing.wedTotal.toLocaleString()}.-</span>
+                          </div>
+                        )}
+                        {newMonthlyDays.sat && newMonthlyStallsSat.length > 0 && (
+                          <div className="flex justify-between">
+                            <span>วันเสาร์: {pricing.satCount} วัน x {pricing.satStallsPrice.toLocaleString()}.-</span>
+                            <span className="font-bold">{pricing.satTotal.toLocaleString()}.-</span>
+                          </div>
+                        )}
+                        {newMonthlyDays.sun && newMonthlyStallsSun.length > 0 && (
+                          <div className="flex justify-between">
+                            <span>วันอาทิตย์: {pricing.sunCount} วัน x {pricing.sunStallsPrice.toLocaleString()}.-</span>
+                            <span className="font-bold">{pricing.sunTotal.toLocaleString()}.-</span>
+                          </div>
+                        )}
+                        {parseNumber(newMonthlyElecUnit) > 0 && pricing.totalElecCharged > 0 && (
+                          <div className="flex justify-between text-yellow-800">
+                            <span>ค่าไฟ: {pricing.totalElecCharged} วัน x ({parseNumber(newMonthlyElecUnit)} หน่วย x 10บ.)</span>
+                            <span className="font-bold">{pricing.totalElecPrice.toLocaleString()}.-</span>
+                          </div>
+                        )}
+                        {parseNumber(newMonthlyStorageFee) > 0 && (
+                          <div className="flex justify-between text-amber-900">
+                            <span>ค่าฝากของ:</span>
+                            <span className="font-bold">{pricing.storageFeeVal.toLocaleString()}.-</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-t border-dashed border-[#8B4513]/30 pt-2 mt-1 flex justify-between items-center">
+                        <span className="font-bold text-sm text-[#3E2723]">ยอดรวมที่ต้องชำระทั้งสิ้น</span>
+                        <span className="font-black text-lg text-amber-800">{pricing.grandTotal.toLocaleString()} บาท</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Booker Info Fields */}
+                <div className="bg-[#F5E6D3]/15 p-3 rounded-lg border border-[#D7CCC8]/60 flex flex-col gap-3 text-left">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">ชื่อผู้จอง</label>
+                      <input 
+                        type="text"
+                        placeholder="ระบุชื่อ-สกุล"
+                        value={newMonthlyBookerName}
+                        onChange={(e) => setNewMonthlyBookerName(e.target.value)}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">สินค้า</label>
+                      <input 
+                        type="text"
+                        placeholder="ระบุสินค้า"
+                        value={newMonthlyProduct}
+                        onChange={(e) => setNewMonthlyProduct(e.target.value)}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-gray-700">เบอร์โทรศัพท์</label>
+                    <input 
+                      type="text"
+                      placeholder="08x-xxxxxxx"
+                      value={newMonthlyPhone}
+                      onChange={(e) => setNewMonthlyPhone(e.target.value)}
+                      className="p-2 border border-gray-300 rounded bg-white font-bold"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-gray-700">โน้ตเพิ่มเติม</label>
+                    <textarea 
+                      value={newMonthlyNote}
+                      onChange={(e) => setNewMonthlyNote(e.target.value)}
+                      className="p-2 border border-gray-300 rounded bg-white h-14 resize-none"
+                      placeholder="..."
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loadingMonthly}
+                  className="w-full py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-sm shadow transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                >
+                  {loadingMonthly ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>กำลังบันทึกข้อมูล...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4.5 h-4.5" />
+                      <span>บันทึกข้อมูล</span>
+                    </>
+                  )}
+                </button>
+
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Toast Alert */}
         {alertInfo && (
           <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in ${
