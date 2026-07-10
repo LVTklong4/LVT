@@ -2782,6 +2782,7 @@ export default function BookingPage() {
 
                 const isFullyPaid = totalPaid >= totalVal && totalVal > 0;
                 const isAlreadyPaid = selectedBooking && (selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง') && selectedBooking.type === 'รายวัน';
+                const isPaidInDb = selectedBooking && (selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง');
 
                 const cashNeeded = totalVal - transferTotal;
                 const changeVal = (cashTotal > cashNeeded && cashNeeded >= 0) ? (cashTotal - cashNeeded) : 0;
@@ -3121,28 +3122,32 @@ export default function BookingPage() {
                             </button>
 
                             {/* 2. แจ้งลา */}
-                            <button
-                              type="button"
-                              onClick={handleMarkAbsent}
-                              className="px-3 py-2 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer"
-                            >
-                              <X className="w-4 h-4 shrink-0" /> แจ้งลา
-                            </button>
+                            {isAlreadyPaid && (
+                              <button
+                                type="button"
+                                onClick={handleMarkAbsent}
+                                className="px-3 py-2 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer"
+                              >
+                                <X className="w-4 h-4 shrink-0" /> แจ้งลา
+                              </button>
+                            )}
 
                             {/* 3. ย้ายล็อค */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMoveTargetDate(selectedDate);
-                                setMoveTargetStall(null);
-                                setMoveStallFilter('');
-                                fetchVacantStallsForDate(selectedDate);
-                                setShowMoveLockModal(true);
-                              }}
-                              className="px-3 py-2 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-indigo-600/10 cursor-pointer"
-                            >
-                              <RefreshCw className="w-4 h-4 shrink-0" /> ย้ายล็อค
-                            </button>
+                            {isAlreadyPaid && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMoveTargetDate(selectedDate);
+                                  setMoveTargetStall(null);
+                                  setMoveStallFilter('');
+                                  fetchVacantStallsForDate(selectedDate);
+                                  setShowMoveLockModal(true);
+                                }}
+                                className="px-3 py-2 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-indigo-600/10 cursor-pointer"
+                              >
+                                <RefreshCw className="w-4 h-4 shrink-0" /> ย้ายล็อค
+                              </button>
+                            )}
 
                             {/* 4. ออกตั๋ว */}
                             {isFullyPaid && (
@@ -3172,13 +3177,15 @@ export default function BookingPage() {
                             >
                               <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
                             </button>
-                            <button
-                              type="button"
-                              onClick={handleMarkAbsent}
-                              className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
-                            >
-                              <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
-                            </button>
+                            {isPaidInDb && (
+                              <button
+                                type="button"
+                                onClick={handleMarkAbsent}
+                                className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                              >
+                                <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
