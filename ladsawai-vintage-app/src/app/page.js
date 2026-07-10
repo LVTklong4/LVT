@@ -186,6 +186,12 @@ export default function BookingPage() {
   const [newMonthlyProduct, setNewMonthlyProduct] = useState('');
   const [newMonthlyPhone, setNewMonthlyPhone] = useState('');
   const [newMonthlyNote, setNewMonthlyNote] = useState('');
+  const [showAddStallSelectWed, setShowAddStallSelectWed] = useState(false);
+  const [showAddStallSelectSat, setShowAddStallSelectSat] = useState(false);
+  const [showAddStallSelectSun, setShowAddStallSelectSun] = useState(false);
+  const [stallFilterWed, setStallFilterWed] = useState('');
+  const [stallFilterSat, setStallFilterSat] = useState('');
+  const [stallFilterSun, setStallFilterSun] = useState('');
 
   // Storage Print Settings States
   const [showStoragePrintModal, setShowStoragePrintModal] = useState(false);
@@ -205,6 +211,9 @@ export default function BookingPage() {
   const [stallFilter, setStallFilter] = useState('');
   const [paymentList, setPaymentList] = useState([]);
   const addStallDropdownRef = useRef(null);
+  const addStallDropdownRefWed = useRef(null);
+  const addStallDropdownRefSat = useRef(null);
+  const addStallDropdownRefSun = useRef(null);
 
   // Finance Modal States
   const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
@@ -2887,6 +2896,12 @@ export default function BookingPage() {
     setNewMonthlyProduct('');
     setNewMonthlyPhone('');
     setNewMonthlyNote('');
+    setShowAddStallSelectWed(false);
+    setShowAddStallSelectSat(false);
+    setShowAddStallSelectSun(false);
+    setStallFilterWed('');
+    setStallFilterSat('');
+    setStallFilterSun('');
     setShowNewMonthlyModal(true);
   };
 
@@ -3567,6 +3582,18 @@ export default function BookingPage() {
       if (addStallDropdownRef.current && !addStallDropdownRef.current.contains(event.target)) {
         setShowAddStallSelect(false);
         setStallFilter('');
+      }
+      if (addStallDropdownRefWed.current && !addStallDropdownRefWed.current.contains(event.target)) {
+        setShowAddStallSelectWed(false);
+        setStallFilterWed('');
+      }
+      if (addStallDropdownRefSat.current && !addStallDropdownRefSat.current.contains(event.target)) {
+        setShowAddStallSelectSat(false);
+        setStallFilterSat('');
+      }
+      if (addStallDropdownRefSun.current && !addStallDropdownRefSun.current.contains(event.target)) {
+        setShowAddStallSelectSun(false);
+        setStallFilterSun('');
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -4342,37 +4369,226 @@ export default function BookingPage() {
                   </div>
 
                   {newMonthlyDays.wed && (
-                    <div className="flex items-center gap-2 bg-green-50/40 p-2 rounded border border-green-100">
+                    <div className="flex flex-wrap gap-2 items-center bg-green-50/40 p-2 rounded border border-green-100">
                       <span className="w-12 font-bold text-green-700 shrink-0">วันพุธ</span>
-                      <div className="flex-1 min-w-0">
-                        <StallSelector 
-                          selectedStalls={newMonthlyStallsWed}
-                          onChange={setNewMonthlyStallsWed}
-                        />
+                      <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                        {newMonthlyStallsWed.map((stName) => (
+                          <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                            [{stName}]
+                            <button
+                              type="button"
+                              onClick={() => setNewMonthlyStallsWed(newMonthlyStallsWed.filter(s => s !== stName))}
+                              className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                              title="ลบออก"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                        
+                        <div className="relative" ref={addStallDropdownRefWed}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddStallSelectWed(!showAddStallSelectWed);
+                              setShowAddStallSelectSat(false);
+                              setShowAddStallSelectSun(false);
+                              setStallFilterWed('');
+                            }}
+                            className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                          >
+                            + เพิ่มล็อค
+                          </button>
+                          
+                          {showAddStallSelectWed && (
+                            <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                              <input
+                                type="text"
+                                value={stallFilterWed}
+                                onChange={(e) => setStallFilterWed(e.target.value)}
+                                placeholder="ค้นหาชื่อล็อค..."
+                                className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                                autoFocus
+                              />
+                              {(() => {
+                                const filtered = stalls.filter(s => 
+                                  s.type !== 'ทางเดิน' && 
+                                  s.type !== 'อื่นๆ' && 
+                                  !newMonthlyStallsWed.includes(s.name) && 
+                                  s.name.toLowerCase().includes(stallFilterWed.toLowerCase())
+                                );
+                                
+                                if (filtered.length === 0) {
+                                  return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                                }
+                                
+                                return filtered.map((vSt) => (
+                                  <button
+                                    key={vSt.name}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewMonthlyStallsWed([...newMonthlyStallsWed, vSt.name]);
+                                      setShowAddStallSelectWed(false);
+                                    }}
+                                    className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                  >
+                                    {vSt.name} ({vSt.zone})
+                                  </button>
+                                ));
+                              })()}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {newMonthlyDays.sat && (
-                    <div className="flex items-center gap-2 bg-purple-50/40 p-2 rounded border border-purple-100">
+                    <div className="flex flex-wrap gap-2 items-center bg-purple-50/40 p-2 rounded border border-purple-100">
                       <span className="w-12 font-bold text-purple-700 shrink-0">วันเสาร์</span>
-                      <div className="flex-1 min-w-0">
-                        <StallSelector 
-                          selectedStalls={newMonthlyStallsSat}
-                          onChange={setNewMonthlyStallsSat}
-                        />
+                      <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                        {newMonthlyStallsSat.map((stName) => (
+                          <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                            [{stName}]
+                            <button
+                              type="button"
+                              onClick={() => setNewMonthlyStallsSat(newMonthlyStallsSat.filter(s => s !== stName))}
+                              className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                              title="ลบออก"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                        
+                        <div className="relative" ref={addStallDropdownRefSat}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddStallSelectSat(!showAddStallSelectSat);
+                              setShowAddStallSelectWed(false);
+                              setShowAddStallSelectSun(false);
+                              setStallFilterSat('');
+                            }}
+                            className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                          >
+                            + เพิ่มล็อค
+                          </button>
+                          
+                          {showAddStallSelectSat && (
+                            <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                              <input
+                                type="text"
+                                value={stallFilterSat}
+                                onChange={(e) => setStallFilterSat(e.target.value)}
+                                placeholder="ค้นหาชื่อล็อค..."
+                                className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                                autoFocus
+                              />
+                              {(() => {
+                                const filtered = stalls.filter(s => 
+                                  s.type !== 'ทางเดิน' && 
+                                  s.type !== 'อื่นๆ' && 
+                                  !newMonthlyStallsSat.includes(s.name) && 
+                                  s.name.toLowerCase().includes(stallFilterSat.toLowerCase())
+                                );
+                                
+                                if (filtered.length === 0) {
+                                  return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                                }
+                                
+                                return filtered.map((vSt) => (
+                                  <button
+                                    key={vSt.name}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewMonthlyStallsSat([...newMonthlyStallsSat, vSt.name]);
+                                      setShowAddStallSelectSat(false);
+                                    }}
+                                    className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                  >
+                                    {vSt.name} ({vSt.zone})
+                                  </button>
+                                ));
+                              })()}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {newMonthlyDays.sun && (
-                    <div className="flex items-center gap-2 bg-red-50/40 p-2 rounded border border-red-100">
+                    <div className="flex flex-wrap gap-2 items-center bg-red-50/40 p-2 rounded border border-red-100">
                       <span className="w-12 font-bold text-red-700 shrink-0">วันอาทิตย์</span>
-                      <div className="flex-1 min-w-0">
-                        <StallSelector 
-                          selectedStalls={newMonthlyStallsSun}
-                          onChange={setNewMonthlyStallsSun}
-                        />
+                      <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                        {newMonthlyStallsSun.map((stName) => (
+                          <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                            [{stName}]
+                            <button
+                              type="button"
+                              onClick={() => setNewMonthlyStallsSun(newMonthlyStallsSun.filter(s => s !== stName))}
+                              className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                              title="ลบออก"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                        
+                        <div className="relative" ref={addStallDropdownRefSun}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddStallSelectSun(!showAddStallSelectSun);
+                              setShowAddStallSelectWed(false);
+                              setShowAddStallSelectSat(false);
+                              setStallFilterSun('');
+                            }}
+                            className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                          >
+                            + เพิ่มล็อค
+                          </button>
+                          
+                          {showAddStallSelectSun && (
+                            <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                              <input
+                                type="text"
+                                value={stallFilterSun}
+                                onChange={(e) => setStallFilterSun(e.target.value)}
+                                placeholder="ค้นหาชื่อล็อค..."
+                                className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                                autoFocus
+                              />
+                              {(() => {
+                                const filtered = stalls.filter(s => 
+                                  s.type !== 'ทางเดิน' && 
+                                  s.type !== 'อื่นๆ' && 
+                                  !newMonthlyStallsSun.includes(s.name) && 
+                                  s.name.toLowerCase().includes(stallFilterSun.toLowerCase())
+                                );
+                                
+                                if (filtered.length === 0) {
+                                  return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                                }
+                                
+                                return filtered.map((vSt) => (
+                                  <button
+                                    key={vSt.name}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewMonthlyStallsSun([...newMonthlyStallsSun, vSt.name]);
+                                      setShowAddStallSelectSun(false);
+                                    }}
+                                    className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                  >
+                                    {vSt.name} ({vSt.zone})
+                                  </button>
+                                ));
+                              })()}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -6540,37 +6756,226 @@ export default function BookingPage() {
                 </div>
 
                 {newMonthlyDays.wed && (
-                  <div className="flex items-center gap-2 bg-green-50/40 p-2 rounded border border-green-100">
+                  <div className="flex flex-wrap gap-2 items-center bg-green-50/40 p-2 rounded border border-green-100">
                     <span className="w-12 font-bold text-green-700 shrink-0">วันพุธ</span>
-                    <div className="flex-1 min-w-0">
-                      <StallSelector 
-                        selectedStalls={newMonthlyStallsWed}
-                        onChange={setNewMonthlyStallsWed}
-                      />
+                    <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                      {newMonthlyStallsWed.map((stName) => (
+                        <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                          [{stName}]
+                          <button
+                            type="button"
+                            onClick={() => setNewMonthlyStallsWed(newMonthlyStallsWed.filter(s => s !== stName))}
+                            className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                            title="ลบออก"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                      
+                      <div className="relative" ref={addStallDropdownRefWed}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddStallSelectWed(!showAddStallSelectWed);
+                            setShowAddStallSelectSat(false);
+                            setShowAddStallSelectSun(false);
+                            setStallFilterWed('');
+                          }}
+                          className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                        >
+                          + เพิ่มล็อค
+                        </button>
+                        
+                        {showAddStallSelectWed && (
+                          <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                            <input
+                              type="text"
+                              value={stallFilterWed}
+                              onChange={(e) => setStallFilterWed(e.target.value)}
+                              placeholder="ค้นหาชื่อล็อค..."
+                              className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                              autoFocus
+                            />
+                            {(() => {
+                              const filtered = stalls.filter(s => 
+                                s.type !== 'ทางเดิน' && 
+                                s.type !== 'อื่นๆ' && 
+                                !newMonthlyStallsWed.includes(s.name) && 
+                                s.name.toLowerCase().includes(stallFilterWed.toLowerCase())
+                              );
+                              
+                              if (filtered.length === 0) {
+                                  return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                              }
+                              
+                              return filtered.map((vSt) => (
+                                <button
+                                  key={vSt.name}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewMonthlyStallsWed([...newMonthlyStallsWed, vSt.name]);
+                                    setShowAddStallSelectWed(false);
+                                  }}
+                                  className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                >
+                                  {vSt.name} ({vSt.zone})
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {newMonthlyDays.sat && (
-                  <div className="flex items-center gap-2 bg-purple-50/40 p-2 rounded border border-purple-100">
+                  <div className="flex flex-wrap gap-2 items-center bg-purple-50/40 p-2 rounded border border-purple-100">
                     <span className="w-12 font-bold text-purple-700 shrink-0">วันเสาร์</span>
-                    <div className="flex-1 min-w-0">
-                      <StallSelector 
-                        selectedStalls={newMonthlyStallsSat}
-                        onChange={setNewMonthlyStallsSat}
-                      />
+                    <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                      {newMonthlyStallsSat.map((stName) => (
+                        <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                          [{stName}]
+                          <button
+                            type="button"
+                            onClick={() => setNewMonthlyStallsSat(newMonthlyStallsSat.filter(s => s !== stName))}
+                            className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                            title="ลบออก"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                      
+                      <div className="relative" ref={addStallDropdownRefSat}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddStallSelectSat(!showAddStallSelectSat);
+                            setShowAddStallSelectWed(false);
+                            setShowAddStallSelectSun(false);
+                            setStallFilterSat('');
+                          }}
+                          className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                        >
+                          + เพิ่มล็อค
+                        </button>
+                        
+                        {showAddStallSelectSat && (
+                          <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                            <input
+                              type="text"
+                              value={stallFilterSat}
+                              onChange={(e) => setStallFilterSat(e.target.value)}
+                              placeholder="ค้นหาชื่อล็อค..."
+                              className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                              autoFocus
+                            />
+                            {(() => {
+                              const filtered = stalls.filter(s => 
+                                s.type !== 'ทางเดิน' && 
+                                s.type !== 'อื่นๆ' && 
+                                !newMonthlyStallsSat.includes(s.name) && 
+                                s.name.toLowerCase().includes(stallFilterSat.toLowerCase())
+                              );
+                              
+                              if (filtered.length === 0) {
+                                  return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                              }
+                              
+                              return filtered.map((vSt) => (
+                                <button
+                                  key={vSt.name}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewMonthlyStallsSat([...newMonthlyStallsSat, vSt.name]);
+                                    setShowAddStallSelectSat(false);
+                                  }}
+                                  className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                >
+                                  {vSt.name} ({vSt.zone})
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {newMonthlyDays.sun && (
-                  <div className="flex items-center gap-2 bg-red-50/40 p-2 rounded border border-red-100">
+                  <div className="flex flex-wrap gap-2 items-center bg-red-50/40 p-2 rounded border border-red-100">
                     <span className="w-12 font-bold text-red-700 shrink-0">วันอาทิตย์</span>
-                    <div className="flex-1 min-w-0">
-                      <StallSelector 
-                        selectedStalls={newMonthlyStallsSun}
-                        onChange={setNewMonthlyStallsSun}
-                      />
+                    <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                      {newMonthlyStallsSun.map((stName) => (
+                        <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                          [{stName}]
+                          <button
+                            type="button"
+                            onClick={() => setNewMonthlyStallsSun(newMonthlyStallsSun.filter(s => s !== stName))}
+                            className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                            title="ลบออก"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                      
+                      <div className="relative" ref={addStallDropdownRefSun}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddStallSelectSun(!showAddStallSelectSun);
+                            setShowAddStallSelectWed(false);
+                            setShowAddStallSelectSat(false);
+                            setStallFilterSun('');
+                          }}
+                          className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                        >
+                          + เพิ่มล็อค
+                        </button>
+                        
+                        {showAddStallSelectSun && (
+                          <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#8B4513]/25 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                            <input
+                              type="text"
+                              value={stallFilterSun}
+                              onChange={(e) => setStallFilterSun(e.target.value)}
+                              placeholder="ค้นหาชื่อล็อค..."
+                              className="p-1.5 border border-red-500 rounded text-xs text-gray-800 bg-red-50/10 focus:outline-none focus:ring-1 focus:ring-red-500 font-bold mb-1"
+                              autoFocus
+                            />
+                            {(() => {
+                              const filtered = stalls.filter(s => 
+                                s.type !== 'ทางเดิน' && 
+                                s.type !== 'อื่นๆ' && 
+                                !newMonthlyStallsSun.includes(s.name) && 
+                                s.name.toLowerCase().includes(stallFilterSun.toLowerCase())
+                              );
+                              
+                              if (filtered.length === 0) {
+                                  return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                              }
+                              
+                              return filtered.map((vSt) => (
+                                <button
+                                  key={vSt.name}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewMonthlyStallsSun([...newMonthlyStallsSun, vSt.name]);
+                                    setShowAddStallSelectSun(false);
+                                  }}
+                                  className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                >
+                                  {vSt.name} ({vSt.zone})
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
