@@ -2671,6 +2671,25 @@ export default function BookingPage() {
     return new Date(year, month, 1);
   };
 
+  const sortThaiMonthsDescending = (monthsArray) => {
+    const monthsMap = {
+      'มกราคม': 0, 'กุมภาพันธ์': 1, 'มีนาคม': 2, 'เมษายน': 3,
+      'พฤษภาคม': 4, 'มิถุนายน': 5, 'กรกฎาคม': 6, 'สิงหาคม': 7,
+      'กันยายน': 8, 'ตุลาคม': 9, 'พฤศจิกายน': 10, 'ธันวาคม': 11
+    };
+    return [...monthsArray].sort((a, b) => {
+      const partsA = a.split(' ');
+      const partsB = b.split(' ');
+      const monthA = monthsMap[partsA[0]] || 0;
+      const yearA = parseInt(partsA[1]) || 0;
+      const monthB = monthsMap[partsB[0]] || 0;
+      const yearB = parseInt(partsB[1]) || 0;
+      const valA = yearA * 12 + monthA;
+      const valB = yearB * 12 + monthB;
+      return valB - valA;
+    });
+  };
+
   const formatBookingMonth = (monthStr) => {
     if (!monthStr) return '-';
     const parts = monthStr.split(' ');
@@ -3322,7 +3341,7 @@ export default function BookingPage() {
                   const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
                   const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
                   monthSet.add(currentMonthYear);
-                  return Array.from(monthSet).sort().map(month => (
+                  return sortThaiMonthsDescending(Array.from(monthSet)).map(month => (
                     <option key={month} value={month}>{month}</option>
                   ));
                 })()}
@@ -5515,7 +5534,7 @@ export default function BookingPage() {
                       const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
                       const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
                       monthSet.add(currentMonthYear);
-                      return Array.from(monthSet).sort().map(month => (
+                      return sortThaiMonthsDescending(Array.from(monthSet)).map(month => (
                         <option key={month} value={month}>{month}</option>
                       ));
                     })()}
