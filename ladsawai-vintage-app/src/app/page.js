@@ -4382,7 +4382,7 @@ export default function BookingPage() {
                       <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                         {newMonthlyStallsWed.map((stName) => (
                           <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
-                            [{stName}]
+                            {cleanStallName(stName)}
                             <button
                               type="button"
                               onClick={() => setNewMonthlyStallsWed(newMonthlyStallsWed.filter(s => s !== stName))}
@@ -4440,7 +4440,7 @@ export default function BookingPage() {
                                     }}
                                     className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                   >
-                                    {vSt.name} ({vSt.zone})
+                                    {cleanStallName(vSt.name)} ({vSt.zone})
                                   </button>
                                 ));
                               })()}
@@ -4457,7 +4457,7 @@ export default function BookingPage() {
                       <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                         {newMonthlyStallsSat.map((stName) => (
                           <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
-                            [{stName}]
+                            {cleanStallName(stName)}
                             <button
                               type="button"
                               onClick={() => setNewMonthlyStallsSat(newMonthlyStallsSat.filter(s => s !== stName))}
@@ -4515,7 +4515,7 @@ export default function BookingPage() {
                                     }}
                                     className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                   >
-                                    {vSt.name} ({vSt.zone})
+                                    {cleanStallName(vSt.name)} ({vSt.zone})
                                   </button>
                                 ));
                               })()}
@@ -4532,7 +4532,7 @@ export default function BookingPage() {
                       <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                         {newMonthlyStallsSun.map((stName) => (
                           <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
-                            [{stName}]
+                            {cleanStallName(stName)}
                             <button
                               type="button"
                               onClick={() => setNewMonthlyStallsSun(newMonthlyStallsSun.filter(s => s !== stName))}
@@ -4590,7 +4590,7 @@ export default function BookingPage() {
                                     }}
                                     className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                   >
-                                    {vSt.name} ({vSt.zone})
+                                    {cleanStallName(vSt.name)} ({vSt.zone})
                                   </button>
                                 ));
                               })()}
@@ -5473,7 +5473,7 @@ export default function BookingPage() {
                         <div className="flex flex-wrap gap-1.5 p-2 bg-[#FFFDF9] border border-[#8B4513]/25 rounded-lg min-h-[44px] items-center relative">
                           {selectedStallsList.map((st) => (
                             <span key={st.name} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2.5 py-1 rounded-md shadow-xs">
-                              {st.name}
+                              {cleanStallName(st.name)}
                               {selectedStallsList.length > 1 && !isAlreadyPaid && (
                                 <button
                                   type="button"
@@ -5541,7 +5541,7 @@ export default function BookingPage() {
                                         }}
                                         className="w-full text-left px-2 py-1.5 hover:bg-amber-50 rounded text-xs font-mono font-bold text-gray-700 flex justify-between items-center transition-colors border-b border-gray-100 last:border-b-0"
                                       >
-                                        <span>{vSt.name}</span>
+                                        <span>{cleanStallName(vSt.name)}</span>
                                         <span className="text-[9px] text-gray-400 font-medium">({vSt.type})</span>
                                       </button>
                                     ));
@@ -6769,7 +6769,7 @@ export default function BookingPage() {
                     <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                       {newMonthlyStallsWed.map((stName) => (
                         <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
-                          [{stName}]
+                          {cleanStallName(stName)}
                           <button
                             type="button"
                             onClick={() => setNewMonthlyStallsWed(newMonthlyStallsWed.filter(s => s !== stName))}
@@ -6827,7 +6827,7 @@ export default function BookingPage() {
                                   }}
                                   className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                 >
-                                  {vSt.name} ({vSt.zone})
+                                  {cleanStallName(vSt.name)} ({vSt.zone})
                                 </button>
                               ));
                             })()}
@@ -6844,7 +6844,7 @@ export default function BookingPage() {
                     <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                       {newMonthlyStallsSat.map((stName) => (
                         <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
-                          [{stName}]
+                          {cleanStallName(stName)}
                           <button
                             type="button"
                             onClick={() => setNewMonthlyStallsSat(newMonthlyStallsSat.filter(s => s !== stName))}
@@ -6902,7 +6902,7 @@ export default function BookingPage() {
                                   }}
                                   className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                 >
-                                  {vSt.name} ({vSt.zone})
+                                  {cleanStallName(vSt.name)} ({vSt.zone})
                                 </button>
                               ));
                             })()}
@@ -6919,7 +6919,7 @@ export default function BookingPage() {
                     <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                       {newMonthlyStallsSun.map((stName) => (
                         <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
-                          [{stName}]
+                          {cleanStallName(stName)}
                           <button
                             type="button"
                             onClick={() => setNewMonthlyStallsSun(newMonthlyStallsSun.filter(s => s !== stName))}
@@ -6977,7 +6977,7 @@ export default function BookingPage() {
                                   }}
                                   className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                 >
-                                  {vSt.name} ({vSt.zone})
+                                  {cleanStallName(vSt.name)} ({vSt.zone})
                                 </button>
                               ));
                             })()}
