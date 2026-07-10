@@ -2790,6 +2790,88 @@ export default function BookingPage() {
     );
   };
 
+  const getNewMonthlyPricing = () => {
+    if (!newMonthlyStartDate) {
+      return {
+        wedCount: 0, wedStallsPrice: 0, wedTotal: 0,
+        satCount: 0, satStallsPrice: 0, satTotal: 0,
+        sunCount: 0, sunStallsPrice: 0, sunTotal: 0,
+        totalElecCharged: 0, totalElecPrice: 0,
+        storageFeeVal: 0, grandTotal: 0
+      };
+    }
+    
+    const startD = new Date(newMonthlyStartDate);
+    const year = startD.getFullYear();
+    const monthVal = startD.getMonth();
+    const lastDay = new Date(year, monthVal + 1, 0).getDate();
+    
+    let wedCount = 0;
+    let satCount = 0;
+    let sunCount = 0;
+    let totalElecCharged = 0;
+    
+    for (let d = 1; d <= lastDay; d++) {
+      const currentD = new Date(year, monthVal, d);
+      const dayOfWeek = currentD.getDay();
+      let hasTradingDayOnDate = false;
+      
+      if (dayOfWeek === 3 && newMonthlyDays.wed) {
+        wedCount++;
+        hasTradingDayOnDate = true;
+      }
+      if (dayOfWeek === 6 && newMonthlyDays.sat) {
+        satCount++;
+        hasTradingDayOnDate = true;
+      }
+      if (dayOfWeek === 0 && newMonthlyDays.sun) {
+        sunCount++;
+        hasTradingDayOnDate = true;
+      }
+      
+      if (hasTradingDayOnDate && (newMonthlyStallsWed.length > 0 || newMonthlyStallsSat.length > 0 || newMonthlyStallsSun.length > 0)) {
+        totalElecCharged++;
+      }
+    }
+    
+    const getStallsPrice = (stallsList, dayOfWeek) => {
+      let sum = 0;
+      stallsList.forEach(sName => {
+        const sMaster = stalls.find(s => s.name === sName);
+        if (sMaster) {
+          let price = sMaster.price_wed;
+          if (dayOfWeek === 6) price = sMaster.price_sat;
+          if (dayOfWeek === 0) price = sMaster.price_sun;
+          
+          if (newMonthlyCustomerType === 'VIP') price = 0;
+          sum += price;
+        }
+      });
+      return sum;
+    };
+    
+    const wedStallsPrice = getStallsPrice(newMonthlyStallsWed, 3);
+    const satStallsPrice = getStallsPrice(newMonthlyStallsSat, 6);
+    const sunStallsPrice = getStallsPrice(newMonthlyStallsSun, 0);
+    
+    const wedTotal = wedCount * wedStallsPrice;
+    const satTotal = satCount * satStallsPrice;
+    const sunTotal = sunCount * sunStallsPrice;
+    
+    const totalElecPrice = totalElecCharged * (parseNumber(newMonthlyElecUnit || 0) * 10);
+    const storageFeeVal = parseNumber(newMonthlyStorageFee || 0);
+    
+    const grandTotal = wedTotal + satTotal + sunTotal + totalElecPrice + storageFeeVal;
+    
+    return {
+      wedCount, wedStallsPrice, wedTotal,
+      satCount, satStallsPrice, satTotal,
+      sunCount, sunStallsPrice, sunTotal,
+      totalElecCharged, totalElecPrice,
+      storageFeeVal, grandTotal
+    };
+  };
+
   const handleOpenNewMonthlyModal = () => {
     setNewMonthlyStartDate(new Date().toISOString().split('T')[0]);
     setNewMonthlyDays({ wed: true, sat: true, sun: true });
