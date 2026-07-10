@@ -584,7 +584,11 @@ export default function BookingPage() {
           });
           setPaymentList(splits);
         } else {
-          setPaymentList([{ method: booking.payment_method, amount: booking.total_price || '' }]);
+          const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
+          setPaymentList([{ 
+            method: booking.payment_method, 
+            amount: isPaidStatus ? (booking.total_price || '') : '' 
+          }]);
         }
       } else {
         setPaymentList([{ method: '', amount: '' }]);
