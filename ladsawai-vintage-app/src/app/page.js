@@ -2970,8 +2970,9 @@ export default function BookingPage() {
             
             const dateStr = `${year}-${String(monthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             
+            const uniqueDailyId = `${newBookingId}-${dateStr}-${stallName.replace(/[\[\]]/g, '')}`;
             dailyBookings.push({
-              id: newBookingId,
+              id: uniqueDailyId,
               date: dateStr,
               stall_name: stallName,
               booker_name: newMonthlyBookerName,
@@ -2984,7 +2985,8 @@ export default function BookingPage() {
               payment_method: 'Cash',
               status: 'ค้างชำระ',
               note: 'จองใหม่รายเดือน',
-              storage_fee: parseNumber(newMonthlyStorageFee || 0)
+              storage_fee: parseNumber(newMonthlyStorageFee || 0),
+              master_id: newBookingId
             });
           }
         });
@@ -3176,8 +3178,9 @@ export default function BookingPage() {
             
             const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             
+            const uniqueDailyId = `${newBookingId}-${dateStr}-${stallName.replace(/[\[\]]/g, '')}`;
             dailyBookings.push({
-              id: newBookingId,
+              id: uniqueDailyId,
               date: dateStr,
               stall_name: stallName,
               booker_name: activeMonthlyBooking.booker_name,
@@ -3190,7 +3193,8 @@ export default function BookingPage() {
               payment_method: 'Cash',
               status: 'ค้างชำระ',
               note: 'ต่ออายุอัตโนมัติ',
-              storage_fee: parseNumber(activeMonthlyBooking.storage_fee || 0)
+              storage_fee: parseNumber(activeMonthlyBooking.storage_fee || 0),
+              master_id: newBookingId
             });
           }
         });
