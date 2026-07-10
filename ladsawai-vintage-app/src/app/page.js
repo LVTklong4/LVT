@@ -5355,7 +5355,7 @@ export default function BookingPage() {
 
             {/* Title / Stall Name */}
             <div className="text-center flex flex-col items-center gap-1.5 mb-5">
-              <h2 className="text-3xl font-black text-slate-800 tracking-tight">
+              <h2 className="text-5xl font-black text-slate-800 tracking-tight">
                 {cleanStallName(selectedStall.name)}
               </h2>
               <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-0.5 rounded-full">
@@ -5365,10 +5365,12 @@ export default function BookingPage() {
 
             {/* Customer & Product Card */}
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-col gap-3">
-              <div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">ผู้เช่า</span>
-                <span className="text-sm font-bold text-gray-850">{selectedMonthlyStallBooking.booker_name}</span>
-              </div>
+              {adminUser && (
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">ผู้เช่า</span>
+                  <span className="text-sm font-bold text-gray-850">{selectedMonthlyStallBooking.booker_name}</span>
+                </div>
+              )}
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">สินค้า</span>
                 <span className="text-sm font-bold text-gray-700">{selectedMonthlyStallBooking.product || 'ไม่มีชื่อสินค้า'}</span>
@@ -5376,17 +5378,21 @@ export default function BookingPage() {
             </div>
 
             {/* Vacate Button */}
-            <button
-              onClick={handleVacateMonthlyStallToday}
-              className="w-full mt-6 py-3 bg-[#E53935] hover:bg-[#D32F2F] text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <CalendarX className="w-4 h-4" /> คืนล็อคเฉพาะวันนี้
-            </button>
+            {adminUser && (
+              <>
+                <button
+                  onClick={handleVacateMonthlyStallToday}
+                  className="w-full mt-6 py-3 bg-[#E53935] hover:bg-[#D32F2F] text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CalendarX className="w-4 h-4" /> คืนล็อคเฉพาะวันนี้
+                </button>
 
-            {/* Footnote */}
-            <p className="text-[9px] text-gray-400 text-center mt-3 font-semibold">
-              * กดปุ่มนี้เพื่อให้ล็อคว่างสำหรับขายรายวัน (สัญญาหลักไม่หาย)
-            </p>
+                {/* Footnote */}
+                <p className="text-[9px] text-gray-400 text-center mt-3 font-semibold">
+                  * กดปุ่มนี้เพื่อให้ล็อคว่างสำหรับขายรายวัน (สัญญาหลักไม่หาย)
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
