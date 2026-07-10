@@ -4440,7 +4440,7 @@ export default function BookingPage() {
                                     }}
                                     className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                   >
-                                    {cleanStallName(vSt.name)} ({vSt.zone})
+                                    {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
                                   </button>
                                 ));
                               })()}
@@ -4515,7 +4515,7 @@ export default function BookingPage() {
                                     }}
                                     className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                   >
-                                    {cleanStallName(vSt.name)} ({vSt.zone})
+                                    {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
                                   </button>
                                 ));
                               })()}
@@ -4590,7 +4590,7 @@ export default function BookingPage() {
                                     }}
                                     className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                   >
-                                    {cleanStallName(vSt.name)} ({vSt.zone})
+                                    {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
                                   </button>
                                 ));
                               })()}
@@ -6827,7 +6827,7 @@ export default function BookingPage() {
                                   }}
                                   className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                 >
-                                  {cleanStallName(vSt.name)} ({vSt.zone})
+                                  {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
                                 </button>
                               ));
                             })()}
@@ -6902,7 +6902,7 @@ export default function BookingPage() {
                                   }}
                                   className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                 >
-                                  {cleanStallName(vSt.name)} ({vSt.zone})
+                                  {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
                                 </button>
                               ));
                             })()}
@@ -6977,7 +6977,7 @@ export default function BookingPage() {
                                   }}
                                   className="text-left w-full px-2 py-1.5 text-xs hover:bg-amber-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
                                 >
-                                  {cleanStallName(vSt.name)} ({vSt.zone})
+                                  {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
                                 </button>
                               ));
                             })()}
