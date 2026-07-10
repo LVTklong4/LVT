@@ -5044,6 +5044,9 @@ export default function BookingPage() {
                       if (booking.status === 'ลา') {
                         statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                         statusText = priceText;
+                      } else if (booking.type === 'รายเดือน') {
+                        statusClass = "bg-monthly-stall";
+                        statusText = booking.product || "รายเดือน";
                       } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
                         statusClass = "bg-occupied text-red-900";
                         statusText = booking.product || "จองแล้ว";
@@ -5063,7 +5066,10 @@ export default function BookingPage() {
                       if (booking.status === 'ลา') {
                         statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                         statusText = priceText;
-                      } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
+                      } else if (booking.type === 'รายเดือน') {
+                        statusClass = "bg-monthly-stall";
+                        statusText = booking.product || "รายเดือน";
+                      } else if (booking.status === 'ชำrateแล้ว' || booking.status === 'ไม่ว่าง' || booking.status === 'ชำระแล้ว') {
                         statusClass = "bg-occupied text-red-900";
                         statusText = booking.product || "จองแล้ว";
                       } else {
