@@ -963,10 +963,10 @@ export default function BookingPage() {
     const dayName = dayNamesShort[tradingDateObj.getDay()] || '';
     const tradingDateFormatted = `${dayName} ที่ ${tradingDateObj.getDate()} ${monthNamesFull[tradingDateObj.getMonth()]} ${tradingDateObj.getFullYear() + 543}`;
 
-    // Format stall name list with brackets
+    // Format stall name list without brackets
     const formattedStallName = bookingObj.stall_name 
-      ? bookingObj.stall_name.split(',').map(s => `[${s.trim()}]`).join(', ') 
-      : `[${stallObj.name}]`;
+      ? cleanStallName(bookingObj.stall_name) 
+      : cleanStallName(stallObj.name);
 
     const stallPriceVal = parseNumber(bookingObj.stall_price);
     const elecPriceVal = parseNumber(bookingObj.elec_price);
@@ -1266,7 +1266,7 @@ export default function BookingPage() {
       const satTotal = (satPrice + elecRate) * satCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันเสาร์ ล็อค : [${item.stalls}]</td>
+          <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(item.stalls)}</td>
           <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -1279,7 +1279,7 @@ export default function BookingPage() {
       const sunTotal = (sunPrice + elecRate) * sunCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันอาทิตย์ ล็อค : [${item.stalls}]</td>
+          <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(item.stalls)}</td>
           <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -1292,7 +1292,7 @@ export default function BookingPage() {
       const wedTotal = (wedPrice + elecRate) * wedCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันพุธ ล็อค : [${item.stalls}]</td>
+          <td class="bold">วันพุธ ล็อค : ${cleanStallName(item.stalls)}</td>
           <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -1636,7 +1636,7 @@ export default function BookingPage() {
       const satTotal = (satPrice + elecRate) * monthlyPrintSatCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันเสาร์ ล็อค : [${monthlyPrintItem.stalls}]</td>
+          <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
           <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -1650,7 +1650,7 @@ export default function BookingPage() {
       const sunTotal = (sunPrice + elecRate) * monthlyPrintSunCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันอาทิตย์ ล็อค : [${monthlyPrintItem.stalls}]</td>
+          <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
           <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -1664,7 +1664,7 @@ export default function BookingPage() {
       const wedTotal = (wedPrice + elecRate) * monthlyPrintWedCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันพุธ ล็อค : [${monthlyPrintItem.stalls}]</td>
+          <td class="bold">วันพุธ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
           <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -1999,7 +1999,7 @@ export default function BookingPage() {
       const satTotal = (satPrice + elecRate) * satCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันเสาร์ ล็อค : [${item.stalls}]</td>
+          <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(item.stalls)}</td>
           <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -2012,7 +2012,7 @@ export default function BookingPage() {
       const sunTotal = (sunPrice + elecRate) * sunCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันอาทิตย์ ล็อค : [${item.stalls}]</td>
+          <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(item.stalls)}</td>
           <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -2025,7 +2025,7 @@ export default function BookingPage() {
       const wedTotal = (wedPrice + elecRate) * wedCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันพุธ ล็อค : [${item.stalls}]</td>
+          <td class="bold">วันพุธ ล็อค : ${cleanStallName(item.stalls)}</td>
           <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
         </tr>
         <tr class="calc-row">
@@ -3608,6 +3608,14 @@ export default function BookingPage() {
     return isNaN(num) ? 0 : num;
   };
 
+  const cleanStallName = (name) => {
+    if (!name) return '';
+    return String(name)
+      .split(',')
+      .map(s => s.trim().replace(/^\[|\]$/g, ''))
+      .join(', ');
+  };
+
   const handleSortToggle = (field) => {
     if (monthlySortField === field) {
       if (monthlySortOrder === 'asc') {
@@ -3829,7 +3837,7 @@ export default function BookingPage() {
                           <div className="font-bold text-gray-800">{item.booker_name}</div>
                           <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
                         </td>
-                        <td className="p-2 font-bold text-[#8B4513]">{item.stalls}</td>
+                        <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
                         <td className="p-2 text-center font-semibold text-gray-800">
                           {item.total_price.toLocaleString()}.-
                         </td>
@@ -3897,7 +3905,7 @@ export default function BookingPage() {
                     </div>
                   </div>
                   <div className="text-[11px] text-gray-600 mt-1 font-bold">
-                    ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{activeMonthlyBooking.stalls}</span>
+                    ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls)}</span>
                   </div>
                   <div className="text-[10px] text-gray-500 mt-0.5">
                     ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price.toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{(activeMonthlyBooking.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0)).toLocaleString()}.-</span>
@@ -3959,7 +3967,7 @@ export default function BookingPage() {
               <form onSubmit={handleUpdateMonthlyItem} className="p-5 flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-gray-500 font-bold">ล็อกที่เช่า</span>
-                  <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border">{selectedMonthlyItem.stalls}</span>
+                  <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border">{cleanStallName(selectedMonthlyItem.stalls)}</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -5950,8 +5958,8 @@ export default function BookingPage() {
         const tradingDateFormatted = `${dayName} ที่ ${tradingDateObj.getDate()} ${monthNamesFull[tradingDateObj.getMonth()]} ${tradingDateObj.getFullYear() + 543}`;
 
         const formattedStallName = bookingObj.stall_name 
-          ? bookingObj.stall_name.split(',').map(s => `[${s.trim()}]`).join(', ') 
-          : `[${stallObj.name}]`;
+          ? cleanStallName(bookingObj.stall_name) 
+          : cleanStallName(stallObj.name);
 
         const rawPayments = bookingObj.payment_method || '';
         const paymentLines = [];
@@ -6514,7 +6522,7 @@ export default function BookingPage() {
                               <div className="font-bold text-gray-800">{item.booker_name}</div>
                               <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
                             </td>
-                            <td className="p-2 font-bold text-[#8B4513]">{item.stalls}</td>
+                            <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
                             <td className="p-2 text-center font-semibold text-gray-800">
                               {item.total_price.toLocaleString()}.-
                             </td>
@@ -6582,7 +6590,7 @@ export default function BookingPage() {
                         </div>
                       </div>
                       <div className="text-[11px] text-gray-600 mt-1 font-bold">
-                        ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{activeMonthlyBooking.stalls}</span>
+                        ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls)}</span>
                       </div>
                       <div className="text-[10px] text-gray-500 mt-0.5">
                         ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{activeMonthlyBooking.paid_amount || 0}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0))}.-</span>
@@ -7284,7 +7292,7 @@ export default function BookingPage() {
             <form onSubmit={handleUpdateMonthlyItem} className="p-5 flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] text-gray-500 font-bold">ล็อกที่เช่า</span>
-                <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border">{selectedMonthlyItem.stalls}</span>
+                <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border">{cleanStallName(selectedMonthlyItem.stalls)}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -7370,7 +7378,7 @@ export default function BookingPage() {
             <div className="p-4 flex flex-col gap-3 max-h-[75vh] overflow-y-auto custom-scrollbar text-xs">
               <div className="bg-[#F5E6D3] border border-[#D7CCC8] rounded p-2.5">
                 <div className="font-bold text-[#3E2723]">ผู้เช่า: {monthlyPrintItem.booker_name}</div>
-                <div className="text-gray-600 mt-0.5">ล็อก: {monthlyPrintItem.stalls} | ค่าเช่า: {monthlyPrintItem.total_price}.-</div>
+                <div className="text-gray-600 mt-0.5">ล็อก: {cleanStallName(monthlyPrintItem.stalls)} | ค่าเช่า: {monthlyPrintItem.total_price}.-</div>
               </div>
 
               {/* Month */}
