@@ -1205,7 +1205,7 @@ export default function BookingPage() {
     const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
     const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
     const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
-    const elecRate = 30; // standard monthly electric per day
+    const elecRate = monthlyPrintItem && monthlyPrintItem.elec_unit !== undefined && monthlyPrintItem.elec_unit !== null ? parseNumber(monthlyPrintItem.elec_unit) * 10 : 20;
 
     // Get current date time for transaction date
     const now = new Date();
@@ -1414,6 +1414,28 @@ export default function BookingPage() {
               font-size: 13pt;
               font-weight: 800;
             }
+            .remaining-row td {
+              border-top: 1px dashed #000;
+              border-bottom: 1px dashed #000;
+              padding-top: 2.5mm !important;
+              padding-bottom: 2.5mm !important;
+            }
+            .remaining-row td.label {
+              text-align: right;
+              font-size: 11.5pt;
+              font-weight: 800;
+              padding-right: 2mm;
+            }
+            .remaining-row td.val {
+              text-align: right;
+              font-size: 13pt;
+              font-weight: 800;
+            }
+            .info-table td.large-val {
+              text-align: right;
+              font-size: 12.5pt;
+              font-weight: 800;
+            }
             .footer {
               margin-top: 4mm;
               font-size: 9.5pt;
@@ -1450,15 +1472,15 @@ export default function BookingPage() {
             </tr>
             <tr>
               <td class="label">ประจำเดือน :</td>
-              <td style="text-align: right;" class="bold">${monthlyPrintMonth}</td>
+              <td class="large-val">${monthlyPrintMonth}</td>
             </tr>
             <tr>
               <td class="label">ผู้จอง :</td>
-              <td style="text-align: right;" class="bold">${monthlyPrintItem.booker_name}</td>
+              <td class="large-val">${monthlyPrintItem.booker_name}</td>
             </tr>
             <tr>
               <td class="label">สินค้า :</td>
-              <td style="text-align: right;" class="bold">${monthlyPrintProduct}</td>
+              <td class="large-val">${monthlyPrintProduct}</td>
             </tr>
           </table>
           
@@ -1498,9 +1520,9 @@ export default function BookingPage() {
               <td class="label">คิดเป็นเปอร์เซ็นต์ :</td>
               <td class="val">${percentage}%</td>
             </tr>
-            <tr>
+            <tr class="remaining-row">
               <td class="label">ค้างชำระ/คงเหลือ :</td>
-              <td class="val" style="color: ${remaining > 0 ? '#DC2626' : '#000'}">${remaining.toFixed(2)}</td>
+              <td class="val">${remaining.toFixed(2)}</td>
             </tr>
           </table>
           
@@ -1534,7 +1556,7 @@ export default function BookingPage() {
     const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
     const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
     const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
-    const elecRate = 30; // standard monthly electric per day
+    const elecRate = item && item.elec_unit !== undefined && item.elec_unit !== null ? parseNumber(item.elec_unit) * 10 : 20;
 
     // Get current date time for billing date
     const now = new Date();
@@ -2250,6 +2272,19 @@ export default function BookingPage() {
     }
   };
 
+  const parseBookingMonthToDate = (monthStr) => {
+    if (!monthStr) return new Date(0);
+    const parts = monthStr.split(' ');
+    if (parts.length < 4) return new Date(monthStr);
+    const monthsMap = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+      Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+    };
+    const month = monthsMap[parts[1]] !== undefined ? monthsMap[parts[1]] : 0;
+    const year = parseInt(parts[3]) - 543;
+    return new Date(year, month, 1);
+  };
+
   const formatBookingMonth = (monthStr) => {
     if (!monthStr) return '-';
     const parts = monthStr.split(' ');
@@ -2812,6 +2847,9 @@ export default function BookingPage() {
       } else if (monthlySortField === 'remaining') {
         valA = (a.total_price || 0) - (a.paid_amount || 0);
         valB = (b.total_price || 0) - (b.paid_amount || 0);
+      } else if (monthlySortField === 'booking_month') {
+        valA = parseBookingMonthToDate(a.booking_month).getTime();
+        valB = parseBookingMonthToDate(b.booking_month).getTime();
       }
       
       if (monthlySortOrder === 'asc') {
@@ -2914,6 +2952,12 @@ export default function BookingPage() {
               <table className="w-full text-xs text-left">
                 <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                   <tr>
+                    <th 
+                      onClick={() => handleSortToggle('booking_month')}
+                      className="p-2 cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                    >
+                      เดือน {renderSortArrow('booking_month')}
+                    </th>
                     <th className="p-2 select-none">ลูกค้า</th>
                     <th className="p-2 select-none">ล็อค</th>
                     <th 
@@ -2951,6 +2995,9 @@ export default function BookingPage() {
                           activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
                         }`}
                       >
+                        <td className="p-2 font-semibold text-gray-700">
+                          {formatBookingMonth(item.booking_month)}
+                        </td>
                         <td className="p-2">
                           <div className="font-bold text-gray-800">{item.booker_name}</div>
                           <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
@@ -5091,6 +5138,12 @@ export default function BookingPage() {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                       <tr>
+                        <th 
+                          onClick={() => handleSortToggle('booking_month')}
+                          className="p-2 cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                        >
+                          เดือน {renderSortArrow('booking_month')}
+                        </th>
                         <th className="p-2 select-none">ลูกค้า</th>
                         <th className="p-2 select-none">ล็อค</th>
                         <th 
@@ -5128,6 +5181,9 @@ export default function BookingPage() {
                               activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
                             }`}
                           >
+                            <td className="p-2 font-semibold text-gray-700">
+                              {formatBookingMonth(item.booking_month)}
+                            </td>
                             <td className="p-2">
                               <div className="font-bold text-gray-800">{item.booker_name}</div>
                               <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
