@@ -3266,20 +3266,13 @@ export default function BookingPage() {
                         )
                       ) : (
                         // New booking: Footer controls
-                        <div className="flex justify-end gap-2 w-full">
+                        <div className="flex justify-end w-full">
                           <button
                             type="button"
-                            onClick={() => handleSaveBooking('ค้างชำระ')}
-                            className="px-3 py-2 bg-[#8B5A2B] hover:bg-[#6D4C41] text-white rounded-lg font-bold text-xs shadow transition-colors"
+                            onClick={() => handleSaveBooking(isFullyPaid ? 'ชำระแล้ว' : 'ค้างชำระ', isFullyPaid)}
+                            className="px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-colors duration-200 cursor-pointer"
                           >
-                            บันทึก (ค้างจ่าย)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveBooking('ชำระแล้ว', true)}
-                            className="px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow transition-colors"
-                          >
-                            <Printer className="w-4 h-4" /> บันทึก
+                            <Check className="w-4.5 h-4.5" /> {isFullyPaid ? "บันทึก/พิมพ์ตั๋ว" : "บันทึก (ค้างจ่าย)"}
                           </button>
                         </div>
                       )}
