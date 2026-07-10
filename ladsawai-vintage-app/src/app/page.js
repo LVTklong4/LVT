@@ -151,6 +151,8 @@ export default function BookingPage() {
   const [monthlyMonthFilter, setMonthlyMonthFilter] = useState('ทั้งหมด');
   const [monthlySearchQuery, setMonthlySearchQuery] = useState('');
   const [isMonthlyPageOnly, setIsMonthlyPageOnly] = useState(false);
+  const [monthlySortField, setMonthlySortField] = useState(null); // 'total_price' | 'paid_amount' | 'remaining'
+  const [monthlySortOrder, setMonthlySortOrder] = useState('asc'); // 'asc' | 'desc'
 
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
@@ -1525,6 +1527,286 @@ export default function BookingPage() {
     setShowMonthlyPrintModal(false);
   };
 
+  const handlePrintMonthlyInvoice = (item) => {
+    if (!item) return;
+
+    const stallObj = stalls.find(s => s.name === item.stalls);
+    const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
+    const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
+    const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+    const elecRate = 30; // standard monthly electric per day
+
+    // Get current date time for billing date
+    const now = new Date();
+    const formattedTransaction = now.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+
+    const empCode = adminUser?.employee_id || adminUser?.name || 'lvt-admin';
+
+    // Parse booking month name
+    let invoiceMonth = formatBookingMonth(item.booking_month);
+    if (invoiceMonth === '-') {
+      const thaiMonth = monthNamesFull[now.getMonth()];
+      const thaiYear = now.getFullYear() + 543;
+      invoiceMonth = `${thaiMonth} ${thaiYear}`;
+    }
+
+    // Default counts to 4 Saturdays and 4 Sundays, 0 Wednesdays
+    const satCount = 4;
+    const sunCount = 4;
+    const wedCount = 0;
+
+    // Build day detail rows
+    let dayDetailsHtml = '';
+    if (satCount > 0) {
+      const satTotal = (satPrice + elecRate) * satCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันเสาร์ ล็อค : [${item.stalls}]</td>
+          <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>(${satPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (sunCount > 0) {
+      const sunTotal = (sunPrice + elecRate) * sunCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันอาทิตย์ ล็อค : [${item.stalls}]</td>
+          <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>(${sunPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (wedCount > 0) {
+      const wedTotal = (wedPrice + elecRate) * wedCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันพุธ ล็อค : [${item.stalls}]</td>
+          <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>(${wedPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
+          <td></td>
+        </tr>
+      `;
+    }
+
+    const grandTotal = parseNumber(item.total_price);
+    const paidVal = parseNumber(item.paid_amount || 0);
+    const remaining = grandTotal - paidVal;
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) {
+      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ใบแจ้งหนี้');
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>พิมพ์ใบแจ้งหนี้ (รายเดือน)</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Sarabun', sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              background: #fff;
+              color: #000;
+              font-size: 11pt;
+              line-height: 1.4;
+            }
+            .center {
+              text-align: center;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .logo {
+              width: 32mm;
+              height: auto;
+              margin: 0 auto 2mm auto;
+              display: block;
+            }
+            .divider {
+              border-top: 1.5px dashed #000;
+              margin: 3mm 0;
+            }
+            .title {
+              font-size: 13pt;
+              font-weight: 800;
+              margin: 2mm 0 1mm 0;
+            }
+            .subtitle {
+              font-size: 9.5pt;
+              font-weight: bold;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .info-table td {
+              padding: 1.2mm 0;
+              vertical-align: top;
+              font-size: 10.5pt;
+            }
+            .info-table td.label {
+              width: 32%;
+              white-space: nowrap;
+            }
+            .price-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .price-table td {
+              padding: 1.2mm 0;
+              font-size: 10.5pt;
+            }
+            .calc-row td {
+              font-size: 9.5pt;
+              color: #333;
+              padding-top: 0 !important;
+              padding-bottom: 2mm !important;
+            }
+            .total-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .total-table td {
+              padding: 1.2mm 0;
+            }
+            .total-table td.label {
+              text-align: right;
+              font-size: 11pt;
+              font-weight: bold;
+              padding-right: 2mm;
+            }
+            .total-table td.val {
+              text-align: right;
+              font-size: 11.5pt;
+              font-weight: bold;
+            }
+            .grand-total-row td {
+              padding-top: 2mm;
+            }
+            .grand-total-row td.label {
+              font-size: 11.5pt;
+              font-weight: 800;
+            }
+            .grand-total-row td.val {
+              font-size: 13pt;
+              font-weight: 800;
+            }
+            .footer {
+              margin-top: 6mm;
+              font-size: 9.5pt;
+              text-align: center;
+              line-height: 1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
+            <div class="subtitle">ใบแจ้งหนี้ / ใบเตือนชำระเงิน</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <table class="info-table">
+            <tr>
+              <td class="label">วันที่ออกเอกสาร:</td>
+              <td style="text-align: right;">${formattedTransaction}</td>
+            </tr>
+            <tr>
+              <td class="label">รหัสพนักงาน :</td>
+              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
+            </tr>
+            <tr>
+              <td class="label">ประจำเดือน :</td>
+              <td style="text-align: right;" class="bold">${invoiceMonth}</td>
+            </tr>
+            <tr>
+              <td class="label">ผู้เช่า :</td>
+              <td style="text-align: right;" class="bold">${item.booker_name}</td>
+            </tr>
+            <tr>
+              <td class="label">สินค้า :</td>
+              <td style="text-align: right;" class="bold">${item.product || 'ของชำทั่วไป'}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="center bold" style="font-size: 10.5pt; margin-bottom: 2mm;">รายละเอียดค่าเช่าประจำเดือน</div>
+          <table class="price-table">
+            ${dayDetailsHtml}
+            ${item.storage_fee > 0 ? `
+              <tr>
+                <td class="bold">ค่าฝากของสะสม :</td>
+                <td style="text-align: right;" class="bold">${parseNumber(item.storage_fee).toFixed(2)}</td>
+              </tr>
+            ` : ''}
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="total-table">
+            <tr class="grand-total-row">
+              <td class="label">รวมยอดต้องชำระ :</td>
+              <td class="val">${grandTotal.toFixed(2)} บาท</td>
+            </tr>
+            <tr>
+              <td class="label" style="border-top: 1px dashed #000; padding-top: 1.5mm;">ชำระแล้ว :</td>
+              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm; text-align: right; color: green;">${paidVal.toFixed(2)} บาท</td>
+            </tr>
+            <tr class="grand-total-row">
+              <td class="label" style="border-top: 1.5px solid #000; padding-top: 2mm;">ยอดค้างชำระสุทธิ :</td>
+              <td class="val" style="border-top: 1.5px solid #000; padding-top: 2mm; text-align: right; color: red; font-size: 12.5pt;">${remaining.toFixed(2)} บาท</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">
+            <span class="bold">กรุณาชำระเงินภายในระยะเวลาที่กำหนด</span><br/>
+            ขอขอบพระคุณที่ร่วมร่วมมือกับทางตลาดนัด<br/>
+            ตลาดนัดลาดสวายวินเทจ
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   // Open storage print modal and compute default values
   const handleOpenStoragePrintModal = (item) => {
     setStoragePrintItem(item);
@@ -2269,6 +2551,42 @@ export default function BookingPage() {
     }
   };
 
+  const handleDeleteMonthlyBooking = async (item) => {
+    if (!adminUser) {
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
+      return;
+    }
+    if (!item) return;
+
+    if (!confirm(`⚠️ ยืนยันการลบข้อมูลการจองรายเดือนของคุณ "${item.booker_name}" (ล็อค ${item.stalls}) หรือไม่?\nการลบนี้จะไม่สามารถย้อนกลับได้`)) {
+      return;
+    }
+
+    setLoadingMonthly(true);
+    try {
+      const { error } = await supabase
+        .from('monthly_bookings')
+        .delete()
+        .eq('id', item.id);
+      if (error) throw error;
+
+      showAlert(`ลบข้อมูลการจองรายเดือนสำเร็จ`, "สำเร็จ");
+      
+      // If we deleted the currently selected one, clear selection
+      if (activeMonthlyBooking && activeMonthlyBooking.id === item.id) {
+        setActiveMonthlyBooking(null);
+        setActiveMonthlyTransactions([]);
+      }
+      
+      fetchAllMonthly();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการลบข้อมูล: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
   // --- FINANCE CRUD HANDLERS ---
   const fetchFinanceData = async () => {
     setLoadingFinance(true);
@@ -2432,6 +2750,26 @@ export default function BookingPage() {
     return isNaN(num) ? 0 : num;
   };
 
+  const handleSortToggle = (field) => {
+    if (monthlySortField === field) {
+      if (monthlySortOrder === 'asc') {
+        setMonthlySortOrder('desc');
+      } else {
+        setMonthlySortField(null);
+      }
+    } else {
+      setMonthlySortField(field);
+      setMonthlySortOrder('asc');
+    }
+  };
+
+  const renderSortArrow = (field) => {
+    if (monthlySortField !== field) return <span className="text-gray-300 ml-1 text-[9px]">⇅</span>;
+    return monthlySortOrder === 'asc' 
+      ? <span className="text-purple-700 ml-1 font-extrabold text-[9px]">▲</span> 
+      : <span className="text-purple-700 ml-1 font-extrabold text-[9px]">▼</span>;
+  };
+
   // Dynamic grid column setup
   let maxCol = 24;
   let maxRow = 26;
@@ -2458,6 +2796,31 @@ export default function BookingPage() {
     
     return true;
   });
+
+  // Sort lists if requested
+  if (monthlySortField) {
+    filteredMonthlyList.sort((a, b) => {
+      let valA = 0;
+      let valB = 0;
+      
+      if (monthlySortField === 'total_price') {
+        valA = a.total_price || 0;
+        valB = b.total_price || 0;
+      } else if (monthlySortField === 'paid_amount') {
+        valA = a.paid_amount || 0;
+        valB = b.paid_amount || 0;
+      } else if (monthlySortField === 'remaining') {
+        valA = (a.total_price || 0) - (a.paid_amount || 0);
+        valB = (b.total_price || 0) - (b.paid_amount || 0);
+      }
+      
+      if (monthlySortOrder === 'asc') {
+        return valA - valB;
+      } else {
+        return valB - valA;
+      }
+    });
+  }
 
   if (isMonthlyPageOnly) {
     return (
@@ -2551,12 +2914,27 @@ export default function BookingPage() {
               <table className="w-full text-xs text-left">
                 <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                   <tr>
-                    <th className="p-2">ลูกค้า</th>
-                    <th className="p-2">ล็อค</th>
-                    <th className="p-2 text-center">ค่าล็อค</th>
-                    <th className="p-2 text-center">ชำระแล้ว</th>
-                    <th className="p-2 text-center">คงเหลือ</th>
-                    <th className="p-2 text-center">จัดการ</th>
+                    <th className="p-2 select-none">ลูกค้า</th>
+                    <th className="p-2 select-none">ล็อค</th>
+                    <th 
+                      onClick={() => handleSortToggle('total_price')}
+                      className="p-2 text-center cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                    >
+                      ค่าล็อค {renderSortArrow('total_price')}
+                    </th>
+                    <th 
+                      onClick={() => handleSortToggle('paid_amount')}
+                      className="p-2 text-center cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                    >
+                      ชำระแล้ว {renderSortArrow('paid_amount')}
+                    </th>
+                    <th 
+                      onClick={() => handleSortToggle('remaining')}
+                      className="p-2 text-center cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                    >
+                      คงเหลือ {renderSortArrow('remaining')}
+                    </th>
+                    <th className="p-2 text-center select-none">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white">
@@ -2596,10 +2974,16 @@ export default function BookingPage() {
                               แก้ไข
                             </button>
                             <button 
-                              onClick={() => handleOpenMonthlyPrintModal(item)}
-                              className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 flex items-center gap-0.5 cursor-pointer"
+                              onClick={() => handlePrintMonthlyInvoice(item)}
+                              className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
                             >
-                              <Printer className="w-3 h-3" /> พิมพ์
+                              <FileText className="w-3 h-3" /> แจ้งหนี้
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteMonthlyBooking(item)}
+                              className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-[10px] font-bold hover:bg-red-100 flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> ลบ
                             </button>
                           </div>
                         </td>
@@ -2616,18 +3000,27 @@ export default function BookingPage() {
             {activeMonthlyBooking ? (
               <div className="flex flex-col gap-3 h-full overflow-hidden">
                 <div className="border-b pb-2 shrink-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
-                        setShowMonthlyPaymentModal(true);
-                      }}
-                      className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3" /> ชำระเงิน
-                    </button>
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5 mt-1"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
+                    <div className="flex flex-col gap-1 items-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+                          setShowMonthlyPaymentModal(true);
+                        }}
+                        className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                      >
+                        <Plus className="w-3 h-3" /> ชำระเงิน
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMonthlyPrintModal(activeMonthlyBooking)}
+                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                      >
+                        <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
+                      </button>
+                    </div>
                   </div>
                   <div className="text-[11px] text-gray-600 mt-1 font-bold">
                     ผู้เช่า: <span className="text-purple-700">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-purple-700">{activeMonthlyBooking.stalls}</span>
@@ -4698,12 +5091,27 @@ export default function BookingPage() {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                       <tr>
-                        <th className="p-2">ลูกค้า</th>
-                        <th className="p-2">ล็อค</th>
-                        <th className="p-2 text-center">ค่าล็อค</th>
-                        <th className="p-2 text-center">ชำระแล้ว</th>
-                        <th className="p-2 text-center">คงเหลือ</th>
-                        <th className="p-2 text-center">จัดการ</th>
+                        <th className="p-2 select-none">ลูกค้า</th>
+                        <th className="p-2 select-none">ล็อค</th>
+                        <th 
+                          onClick={() => handleSortToggle('total_price')}
+                          className="p-2 text-center cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                        >
+                          ค่าล็อค {renderSortArrow('total_price')}
+                        </th>
+                        <th 
+                          onClick={() => handleSortToggle('paid_amount')}
+                          className="p-2 text-center cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                        >
+                          ชำระแล้ว {renderSortArrow('paid_amount')}
+                        </th>
+                        <th 
+                          onClick={() => handleSortToggle('remaining')}
+                          className="p-2 text-center cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
+                        >
+                          คงเหลือ {renderSortArrow('remaining')}
+                        </th>
+                        <th className="p-2 text-center select-none">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
@@ -4743,10 +5151,16 @@ export default function BookingPage() {
                                   แก้ไข
                                 </button>
                                 <button 
-                                  onClick={() => handleOpenMonthlyPrintModal(item)}
-                                  className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 flex items-center gap-0.5 cursor-pointer"
+                                  onClick={() => handlePrintMonthlyInvoice(item)}
+                                  className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
                                 >
-                                  <Printer className="w-3 h-3" /> พิมพ์
+                                  <FileText className="w-3 h-3" /> แจ้งหนี้
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteMonthlyBooking(item)}
+                                  className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-[10px] font-bold hover:bg-red-100 flex items-center gap-0.5 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> ลบ
                                 </button>
                               </div>
                             </td>
@@ -4763,18 +5177,27 @@ export default function BookingPage() {
                 {activeMonthlyBooking ? (
                   <div className="flex flex-col gap-3 h-full overflow-hidden">
                     <div className="border-b pb-2 shrink-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
-                            setShowMonthlyPaymentModal(true);
-                          }}
-                          className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all"
-                        >
-                          <Plus className="w-3 h-3" /> ชำระเงิน
-                        </button>
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5 mt-1"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
+                        <div className="flex flex-col gap-1 items-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+                              setShowMonthlyPaymentModal(true);
+                            }}
+                            className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                          >
+                            <Plus className="w-3 h-3" /> ชำระเงิน
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMonthlyPrintModal(activeMonthlyBooking)}
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                          >
+                            <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
+                          </button>
+                        </div>
                       </div>
                       <div className="text-[11px] text-gray-600 mt-1 font-bold">
                         ผู้เช่า: <span className="text-purple-700">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-purple-700">{activeMonthlyBooking.stalls}</span>
