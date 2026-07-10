@@ -149,6 +149,7 @@ export default function BookingPage() {
   const [showMonthlyPaymentModal, setShowMonthlyPaymentModal] = useState(false);
   const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
   const [monthlyMonthFilter, setMonthlyMonthFilter] = useState('ทั้งหมด');
+  const [monthlySearchQuery, setMonthlySearchQuery] = useState('');
 
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
@@ -248,6 +249,14 @@ export default function BookingPage() {
     };
 
     checkUser();
+
+    // Check URL parameters to auto-open monthly management
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'monthly') {
+        setShowMonthlyMgmtModal(true);
+      }
+    }
 
     // 5. Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -2430,8 +2439,22 @@ export default function BookingPage() {
   });
 
   const filteredMonthlyList = monthlyList.filter(item => {
-    if (monthlyMonthFilter === 'ทั้งหมด') return true;
-    return formatBookingMonth(item.booking_month) === monthlyMonthFilter;
+    // 1. Period month filter
+    if (monthlyMonthFilter !== 'ทั้งหมด') {
+      if (formatBookingMonth(item.booking_month) !== monthlyMonthFilter) return false;
+    }
+    
+    // 2. Search query filter (matches booker_name, phone, or stalls)
+    if (monthlySearchQuery.trim()) {
+      const q = monthlySearchQuery.toLowerCase();
+      const matchName = (item.booker_name || '').toLowerCase().includes(q);
+      const matchPhone = (item.phone || '').toLowerCase().includes(q);
+      const matchStalls = (item.stalls || '').toLowerCase().includes(q);
+      const matchProduct = (item.product || '').toLowerCase().includes(q);
+      return matchName || matchPhone || matchStalls || matchProduct;
+    }
+    
+    return true;
   });
 
   return (
@@ -2570,7 +2593,7 @@ export default function BookingPage() {
                         <span>📦</span> จัดการฝากของ
                       </button>
                       <button 
-                        onClick={() => setShowMonthlyMgmtModal(true)} 
+                        onClick={() => window.open('/?view=monthly', '_blank')} 
                         className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors"
                       >
                         <span>🗓️</span> จัดการรายเดือน
@@ -4082,22 +4105,45 @@ export default function BookingPage() {
                 </button>
               </div>
 
-              {/* ตัวกรองรายเดือน */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-600 flex items-center gap-1">
-                  <CalendarDays className="w-4 h-4 text-purple-600" />
-                  ตัวกรองรายเดือน:
-                </span>
-                <select
-                  value={monthlyMonthFilter}
-                  onChange={(e) => setMonthlyMonthFilter(e.target.value)}
-                  className="p-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                >
-                  <option value="ทั้งหมด">ทั้งหมด</option>
-                  {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
-                    <option key={month} value={month}>{month}</option>
-                  ))}
-                </select>
+              {/* ค้นหาและตัวกรองรายเดือน */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* ช่องค้นหา */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={monthlySearchQuery}
+                    onChange={(e) => setMonthlySearchQuery(e.target.value)}
+                    placeholder="ค้นหาชื่อ, เบอร์โทร, แผงค้า..."
+                    className="w-48 pl-7 pr-7 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  {monthlySearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setMonthlySearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 font-extrabold text-[10px]"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-600 flex items-center gap-1">
+                    <CalendarDays className="w-4 h-4 text-purple-600" />
+                    ตัวกรองรายเดือน:
+                  </span>
+                  <select
+                    value={monthlyMonthFilter}
+                    onChange={(e) => setMonthlyMonthFilter(e.target.value)}
+                    className="p-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                  >
+                    <option value="ทั้งหมด">ทั้งหมด</option>
+                    {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
+                      <option key={month} value={month}>{month}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
             
