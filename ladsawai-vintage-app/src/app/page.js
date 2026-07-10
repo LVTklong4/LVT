@@ -2471,17 +2471,17 @@ export default function BookingPage() {
                         isClickable ? 'clickable cursor-pointer' : 'non-clickable pointer-events-none'
                       } ${isHighlighted ? 'search-highlight' : ''}`}
                     >
-                      <span className="text-[9px] font-extrabold leading-none">{displayName}</span>
+                      <span className="text-[11px] font-black leading-none">{displayName}</span>
                       {statusText && (
                         <span 
-                          className="text-[6.5px] font-bold leading-none mt-0.5 max-w-full truncate px-0.5 text-center block"
+                          className="text-[8px] font-extrabold leading-none mt-0.5 max-w-full truncate px-0.5 text-center block"
                           title={statusText}
                         >
                           {statusText}
                         </span>
                       )}
                       {statusText === 'ลา' && (
-                        <span className="text-[7px] font-bold text-red-600 leading-none mt-0.5">ลา</span>
+                        <span className="text-[8.5px] font-black text-red-600 leading-none mt-0.5">ลา</span>
                       )}
                       
                       {storage && (
@@ -2804,15 +2804,42 @@ export default function BookingPage() {
                         </div>
                         {/* Dynamic Status Badge */}
                         <div className="shrink-0">
-                          {isFullyPaid ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 font-black text-[10px] shadow-xs font-bold">
-                              ● ชำระครบถ้วน
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 font-black text-[10px] shadow-xs font-bold">
-                              ● ค้างชำระ (ขาด {(totalVal - totalPaid).toFixed(2)} บ.)
-                            </span>
-                          )}
+                          {(() => {
+                            if (!selectedBooking) {
+                              const isFood = selectedStall && (selectedStall.type === 'อาหาร' || selectedStall.type === 'ของสด');
+                              if (isFood) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 font-black text-[10px] shadow-xs font-bold">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse mr-0.5" /> ว่าง (อาหาร)
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-black text-[10px] shadow-xs font-bold">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse mr-0.5" /> ว่าง (เสื้อผ้า)
+                                  </span>
+                                );
+                              }
+                            } else if (selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง') {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 font-black text-[10px] shadow-xs font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 mr-0.5" /> ชำระแล้ว
+                                </span>
+                              );
+                            } else if (selectedBooking.status === 'ค้างชำระ') {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-black text-[10px] shadow-xs font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-0.5" /> ค้างชำระ (ขาด {(totalVal - totalPaid).toFixed(2)} บ.)
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200 text-gray-700 font-black text-[10px] shadow-xs font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-0.5" /> {selectedBooking.status}
+                                </span>
+                              );
+                            }
+                          })()}
                         </div>
                       </div>
 
