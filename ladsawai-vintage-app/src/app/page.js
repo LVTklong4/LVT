@@ -3103,7 +3103,7 @@ export default function BookingPage() {
                       </div>
 
                       {/* Extra Admin tools */}
-                      {selectedBooking && selectedBooking.type === 'รายวัน' && (
+                      {selectedBooking && selectedBooking.type === 'รายวัน' && isAlreadyPaid && (
                         <div className="mt-2.5 border-t border-[#8B4513]/10 pt-3.5 flex flex-col gap-2">
                           <span className="text-[10px] font-black text-[#8B4513]/60 uppercase tracking-widest block mb-0.5">เครื่องมือบริการลูกค้า:</span>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -3122,51 +3122,45 @@ export default function BookingPage() {
                             </button>
 
                             {/* 2. แจ้งลา */}
-                            {isAlreadyPaid && (
-                              <button
-                                type="button"
-                                onClick={handleMarkAbsent}
-                                className="px-3 py-2 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer"
-                              >
-                                <X className="w-4 h-4 shrink-0" /> แจ้งลา
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={handleMarkAbsent}
+                              className="px-3 py-2 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer"
+                            >
+                              <X className="w-4 h-4 shrink-0" /> แจ้งลา
+                            </button>
 
                             {/* 3. ย้ายล็อค */}
-                            {isAlreadyPaid && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setMoveTargetDate(selectedDate);
-                                  setMoveTargetStall(null);
-                                  setMoveStallFilter('');
-                                  fetchVacantStallsForDate(selectedDate);
-                                  setShowMoveLockModal(true);
-                                }}
-                                className="px-3 py-2 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-indigo-600/10 cursor-pointer"
-                              >
-                                <RefreshCw className="w-4 h-4 shrink-0" /> ย้ายล็อค
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMoveTargetDate(selectedDate);
+                                setMoveTargetStall(null);
+                                setMoveStallFilter('');
+                                fetchVacantStallsForDate(selectedDate);
+                                setShowMoveLockModal(true);
+                              }}
+                              className="px-3 py-2 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-indigo-600/10 cursor-pointer"
+                            >
+                              <RefreshCw className="w-4 h-4 shrink-0" /> ย้ายล็อค
+                            </button>
 
                             {/* 4. ออกตั๋ว */}
-                            {isFullyPaid && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
-                                  setShowReceiptPreviewModal(true);
-                                }}
-                                className="px-3 py-2 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer"
-                              >
-                                <Printer className="w-4 h-4 shrink-0" /> ออกตั๋ว
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
+                                setShowReceiptPreviewModal(true);
+                              }}
+                              className="px-3 py-2 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer"
+                            >
+                              <Printer className="w-4 h-4 shrink-0" /> ออกตั๋ว
+                            </button>
                           </div>
                         </div>
                       )}
 
-                      {selectedBooking && selectedBooking.type !== 'รายวัน' && (
+                      {selectedBooking && selectedBooking.type !== 'รายวัน' && isPaidInDb && (
                         <div className="mt-1.5 border-t pt-3 flex flex-col gap-2">
                           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">เครื่องมือบริการลูกค้า:</span>
                           <div className="flex flex-wrap gap-2">
@@ -3177,15 +3171,13 @@ export default function BookingPage() {
                             >
                               <Zap className="w-3.5 h-3.5" /> จดไฟหน่วยเพิ่ม
                             </button>
-                            {isPaidInDb && (
-                              <button
-                                type="button"
-                                onClick={handleMarkAbsent}
-                                className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
-                              >
-                                <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={handleMarkAbsent}
+                              className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                            >
+                              <X className="w-3.5 h-3.5" /> แจ้งลาหยุด (ลา)
+                            </button>
                           </div>
                         </div>
                       )}
