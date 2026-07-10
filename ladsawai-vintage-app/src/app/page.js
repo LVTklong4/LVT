@@ -3333,11 +3333,26 @@ export default function BookingPage() {
               <table className="w-full text-xs text-left">
                 <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                   <tr>
-                    <th 
-                      onClick={() => handleSortToggle('booking_month')}
-                      className="p-2 cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
-                    >
-                      เดือน {renderSortArrow('booking_month')}
+                    <th className="p-2 select-none">
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <span 
+                          onClick={() => handleSortToggle('booking_month')}
+                          className="cursor-pointer hover:bg-purple-100/50 p-1 rounded transition-colors flex items-center gap-0.5"
+                        >
+                          เดือน {renderSortArrow('booking_month')}
+                        </span>
+                        <select
+                          value={monthlyMonthFilter}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setMonthlyMonthFilter(e.target.value)}
+                          className="p-1 border border-purple-300 rounded text-[10px] bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer max-w-[80px]"
+                        >
+                          <option value="ทั้งหมด">ทั้งหมด</option>
+                          {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
+                            <option key={month} value={month}>{month}</option>
+                          ))}
+                        </select>
+                      </div>
                     </th>
                     <th className="p-2 select-none">ลูกค้า</th>
                     <th className="p-2 select-none">ล็อค</th>
@@ -5519,11 +5534,26 @@ export default function BookingPage() {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                       <tr>
-                        <th 
-                          onClick={() => handleSortToggle('booking_month')}
-                          className="p-2 cursor-pointer hover:bg-purple-100/50 select-none transition-colors"
-                        >
-                          เดือน {renderSortArrow('booking_month')}
+                        <th className="p-2 select-none">
+                          <div className="flex items-center gap-1.5 justify-between">
+                            <span 
+                              onClick={() => handleSortToggle('booking_month')}
+                              className="cursor-pointer hover:bg-purple-100/50 p-1 rounded transition-colors flex items-center gap-0.5"
+                            >
+                              เดือน {renderSortArrow('booking_month')}
+                            </span>
+                            <select
+                              value={monthlyMonthFilter}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setMonthlyMonthFilter(e.target.value)}
+                              className="p-1 border border-purple-300 rounded text-[10px] bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer max-w-[80px]"
+                            >
+                              <option value="ทั้งหมด">ทั้งหมด</option>
+                              {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
+                                <option key={month} value={month}>{month}</option>
+                              ))}
+                            </select>
+                          </div>
                         </th>
                         <th className="p-2 select-none">ลูกค้า</th>
                         <th className="p-2 select-none">ล็อค</th>
