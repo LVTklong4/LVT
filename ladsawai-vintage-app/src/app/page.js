@@ -147,7 +147,7 @@ export default function BookingPage() {
   const [activeMonthlyTransactions, setActiveMonthlyTransactions] = useState([]);
   const [loadingMonthlyTxns, setLoadingMonthlyTxns] = useState(false);
   const [showMonthlyPaymentModal, setShowMonthlyPaymentModal] = useState(false);
-  const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', method: 'เงินสด', note: '' });
+  const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
 
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
@@ -1965,6 +1965,11 @@ export default function BookingPage() {
       return;
     }
 
+    if (!monthlyPaymentForm.method) {
+      showAlert("กรุณาเลือกประเภทการบันทึก (เงินสด / โอนจ่าย / ส่วนลด)", "แจ้งเตือน", true);
+      return;
+    }
+
     setLoadingMonthly(true);
     try {
       const isDiscount = monthlyPaymentForm.method === 'ส่วนลด';
@@ -2010,7 +2015,7 @@ export default function BookingPage() {
 
       showAlert("บันทึกการชำระเงินสำเร็จ", "สำเร็จ");
       setShowMonthlyPaymentModal(false);
-      setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: 'เงินสด', note: '' });
+      setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
       
       // Refresh details
       fetchAllMonthly();
@@ -3970,7 +3975,7 @@ export default function BookingPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setMonthlyPaymentForm({ amount: '', method: 'โอนจ่าย', note: '' });
+                            setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
                             setShowMonthlyPaymentModal(true);
                           }}
                           className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all"
