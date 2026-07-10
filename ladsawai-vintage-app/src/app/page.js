@@ -142,6 +142,9 @@ export default function BookingPage() {
   const [monthlyList, setMonthlyList] = useState([]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [selectedMonthlyItem, setSelectedMonthlyItem] = useState(null);
+  const [activeMonthlyBooking, setActiveMonthlyBooking] = useState(null);
+  const [activeMonthlyTransactions, setActiveMonthlyTransactions] = useState([]);
+  const [loadingMonthlyTxns, setLoadingMonthlyTxns] = useState(false);
 
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
@@ -1932,6 +1935,24 @@ export default function BookingPage() {
   };
 
   // --- MONTHLY BOOKING CRUD HANDLERS ---
+  const fetchMonthlyTransactions = async (bookingId) => {
+    setLoadingMonthlyTxns(true);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('booking_ref', bookingId)
+        .order('timestamp', { ascending: false });
+      if (error) throw error;
+      setActiveMonthlyTransactions(data || []);
+    } catch (e) {
+      console.error(e);
+      setActiveMonthlyTransactions([]);
+    } finally {
+      setLoadingMonthlyTxns(false);
+    }
+  };
+
   const fetchAllMonthly = async () => {
     setLoadingMonthly(true);
     try {
@@ -1966,6 +1987,18 @@ export default function BookingPage() {
       if (error) throw error;
       
       showAlert("อัปเดตข้อมูลผู้เช่ารายเดือนสำเร็จ", "สำเร็จ");
+
+      // Keep activeMonthlyBooking updated
+      if (activeMonthlyBooking && activeMonthlyBooking.id === selectedMonthlyItem.id) {
+        setActiveMonthlyBooking({
+          ...activeMonthlyBooking,
+          paid_amount: selectedMonthlyItem.paid_amount,
+          status: selectedMonthlyItem.status,
+          renewal_status: selectedMonthlyItem.renewal_status,
+          note: selectedMonthlyItem.note
+        });
+      }
+
       setSelectedMonthlyItem(null);
       fetchAllMonthly();
       fetchBookingsAndStorage();
@@ -3760,106 +3793,23 @@ export default function BookingPage() {
       {/* 🗓️ 2. Monthly Bookings Management Modal */}
       {showMonthlyMgmtModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl border-2 border-purple-800 overflow-hidden animate-pop-in flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl border-2 border-purple-800 overflow-hidden animate-pop-in flex flex-col max-h-[90vh]">
             <div className="bg-purple-800 text-white px-4 py-3 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings)</h3>
               <button onClick={() => setShowMonthlyMgmtModal(false)} className="text-purple-200 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             
-            <div className="p-5 overflow-y-auto flex flex-col md:flex-row gap-5">
-              {/* Editor panel if selected */}
-              {selectedMonthlyItem ? (
-                <form onSubmit={handleUpdateMonthlyItem} className="flex flex-col gap-3 w-full md:w-80 shrink-0 bg-purple-50/40 p-4 border border-purple-200 rounded-lg">
-                  <h4 className="font-bold text-xs text-purple-900 border-b pb-1">แก้ไขข้อมูล: {selectedMonthlyItem.booker_name}</h4>
-                  
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-gray-500 font-bold">ล็อกที่เช่า</span>
-                    <span className="text-xs font-bold text-gray-800 bg-white p-2 rounded border">{selectedMonthlyItem.stalls}</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] text-gray-500 font-bold">ค่าเช่าทั้งหมด</span>
-                      <span className="text-xs font-bold text-gray-800 bg-white p-2 rounded border text-center">{selectedMonthlyItem.total_price}.-</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
-                      <input 
-                        type="number" 
-                        value={selectedMonthlyItem.paid_amount || 0} 
-                        onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, paid_amount: e.target.value })}
-                        className="p-1.5 border border-purple-300 rounded text-xs bg-white text-center" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-gray-700">สถานะชำระเงิน</label>
-                    <select 
-                      value={selectedMonthlyItem.status} 
-                      onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, status: e.target.value })}
-                      className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
-                    >
-                      <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
-                      <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-gray-700">สถานะต่อสัญญา</label>
-                    <select 
-                      value={selectedMonthlyItem.renewal_status || ''} 
-                      onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, renewal_status: e.target.value })}
-                      className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
-                    >
-                      <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
-                      <option value="รอยืนยัน">รอยืนยัน</option>
-                      <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-gray-700">หมายเหตุ</label>
-                    <textarea 
-                      value={selectedMonthlyItem.note || ''} 
-                      onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, note: e.target.value })}
-                      rows="2"
-                      className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 mt-1">
-                    <button 
-                      type="submit" 
-                      className="flex-1 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded text-xs font-bold transition-all shadow"
-                    >
-                      อัปเดตข้อมูล
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setSelectedMonthlyItem(null)}
-                      className="px-2 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all"
-                    >
-                      ยกเลิก
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="w-full md:w-80 shrink-0 bg-purple-50/20 p-4 border border-purple-200/60 rounded-lg flex items-center justify-center text-center text-xs text-gray-500 font-bold">
-                  คลิกปุ่ม &quot;แก้ไข&quot; ท้ายรายชื่อ เพื่อเริ่มปรับแก้ข้อมูลสมาชิกรายเดือน
-                </div>
-              )}
-
-              {/* List panel */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center">
+            <div className="p-5 flex flex-col md:flex-row gap-5 h-[calc(90vh-100px)] overflow-hidden">
+              {/* Left Side: List panel */}
+              <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+                <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center shrink-0">
                   <span>รายชื่อลูกค้ารายเดือน ({monthlyList.length} คน)</span>
                   {loadingMonthly && <Loader2 className="w-4 h-4 text-purple-800 animate-spin" />}
                 </h4>
                 
-                <div className="overflow-x-auto border rounded-lg max-h-[50vh]">
+                <div className="overflow-auto border rounded-lg flex-1 min-h-[300px]">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-purple-50 text-purple-900 border-b font-bold">
+                    <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                       <tr>
                         <th className="p-2">ลูกค้า / เบอร์</th>
                         <th className="p-2">ล็อค</th>
@@ -3871,7 +3821,16 @@ export default function BookingPage() {
                     </thead>
                     <tbody className="divide-y bg-white">
                       {monthlyList.map((item) => (
-                        <tr key={item.id} className="hover:bg-purple-50/20">
+                        <tr 
+                          key={item.id} 
+                          onClick={() => {
+                            setActiveMonthlyBooking(item);
+                            fetchMonthlyTransactions(item.id);
+                          }}
+                          className={`hover:bg-purple-50/20 cursor-pointer transition-colors ${
+                            activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
+                          }`}
+                        >
                           <td className="p-2">
                             <div className="font-bold text-gray-800">{item.booker_name}</div>
                             <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
@@ -3899,7 +3858,7 @@ export default function BookingPage() {
                               {item.renewal_status || 'รอยืนยัน'}
                             </span>
                           </td>
-                          <td className="p-2 text-center">
+                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-1 justify-center">
                               <button 
                                 onClick={() => setSelectedMonthlyItem(item)}
@@ -3921,7 +3880,149 @@ export default function BookingPage() {
                   </table>
                 </div>
               </div>
+
+              {/* Right Side: Selected Booking History & Details */}
+              <div className="w-full md:w-[400px] shrink-0 border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col min-h-[300px] md:min-h-0 h-full overflow-hidden">
+                {activeMonthlyBooking ? (
+                  <div className="flex flex-col gap-3 h-full overflow-hidden">
+                    <div className="border-b pb-2 shrink-0">
+                      <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
+                      <div className="text-[11px] text-gray-600 mt-1 font-bold">
+                        ผู้เช่า: <span className="text-purple-700">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-purple-700">{activeMonthlyBooking.stalls}</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">
+                        ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{activeMonthlyBooking.paid_amount || 0}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0))}.-</span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-auto flex-1 pr-1">
+                      {loadingMonthlyTxns ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-5 h-5 text-purple-800 animate-spin" />
+                        </div>
+                      ) : activeMonthlyTransactions.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {activeMonthlyTransactions.map((txn, idx) => (
+                            <div key={txn.id || idx} className="bg-gray-50 border border-gray-200 rounded p-2.5 text-xs flex flex-col gap-1 shadow-sm">
+                              <div className="flex justify-between items-center font-bold text-gray-800">
+                                <span>{txn.category || 'ค่าเช่า'}</span>
+                                <span className="text-green-700 text-sm">{txn.total_amount || 0}.-</span>
+                              </div>
+                              <div className="flex justify-between text-[10px] text-gray-500">
+                                <span>วันที่: {new Date(txn.timestamp || txn.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">{txn.method || 'โอนจ่าย'}</span>
+                              </div>
+                              {txn.note && (
+                                <div className="text-[10px] text-gray-500 italic bg-white p-1 rounded border border-gray-100 mt-0.5">
+                                  โน้ต: {txn.note}
+                                </div>
+                              )}
+                              <div className="text-[9px] text-gray-400 text-right mt-0.5">ผู้ทำรายการ: {txn.officer || '-'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-400 py-12 flex flex-col items-center justify-center gap-1.5">
+                          <FileText className="w-8 h-8 text-gray-300" />
+                          <span>ไม่มีประวัติธุรกรรมการชำระเงิน</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center h-full text-gray-400 my-auto py-12">
+                    <Info className="w-8 h-8 text-purple-300 animate-bounce mb-2" />
+                    <span className="text-xs font-bold">คลิกลิสต์รายชื่อลูกค้ารายเดือนด้านซ้าย เพื่อดูประวัติธุรกรรมการเงิน</span>
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗓️ 2.2 Edit Monthly Item Modal */}
+      {showMonthlyMgmtModal && selectedMonthlyItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border-2 border-purple-800 overflow-hidden animate-pop-in">
+            <div className="bg-purple-800 text-white px-4 py-3 flex justify-between items-center">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">แก้ไขข้อมูลรายเดือน: {selectedMonthlyItem.booker_name}</h3>
+              <button onClick={() => setSelectedMonthlyItem(null)} className="text-purple-200 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <form onSubmit={handleUpdateMonthlyItem} className="p-5 flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-gray-500 font-bold">ล็อกที่เช่า</span>
+                <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border">{selectedMonthlyItem.stalls}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-gray-500 font-bold">ค่าเช่าทั้งหมด</span>
+                  <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border text-center">{selectedMonthlyItem.total_price}.-</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
+                  <input 
+                    type="number" 
+                    value={selectedMonthlyItem.paid_amount || 0} 
+                    onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, paid_amount: e.target.value })}
+                    className="p-1.5 border border-purple-300 rounded text-xs bg-white text-center" 
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-700">สถานะชำระเงิน</label>
+                <select 
+                  value={selectedMonthlyItem.status} 
+                  onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, status: e.target.value })}
+                  className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
+                >
+                  <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
+                  <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-700">สถานะต่อสัญญา</label>
+                <select 
+                  value={selectedMonthlyItem.renewal_status || ''} 
+                  onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, renewal_status: e.target.value })}
+                  className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
+                >
+                  <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
+                  <option value="รอยืนยัน">รอยืนยัน</option>
+                  <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-700">หมายเหตุ</label>
+                <textarea 
+                  value={selectedMonthlyItem.note || ''} 
+                  onChange={(e) => setSelectedMonthlyItem({ ...selectedMonthlyItem, note: e.target.value })}
+                  rows="2"
+                  className="p-1.5 border border-purple-300 rounded text-xs bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded text-xs font-bold transition-all shadow"
+                >
+                  อัปเดตข้อมูล
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setSelectedMonthlyItem(null)}
+                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
