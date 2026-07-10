@@ -1197,6 +1197,387 @@ export default function BookingPage() {
     setShowMonthlyPrintModal(true);
   };
 
+  const handlePrintMonthlyReceiptDirect = (item) => {
+    if (!item) return;
+
+    const stallObj = stalls.find(s => s.name === item.stalls);
+    const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
+    const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
+    const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+    const elecRate = item && item.elec_unit !== undefined && item.elec_unit !== null ? parseNumber(item.elec_unit) * 10 : 20;
+
+    // Get current date time for transaction date
+    const now = new Date();
+    const formattedTransaction = now.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+
+    const empCode = adminUser?.employee_id || adminUser?.name || 'lvt-admin';
+
+    // Parse booking month name
+    let invoiceMonth = formatBookingMonth(item.booking_month);
+    if (invoiceMonth === '-') {
+      const thaiMonth = monthNamesFull[now.getMonth()];
+      const thaiYear = now.getFullYear() + 543;
+      invoiceMonth = `${thaiMonth} ${thaiYear}`;
+    }
+
+    // Default counts to 4 Saturdays and 4 Sundays, 0 Wednesdays
+    const satCount = 4;
+    const sunCount = 4;
+    const wedCount = 0;
+
+    // Build day detail rows
+    let dayDetailsHtml = '';
+    if (satCount > 0) {
+      const satTotal = (satPrice + elecRate) * satCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันเสาร์ ล็อค : [${item.stalls}]</td>
+          <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>(${satPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (sunCount > 0) {
+      const sunTotal = (sunPrice + elecRate) * sunCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันอาทิตย์ ล็อค : [${item.stalls}]</td>
+          <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>(${sunPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (wedCount > 0) {
+      const wedTotal = (wedPrice + elecRate) * wedCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันพุธ ล็อค : [${item.stalls}]</td>
+          <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>(${wedPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
+          <td></td>
+        </tr>
+      `;
+    }
+
+    // Build payments rows
+    let paymentsHtml = '';
+    let totalPaidFromPayments = 0;
+    
+    const txns = activeMonthlyTransactions && activeMonthlyTransactions.length > 0
+      ? activeMonthlyTransactions
+      : [];
+
+    if (txns.length > 0) {
+      txns.forEach(p => {
+        const amt = parseNumber(p.amount);
+        totalPaidFromPayments += amt;
+        const pDate = p.timestamp ? new Date(p.timestamp) : now;
+        const pDateStr = pDate.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+        paymentsHtml += `
+          <tr>
+            <td>${pDateStr}</td>
+            <td style="text-align: center;">${p.method || 'โอนจ่าย'}</td>
+            <td style="text-align: right;" class="bold">${amt.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    } else if (item.paid_amount > 0) {
+      const todayStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+      totalPaidFromPayments = parseNumber(item.paid_amount);
+      paymentsHtml += `
+        <tr>
+          <td>${todayStr}</td>
+          <td style="text-align: center;">โอนจ่าย</td>
+          <td style="text-align: right;" class="bold">${totalPaidFromPayments.toFixed(2)}</td>
+        </tr>
+      `;
+    }
+
+    const grandTotal = parseNumber(item.total_price);
+    const percentage = grandTotal > 0 ? Math.round((totalPaidFromPayments / grandTotal) * 100) : 0;
+    const remaining = grandTotal - totalPaidFromPayments;
+    const txnNo = item.receipt_no || `TXN-${Math.floor(1000000000000 + Math.random() * 9000000000000)}`;
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) {
+      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ใบเสร็จ');
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>พิมพ์ตั๋ว/ใบเสร็จ (รายเดือน)</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Sarabun', sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              background: #fff;
+              color: #000;
+              font-size: 11pt;
+              line-height: 1.4;
+            }
+            .center {
+              text-align: center;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .logo {
+              width: 32mm;
+              height: auto;
+              margin: 0 auto 2mm auto;
+              display: block;
+            }
+            .divider {
+              border-top: 1.5px dashed #000;
+              margin: 3mm 0;
+            }
+            .title {
+              font-size: 13pt;
+              font-weight: 800;
+              margin: 2mm 0 1mm 0;
+            }
+            .subtitle {
+              font-size: 9.5pt;
+              font-weight: bold;
+              color: #000;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .info-table td {
+              padding: 1.2mm 0;
+              vertical-align: top;
+              font-size: 10.5pt;
+            }
+            .info-table td.label {
+              width: 32%;
+              white-space: nowrap;
+            }
+            .info-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .price-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .price-table td {
+              padding: 1.2mm 0;
+              font-size: 10.5pt;
+            }
+            .price-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .calc-row td {
+              font-size: 9.5pt;
+              color: #333;
+              padding-top: 0 !important;
+              padding-bottom: 2mm !important;
+            }
+            .payment-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .payment-table th {
+              border-bottom: 1px dashed #000;
+              padding: 1.5mm 0;
+              font-size: 10pt;
+              font-weight: bold;
+            }
+            .payment-table td {
+              padding: 1.5mm 0;
+              font-size: 10pt;
+            }
+            .total-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .total-table td {
+              padding: 1.2mm 0;
+            }
+            .total-table td.label {
+              text-align: right;
+              font-size: 11pt;
+              font-weight: bold;
+              padding-right: 2mm;
+            }
+            .total-table td.val {
+              text-align: right;
+              font-size: 11.5pt;
+              font-weight: bold;
+            }
+            .grand-total-row td {
+              padding-top: 2mm;
+            }
+            .grand-total-row td.label {
+              font-size: 11.5pt;
+              font-weight: 800;
+            }
+            .grand-total-row td.val {
+              font-size: 13pt;
+              font-weight: 800;
+            }
+            .remaining-row td {
+              border-top: 1px dashed #000;
+              border-bottom: 1px dashed #000;
+              padding-top: 2.5mm !important;
+              padding-bottom: 2.5mm !important;
+            }
+            .remaining-row td.label {
+              text-align: right;
+              font-size: 11.5pt;
+              font-weight: 800;
+              padding-right: 2mm;
+            }
+            .remaining-row td.val {
+              text-align: right;
+              font-size: 13pt;
+              font-weight: 800;
+            }
+            .info-table td.large-val {
+              text-align: right;
+              font-size: 12.5pt;
+              font-weight: 800;
+            }
+            .footer {
+              margin-top: 4mm;
+              font-size: 9.5pt;
+              text-align: center;
+              line-height: 1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
+            <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
+            <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
+            <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (รายเดือน)</div>
+          
+          <table class="info-table">
+            <tr>
+              <td class="label">เลขที่ :</td>
+              <td style="text-align: right; font-family: monospace; font-size: 9.5pt;">${txnNo}</td>
+            </tr>
+            <tr>
+              <td class="label">วันที่ทำรายการ :</td>
+              <td style="text-align: right;">${formattedTransaction}</td>
+            </tr>
+            <tr>
+              <td class="label">รหัสพนักงาน :</td>
+              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
+            </tr>
+            <tr>
+              <td class="label">ประจำเดือน :</td>
+              <td class="large-val">${invoiceMonth}</td>
+            </tr>
+            <tr>
+              <td class="label">ผู้จอง :</td>
+              <td class="large-val">${item.booker_name}</td>
+            </tr>
+            <tr>
+              <td class="label">สินค้า :</td>
+              <td class="large-val">${item.product || 'ของชำทั่วไป'}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="price-table">
+            ${dayDetailsHtml}
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="payment-table">
+            <thead>
+              <tr>
+                <th style="text-align: left; width: 35%;">วันชำระ</th>
+                <th style="text-align: center; width: 30%;">ช่องทางชำระ</th>
+                <th style="text-align: right; width: 35%;">จำนวนเงิน</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paymentsHtml}
+            </tbody>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="total-table">
+            <tr class="grand-total-row">
+              <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
+              <td class="val">${grandTotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="label" style="border-top: 1px dashed #000; padding-top: 1.5mm;">ชำระแล้วรวมทั้งสิ้น :</td>
+              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm;">${totalPaidFromPayments.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="label">คิดเป็นเปอร์เซ็นต์ :</td>
+              <td class="val">${percentage}%</td>
+            </tr>
+            <tr class="remaining-row">
+              <td class="label">ค้างชำระ/คงเหลือ :</td>
+              <td class="val">${remaining.toFixed(2)}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">
+            <div class="bold">สอบถามค่าล็อค ส่งสลิป ได้ที่</div>
+            <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
+            <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   // Print monthly receipt
   const handlePrintMonthlyReceipt = () => {
     if (!monthlyPrintItem) return;
@@ -3062,7 +3443,7 @@ export default function BookingPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleOpenMonthlyPrintModal(activeMonthlyBooking)}
+                        onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
                         className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
                       >
                         <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
@@ -5248,7 +5629,7 @@ export default function BookingPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleOpenMonthlyPrintModal(activeMonthlyBooking)}
+                            onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
                             className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
                           >
                             <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
