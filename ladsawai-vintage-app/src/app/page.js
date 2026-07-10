@@ -1786,6 +1786,14 @@ export default function BookingPage() {
       const newPrice = currentPrice + parseNumber(addUtilityPrice);
       const newTotal = currentTotal + parseNumber(addUtilityPrice);
 
+      const isOriginallyPaid = selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง';
+      const newStatus = isOriginallyPaid ? 'ชำระแล้ว' : selectedBooking.status;
+
+      const addedPayment = `${addUtilityMethod}:${addUtilityPrice}`;
+      const newPaymentMethod = selectedBooking.payment_method 
+        ? `${selectedBooking.payment_method} + ${addedPayment}` 
+        : addedPayment;
+
       // 1. Update Booking
       const { error: bError } = await supabase
         .from('bookings')
@@ -1793,7 +1801,8 @@ export default function BookingPage() {
           elec_unit: newUnit,
           elec_price: newPrice,
           total_price: newTotal,
-          status: 'ค้างชำระ' // Set back to unpaid for collection
+          payment_method: newPaymentMethod,
+          status: newStatus
         })
         .eq('id', selectedBooking.id);
       if (bError) throw bError;
@@ -1821,9 +1830,24 @@ export default function BookingPage() {
         .insert(txnData);
       if (txnError) throw txnError;
 
+      // 3. Update local states so modal reflects changes instantly without closing
+      setElecUnit(newUnit);
+      setElecPrice(newPrice);
+      setPaymentList(prevList => {
+        const cleaned = prevList.filter(p => p.method && p.amount);
+        return [...cleaned, { method: addUtilityMethod, amount: String(addUtilityPrice) }];
+      });
+      setSelectedBooking(prev => ({
+        ...prev,
+        elec_unit: newUnit,
+        elec_price: newPrice,
+        total_price: newTotal,
+        payment_method: newPaymentMethod,
+        status: newStatus
+      }));
+
       showAlert("บันทึกค่าไฟเพิ่มเติมสำเร็จ", "สำเร็จ");
       setShowAddUtilityModal(false);
-      setShowBookingModal(false);
       fetchBookingsAndStorage();
     } catch (e) {
       console.error(e);
@@ -2980,11 +3004,15 @@ export default function BookingPage() {
                                       setPaymentList(updated);
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      !isAmountEntered || isAlreadyPaid
-                                        ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-40 cursor-not-allowed pointer-events-none'
-                                        : entry.method === 'เงินสด'
-                                          ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
-                                          : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
+                                      isAlreadyPaid
+                                        ? entry.method === 'เงินสด'
+                                          ? 'bg-[#5D4037] text-white border-[#5D4037] opacity-80 pointer-events-none shadow-xs'
+                                          : 'bg-gray-100/70 text-gray-400 border-gray-200 opacity-40 pointer-events-none'
+                                        : !isAmountEntered
+                                          ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-40 cursor-not-allowed pointer-events-none'
+                                          : entry.method === 'เงินสด'
+                                            ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
+                                            : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
                                     }`}
                                   >
                                     เงินสด
@@ -2998,11 +3026,15 @@ export default function BookingPage() {
                                       setPaymentList(updated);
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      !isAmountEntered || isAlreadyPaid
-                                        ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-40 cursor-not-allowed pointer-events-none'
-                                        : entry.method === 'โอนเงิน'
-                                          ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
-                                          : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
+                                      isAlreadyPaid
+                                        ? entry.method === 'โอนเงิน'
+                                          ? 'bg-[#5D4037] text-white border-[#5D4037] opacity-80 pointer-events-none shadow-xs'
+                                          : 'bg-gray-100/70 text-gray-400 border-gray-200 opacity-40 pointer-events-none'
+                                        : !isAmountEntered
+                                          ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-40 cursor-not-allowed pointer-events-none'
+                                          : entry.method === 'โอนเงิน'
+                                            ? 'bg-[#5D4037] text-white border-[#5D4037] shadow-xs'
+                                            : 'bg-white text-gray-500 border-[#8B4513]/25 hover:bg-amber-50'
                                     }`}
                                   >
                                     โอนจ่าย
@@ -3067,9 +3099,9 @@ export default function BookingPage() {
 
                       {/* Extra Admin tools */}
                       {selectedBooking && selectedBooking.type === 'รายวัน' && (
-                        <div className="mt-1.5 border-t pt-3 flex flex-col gap-2">
-                          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">เครื่องมือบริการลูกค้า:</span>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="mt-2.5 border-t border-[#8B4513]/10 pt-3.5 flex flex-col gap-2">
+                          <span className="text-[10px] font-black text-[#8B4513]/60 uppercase tracking-widest block mb-0.5">เครื่องมือบริการลูกค้า:</span>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {/* 1. เพิ่มไฟ */}
                             <button
                               type="button"
@@ -3079,18 +3111,18 @@ export default function BookingPage() {
                                 setAddUtilityMethod('โอนเงิน');
                                 setShowAddUtilityModal(true);
                               }}
-                              className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors"
+                              className="px-3 py-2 bg-gradient-to-br from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-amber-600/10 cursor-pointer"
                             >
-                              <Zap className="w-3.5 h-3.5" /> เพิ่มไฟ
+                              <Zap className="w-4 h-4 shrink-0" /> เพิ่มไฟ
                             </button>
 
                             {/* 2. แจ้งลา */}
                             <button
                               type="button"
                               onClick={handleMarkAbsent}
-                              className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors"
+                              className="px-3 py-2 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer"
                             >
-                              <X className="w-3.5 h-3.5" /> แจ้งลา
+                              <X className="w-4 h-4 shrink-0" /> แจ้งลา
                             </button>
 
                             {/* 3. ย้ายล็อค */}
@@ -3103,9 +3135,9 @@ export default function BookingPage() {
                                 fetchVacantStallsForDate(selectedDate);
                                 setShowMoveLockModal(true);
                               }}
-                              className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors"
+                              className="px-3 py-2 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-indigo-600/10 cursor-pointer"
                             >
-                              <RefreshCw className="w-3.5 h-3.5" /> ย้ายล็อค
+                              <RefreshCw className="w-4 h-4 shrink-0" /> ย้ายล็อค
                             </button>
 
                             {/* 4. ออกตั๋ว */}
@@ -3115,18 +3147,9 @@ export default function BookingPage() {
                                 setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
                                 setShowReceiptPreviewModal(true);
                               }}
-                              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors"
+                              className="px-3 py-2 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer"
                             >
-                              <Printer className="w-3.5 h-3.5" /> ออกตั๋ว
-                            </button>
-
-                            {/* 5. บันทึก */}
-                            <button
-                              type="button"
-                              onClick={() => handleSaveBooking(isFullyPaid ? 'ชำระแล้ว' : 'ค้างชำระ', isFullyPaid)}
-                              className="px-2.5 py-1.5 bg-green-700 hover:bg-green-800 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors"
-                            >
-                              <Check className="w-3.5 h-3.5" /> บันทึก
+                              <Printer className="w-4 h-4 shrink-0" /> ออกตั๋ว
                             </button>
                           </div>
                         </div>
@@ -3162,26 +3185,25 @@ export default function BookingPage() {
                         selectedBooking.type === 'รายวัน' ? (
                           // Daily Booking: Reorganized footer
                           <div className="flex justify-between items-center w-full">
-                            <button
-                              type="button"
-                              disabled={isAlreadyPaid}
-                              onClick={handleDeleteBooking}
-                              className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1 shadow transition-all ${
-                                isAlreadyPaid
-                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
-                                  : 'bg-red-600 hover:bg-red-700 text-white'
-                              }`}
-                              title={isAlreadyPaid ? 'ชำระเงินครบแล้ว ไม่สามารถยกเลิกการจองได้ (โปรดใช้แจ้งลา)' : 'ยกเลิกการจองล็อคนี้'}
-                            >
-                              <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
-                            </button>
+                            {!isAlreadyPaid ? (
+                              <button
+                                type="button"
+                                onClick={handleDeleteBooking}
+                                className="px-3.5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-colors duration-200 cursor-pointer"
+                                title="ยกเลิกการจองล็อคนี้"
+                              >
+                                <Trash2 className="w-4.5 h-4.5" /> ยกเลิกการจอง
+                              </button>
+                            ) : (
+                              <div />
+                            )}
                             
                             <button
                               type="button"
-                              onClick={() => setShowBookingModal(false)}
-                              className="px-3.5 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold text-xs shadow transition-colors"
+                              onClick={() => handleSaveBooking(isFullyPaid ? 'ชำระแล้ว' : 'ค้างชำระ', isFullyPaid)}
+                              className="px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-colors duration-200 cursor-pointer"
                             >
-                              ปิดหน้าต่าง
+                              <Check className="w-4.5 h-4.5" /> บันทึก/พิมพ์ตั๋ว
                             </button>
                           </div>
                         ) : (
