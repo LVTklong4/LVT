@@ -3141,16 +3141,18 @@ export default function BookingPage() {
                             </button>
 
                             {/* 4. ออกตั๋ว */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
-                                setShowReceiptPreviewModal(true);
-                              }}
-                              className="px-3 py-2 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer"
-                            >
-                              <Printer className="w-4 h-4 shrink-0" /> ออกตั๋ว
-                            </button>
+                            {isFullyPaid && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
+                                  setShowReceiptPreviewModal(true);
+                                }}
+                                className="px-3 py-2 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer"
+                              >
+                                <Printer className="w-4 h-4 shrink-0" /> ออกตั๋ว
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -3203,7 +3205,7 @@ export default function BookingPage() {
                               onClick={() => handleSaveBooking(isFullyPaid ? 'ชำระแล้ว' : 'ค้างชำระ', isFullyPaid)}
                               className="px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-colors duration-200 cursor-pointer"
                             >
-                              <Check className="w-4.5 h-4.5" /> บันทึก/พิมพ์ตั๋ว
+                              <Check className="w-4.5 h-4.5" /> {isFullyPaid ? "บันทึก/พิมพ์ตั๋ว" : "บันทึก (ค้างจ่าย)"}
                             </button>
                           </div>
                         ) : (
@@ -3217,16 +3219,18 @@ export default function BookingPage() {
                               >
                                 <Trash2 className="w-4 h-4" /> ยกเลิกการจอง
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
-                                  setShowReceiptPreviewModal(true);
-                                }}
-                                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
-                              >
-                                <Printer className="w-4 h-4" /> ดู/พิมพ์ตั๋ว
-                              </button>
+                              {isFullyPaid && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReceiptPreviewData({ bookingObj: selectedBooking, stallObj: selectedStall });
+                                    setShowReceiptPreviewModal(true);
+                                  }}
+                                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow"
+                                >
+                                  <Printer className="w-4 h-4" /> ดู/พิมพ์ตั๋ว
+                                </button>
+                              )}
                             </div>
                             
                             <div className="flex gap-2">
