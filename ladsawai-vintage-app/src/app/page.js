@@ -1281,7 +1281,7 @@ export default function BookingPage() {
 
     if (txns.length > 0) {
       txns.forEach(p => {
-        const amt = parseNumber(p.amount);
+        const amt = parseNumber(p.total_amount || p.amount);
         totalPaidFromPayments += amt;
         const pDate = p.timestamp ? new Date(p.timestamp) : now;
         const pDateStr = pDate.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
