@@ -2551,71 +2551,61 @@ export default function BookingPage() {
               <table className="w-full text-xs text-left">
                 <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                   <tr>
-                    <th className="p-2">ลูกค้า / เบอร์</th>
+                    <th className="p-2">ลูกค้า</th>
                     <th className="p-2">ล็อค</th>
-                    <th className="p-2 text-center">ค่าเช่า / ยอดจ่าย</th>
-                    <th className="p-2">ชำระเงิน</th>
-                    <th className="p-2">ต่อสัญญา</th>
+                    <th className="p-2 text-center">ค่าล็อค</th>
+                    <th className="p-2 text-center">ชำระแล้ว</th>
+                    <th className="p-2 text-center">คงเหลือ</th>
                     <th className="p-2 text-center">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white">
-                  {filteredMonthlyList.map((item) => (
-                    <tr 
-                      key={item.id} 
-                      onClick={() => {
-                        setActiveMonthlyBooking(item);
-                        fetchMonthlyTransactions(item.id);
-                      }}
-                      className={`hover:bg-purple-50/20 cursor-pointer transition-colors ${
-                        activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
-                      }`}
-                    >
-                      <td className="p-2">
-                        <div className="font-bold text-gray-800">{item.booker_name}</div>
-                        <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
-                      </td>
-                      <td className="p-2 font-bold text-purple-800">{item.stalls}</td>
-                      <td className="p-2 text-center font-semibold">
-                        <div>{item.total_price.toLocaleString()}.-</div>
-                        <div className="text-[10px] text-green-700">จ่าย: {(item.paid_amount || 0).toLocaleString()}.-</div>
-                      </td>
-                      <td className="p-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          item.status === 'ชำระแล้ว' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {item.status || 'ค้างชำระ'}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          item.renewal_status === 'ต่อสัญญาแล้ว' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : item.renewal_status === 'ไม่ต่อสัญญา'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {item.renewal_status || 'รอยืนยัน'}
-                        </span>
-                      </td>
-                      <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-1 justify-center">
-                          <button 
-                            onClick={() => setSelectedMonthlyItem(item)}
-                            className="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold hover:bg-purple-100 cursor-pointer"
-                          >
-                            แก้ไข
-                          </button>
-                          <button 
-                            onClick={() => handleOpenMonthlyPrintModal(item)}
-                            className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Printer className="w-3 h-3" /> พิมพ์
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredMonthlyList.map((item) => {
+                    const unpaidBalance = item.total_price - (item.paid_amount || 0);
+                    return (
+                      <tr 
+                        key={item.id} 
+                        onClick={() => {
+                          setActiveMonthlyBooking(item);
+                          fetchMonthlyTransactions(item.id);
+                        }}
+                        className={`hover:bg-purple-50/20 cursor-pointer transition-colors ${
+                          activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
+                        }`}
+                      >
+                        <td className="p-2">
+                          <div className="font-bold text-gray-800">{item.booker_name}</div>
+                          <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
+                        </td>
+                        <td className="p-2 font-bold text-purple-800">{item.stalls}</td>
+                        <td className="p-2 text-center font-semibold text-gray-800">
+                          {item.total_price.toLocaleString()}.-
+                        </td>
+                        <td className="p-2 text-center font-semibold text-green-700">
+                          {(item.paid_amount || 0).toLocaleString()}.-
+                        </td>
+                        <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                          {unpaidBalance.toLocaleString()}.-
+                        </td>
+                        <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-1 justify-center">
+                            <button 
+                              onClick={() => setSelectedMonthlyItem(item)}
+                              className="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold hover:bg-purple-100 cursor-pointer"
+                            >
+                              แก้ไข
+                            </button>
+                            <button 
+                              onClick={() => handleOpenMonthlyPrintModal(item)}
+                              className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Printer className="w-3 h-3" /> พิมพ์
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -4708,71 +4698,61 @@ export default function BookingPage() {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-purple-50 text-purple-900 border-b font-bold sticky top-0 z-10">
                       <tr>
-                        <th className="p-2">ลูกค้า / เบอร์</th>
+                        <th className="p-2">ลูกค้า</th>
                         <th className="p-2">ล็อค</th>
-                        <th className="p-2 text-center">ค่าเช่า / ยอดจ่าย</th>
-                        <th className="p-2">ชำระเงิน</th>
-                        <th className="p-2">ต่อสัญญา</th>
+                        <th className="p-2 text-center">ค่าล็อค</th>
+                        <th className="p-2 text-center">ชำระแล้ว</th>
+                        <th className="p-2 text-center">คงเหลือ</th>
                         <th className="p-2 text-center">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
-                      {filteredMonthlyList.map((item) => (
-                        <tr 
-                          key={item.id} 
-                          onClick={() => {
-                            setActiveMonthlyBooking(item);
-                            fetchMonthlyTransactions(item.id);
-                          }}
-                          className={`hover:bg-purple-50/20 cursor-pointer transition-colors ${
-                            activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
-                          }`}
-                        >
-                          <td className="p-2">
-                            <div className="font-bold text-gray-800">{item.booker_name}</div>
-                            <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
-                          </td>
-                          <td className="p-2 font-bold text-purple-800">{item.stalls}</td>
-                          <td className="p-2 text-center font-semibold">
-                            <div>{item.total_price}.-</div>
-                            <div className="text-[10px] text-green-700">จ่าย: {item.paid_amount || 0}.-</div>
-                          </td>
-                          <td className="p-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.status === 'ชำระแล้ว' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {item.status || 'ค้างชำระ'}
-                            </span>
-                          </td>
-                          <td className="p-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.renewal_status === 'ต่อสัญญาแล้ว' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : item.renewal_status === 'ไม่ต่อสัญญา'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {item.renewal_status || 'รอยืนยัน'}
-                            </span>
-                          </td>
-                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex gap-1 justify-center">
-                              <button 
-                                onClick={() => setSelectedMonthlyItem(item)}
-                                className="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold hover:bg-purple-100"
-                              >
-                                แก้ไข
-                              </button>
-                              <button 
-                                onClick={() => handleOpenMonthlyPrintModal(item)}
-                                className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 flex items-center gap-0.5"
-                              >
-                                <Printer className="w-3 h-3" /> พิมพ์
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredMonthlyList.map((item) => {
+                        const unpaidBalance = item.total_price - (item.paid_amount || 0);
+                        return (
+                          <tr 
+                            key={item.id} 
+                            onClick={() => {
+                              setActiveMonthlyBooking(item);
+                              fetchMonthlyTransactions(item.id);
+                            }}
+                            className={`hover:bg-purple-50/20 cursor-pointer transition-colors ${
+                              activeMonthlyBooking?.id === item.id ? 'bg-purple-100/50 hover:bg-purple-100/70' : ''
+                            }`}
+                          >
+                            <td className="p-2">
+                              <div className="font-bold text-gray-800">{item.booker_name}</div>
+                              <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
+                            </td>
+                            <td className="p-2 font-bold text-purple-800">{item.stalls}</td>
+                            <td className="p-2 text-center font-semibold text-gray-800">
+                              {item.total_price.toLocaleString()}.-
+                            </td>
+                            <td className="p-2 text-center font-semibold text-green-700">
+                              {(item.paid_amount || 0).toLocaleString()}.-
+                            </td>
+                            <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                              {unpaidBalance.toLocaleString()}.-
+                            </td>
+                            <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex gap-1 justify-center">
+                                <button 
+                                  onClick={() => setSelectedMonthlyItem(item)}
+                                  className="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold hover:bg-purple-100 cursor-pointer"
+                                >
+                                  แก้ไข
+                                </button>
+                                <button 
+                                  onClick={() => handleOpenMonthlyPrintModal(item)}
+                                  className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 flex items-center gap-0.5 cursor-pointer"
+                                >
+                                  <Printer className="w-3 h-3" /> พิมพ์
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
