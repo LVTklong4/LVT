@@ -145,6 +145,8 @@ export default function BookingPage() {
   const [activeMonthlyBooking, setActiveMonthlyBooking] = useState(null);
   const [activeMonthlyTransactions, setActiveMonthlyTransactions] = useState([]);
   const [loadingMonthlyTxns, setLoadingMonthlyTxns] = useState(false);
+  const [showMonthlyPaymentModal, setShowMonthlyPaymentModal] = useState(false);
+  const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({ amount: '', method: 'โอนจ่าย', note: '' });
 
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
@@ -1950,6 +1952,79 @@ export default function BookingPage() {
       setActiveMonthlyTransactions([]);
     } finally {
       setLoadingMonthlyTxns(false);
+    }
+  };
+
+  const handleMonthlyPaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!activeMonthlyBooking) return;
+    const amountVal = parseNumber(monthlyPaymentForm.amount);
+    if (amountVal <= 0) {
+      showAlert("กรุณาระบุจำนวนเงินที่ถูกต้อง", "แจ้งเตือน", true);
+      return;
+    }
+
+    setLoadingMonthly(true);
+    try {
+      // 1. Add Transaction
+      const txnId = `TXN-${Date.now()}`;
+      const txnData = {
+        id: txnId,
+        booking_ref: activeMonthlyBooking.id,
+        date: new Date().toISOString().split('T')[0],
+        category: 'ค่าล็อครายเดือน',
+        total_amount: amountVal,
+        method: monthlyPaymentForm.method,
+        note: monthlyPaymentForm.note.trim() || 'ชำระเงินรายเดือนเพิ่มเติม',
+        officer: adminUser?.name || 'System',
+        timestamp: new Date().toISOString(),
+        stall_amt: amountVal,
+        elec_amt: 0,
+        storage_amt: 0,
+        bill_type: 'General'
+      };
+
+      const { error: txnError } = await supabase
+        .from('transactions')
+        .insert(txnData);
+      if (txnError) throw txnError;
+
+      // 2. Update monthly_bookings
+      const currentPaid = parseNumber(activeMonthlyBooking.paid_amount || 0);
+      const newPaid = currentPaid + amountVal;
+      const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
+      const newStatus = newPaid >= (totalPrice - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
+
+      const { error: mbError } = await supabase
+        .from('monthly_bookings')
+        .update({
+          paid_amount: newPaid,
+          status: newStatus
+        })
+        .eq('id', activeMonthlyBooking.id);
+      if (mbError) throw mbError;
+
+      showAlert("บันทึกการชำระเงินสำเร็จ", "สำเร็จ");
+      setShowMonthlyPaymentModal(false);
+      setMonthlyPaymentForm({ amount: '', method: 'โอนจ่าย', note: '' });
+      
+      // Refresh details
+      fetchAllMonthly();
+      fetchBookingsAndStorage();
+      
+      // Update active state
+      const updatedBooking = {
+        ...activeMonthlyBooking,
+        paid_amount: newPaid,
+        status: newStatus
+      };
+      setActiveMonthlyBooking(updatedBooking);
+      fetchMonthlyTransactions(updatedBooking.id);
+    } catch (err) {
+      console.error(err);
+      showAlert("เกิดข้อผิดพลาดในการบันทึกการชำระเงิน: " + err.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
     }
   };
 
@@ -3886,7 +3961,19 @@ export default function BookingPage() {
                 {activeMonthlyBooking ? (
                   <div className="flex flex-col gap-3 h-full overflow-hidden">
                     <div className="border-b pb-2 shrink-0">
-                      <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
+                      <div className="flex justify-between items-center mb-1">
+                        <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMonthlyPaymentForm({ amount: '', method: 'โอนจ่าย', note: '' });
+                            setShowMonthlyPaymentModal(true);
+                          }}
+                          className="px-2 py-1 bg-green-750 hover:bg-green-800 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all"
+                        >
+                          <Plus className="w-3 h-3" /> ชำระเงิน
+                        </button>
+                      </div>
                       <div className="text-[11px] text-gray-600 mt-1 font-bold">
                         ผู้เช่า: <span className="text-purple-700">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-purple-700">{activeMonthlyBooking.stalls}</span>
                       </div>
@@ -3937,6 +4024,77 @@ export default function BookingPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗓️ 2.3 Add Monthly Payment Modal */}
+      {showMonthlyMgmtModal && showMonthlyPaymentModal && activeMonthlyBooking && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm border-2 border-green-750 overflow-hidden animate-pop-in">
+            <div className="bg-green-750 text-white px-4 py-3 flex justify-between items-center">
+              <h3 className="font-bold text-sm flex items-center gap-1.5"><Banknote className="w-5 h-5" /> บันทึกการชำระเงินรายเดือน</h3>
+              <button onClick={() => setShowMonthlyPaymentModal(false)} className="text-green-100 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <form onSubmit={handleMonthlyPaymentSubmit} className="p-5 flex flex-col gap-3">
+              <div className="bg-green-50 border border-green-200 rounded p-2.5 text-xs text-green-800">
+                <div className="font-bold text-green-950">ผู้เช่า: {activeMonthlyBooking.booker_name}</div>
+                <div>ล็อค: {activeMonthlyBooking.stalls} | ค่าเช่า: {activeMonthlyBooking.total_price}.-</div>
+                <div>ค้างชำระ: {activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0)}.-</div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-700">จำนวนเงินชำระ (บาท)</label>
+                <input 
+                  type="number" 
+                  value={monthlyPaymentForm.amount} 
+                  onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, amount: e.target.value })}
+                  placeholder="เช่น 1000"
+                  className="p-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-green-500 font-bold"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-700">ช่องทางการชำระเงิน</label>
+                <select 
+                  value={monthlyPaymentForm.method} 
+                  onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, method: e.target.value })}
+                  className="p-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  <option value="โอนจ่าย">โอนจ่าย</option>
+                  <option value="เงินสด">เงินสด</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-700">หมายเหตุ / เลขที่อ้างอิง</label>
+                <input 
+                  type="text" 
+                  value={monthlyPaymentForm.note} 
+                  onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, note: e.target.value })}
+                  placeholder="เช่น ชำระค่าเช่ารายเดือนงวดแรก"
+                  className="p-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2 bg-green-750 hover:bg-green-800 text-white rounded text-xs font-bold transition-all shadow"
+                >
+                  บันทึกชำระเงิน
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowMonthlyPaymentModal(false)}
+                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
