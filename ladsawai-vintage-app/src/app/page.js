@@ -148,6 +148,7 @@ export default function BookingPage() {
   const [loadingMonthlyTxns, setLoadingMonthlyTxns] = useState(false);
   const [showMonthlyPaymentModal, setShowMonthlyPaymentModal] = useState(false);
   const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+  const [monthlyMonthFilter, setMonthlyMonthFilter] = useState('ทั้งหมด');
 
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
@@ -1956,6 +1957,169 @@ export default function BookingPage() {
     }
   };
 
+  const formatBookingMonth = (monthStr) => {
+    if (!monthStr) return '-';
+    const parts = monthStr.split(' ');
+    if (parts.length < 4) return monthStr;
+    const monthAbbr = parts[1];
+    const yearStr = parts[3];
+    const monthsMap = {
+      Jan: 'มกราคม', Feb: 'กุมภาพันธ์', Mar: 'มีนาคม', Apr: 'เมษายน',
+      May: 'พฤษภาคม', Jun: 'มิถุนายน', Jul: 'กรกฎาคม', Aug: 'สิงหาคม',
+      Sep: 'กันยายน', Oct: 'ตุลาคม', Nov: 'พฤศจิกายน', Dec: 'ธันวาคม'
+    };
+    const thaiMonth = monthsMap[monthAbbr] || monthAbbr;
+    return `${thaiMonth} ${yearStr}`;
+  };
+
+  const handleRenewMonthlyBooking = async () => {
+    if (!activeMonthlyBooking) return;
+    
+    // Parse current month and next month
+    const currentMonthFormatted = formatBookingMonth(activeMonthlyBooking.booking_month);
+    
+    // Parse target dates
+    const currentStartDateStr = activeMonthlyBooking.start_date || '2026-07-01';
+    const parts = currentStartDateStr.split('-');
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // 0-indexed
+    
+    const nextDate = new Date(year, month + 1, 1);
+    const nextYear = nextDate.getFullYear();
+    const nextMonthVal = nextDate.getMonth();
+    const nextStartDateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-01`;
+    
+    // Thai year is CE year + 543
+    const nextDateThai = new Date(year + 543, month + 1, 1);
+    const nextBookingMonthStr = nextDateThai.toString();
+    const nextMonthFormatted = formatBookingMonth(nextBookingMonthStr);
+
+    if (!confirm(`ยืนยันการต่อสัญญาสำหรับ "${activeMonthlyBooking.booker_name}" (ล็อค ${activeMonthlyBooking.stalls})\nจากรอบเดือน: ${currentMonthFormatted}\nไปยังรอบเดือน: ${nextMonthFormatted} หรือไม่?`)) {
+      return;
+    }
+
+    setLoadingMonthly(true);
+    try {
+      // 1. Safety check: Check if already exists in next month
+      const { data: existing, error: existError } = await supabase
+        .from('monthly_bookings')
+        .select('id')
+        .eq('booker_name', activeMonthlyBooking.booker_name)
+        .eq('booking_month', nextBookingMonthStr)
+        .limit(1);
+      if (existError) throw existError;
+      if (existing && existing.length > 0) {
+        showAlert(`ผู้เช่า "${activeMonthlyBooking.booker_name}" ได้ต่อสัญญารอบเดือน ${nextMonthFormatted} ไว้แล้ว`, "แจ้งเตือน", true);
+        return;
+      }
+
+      // 2. Generate daily rows for bookings table
+      const newBookingId = `BK-${String(nextYear).substr(-2)}${String(nextMonthVal + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const lastDay = new Date(nextYear, nextMonthVal + 1, 0).getDate();
+      const dailyBookings = [];
+      const details = JSON.parse(activeMonthlyBooking.stall_details || '[]');
+      const timestamp = new Date().toISOString();
+
+      for (let d = 1; d <= lastDay; d++) {
+        const currentD = new Date(nextYear, nextMonthVal, d);
+        const dayOfWeek = currentD.getDay(); // 0-6
+        
+        details.forEach(stallDetail => {
+          const myDays = stallDetail.days || [];
+          if (myDays.includes(dayOfWeek)) {
+            const stallName = stallDetail.name;
+            const sMaster = stalls.find(s => s.name === stallName);
+            let price = sMaster ? sMaster.price_wed : 0;
+            if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
+            if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
+            
+            if (activeMonthlyBooking.customer_type === 'VIP') price = 0;
+            
+            const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            
+            dailyBookings.push({
+              id: newBookingId,
+              date: dateStr,
+              stall_name: stallName,
+              booker_name: activeMonthlyBooking.booker_name,
+              product: activeMonthlyBooking.product,
+              type: 'รายเดือน',
+              elec_unit: parseNumber(activeMonthlyBooking.elec_unit || 0),
+              elec_price: parseNumber(activeMonthlyBooking.elec_unit || 0) * 10,
+              stall_price: price,
+              total_price: price + (parseNumber(activeMonthlyBooking.elec_unit || 0) * 10),
+              payment_method: 'Cash',
+              status: 'ค้างชำระ',
+              note: 'ต่ออายุอัตโนมัติ',
+              storage_fee: parseNumber(activeMonthlyBooking.storage_fee || 0)
+            });
+          }
+        });
+      }
+
+      // 3. Insert daily bookings
+      if (dailyBookings.length > 0) {
+        const { error: dbError } = await supabase
+          .from('bookings')
+          .insert(dailyBookings);
+        if (dbError) throw dbError;
+      }
+
+      // 4. Calculate monthly totals
+      const rentTotal = dailyBookings.reduce((sum, b) => sum + b.stall_price, 0);
+      const totalElecCharged = Array.from(new Set(dailyBookings.map(b => b.date))).length;
+      const totalElecPrice = totalElecCharged * (parseNumber(activeMonthlyBooking.elec_unit || 0) * 10);
+      const storageFeeVal = parseNumber(activeMonthlyBooking.storage_fee || 0);
+      
+      let monthlyTotal = rentTotal + totalElecPrice + storageFeeVal;
+      let monthlyStatus = 'ค้างชำระ';
+      if (activeMonthlyBooking.customer_type === 'Regular') {
+        monthlyTotal = 0;
+        monthlyStatus = 'ชำระรายวัน';
+      } else if (activeMonthlyBooking.customer_type === 'VIP') {
+        monthlyTotal = 0;
+        monthlyStatus = 'ชำระแล้ว';
+      }
+
+      // 5. Insert monthly booking record
+      const monthlyData = {
+        id: newBookingId,
+        timestamp: timestamp,
+        start_date: nextStartDateStr,
+        booker_name: activeMonthlyBooking.booker_name,
+        stalls: activeMonthlyBooking.stalls,
+        product: activeMonthlyBooking.product,
+        status: monthlyStatus,
+        elec_unit: activeMonthlyBooking.elec_unit,
+        total_price: monthlyTotal,
+        paid_amount: 0,
+        note: `ต่ออายุอัตโนมัติ [${activeMonthlyBooking.customer_type || 'Standard'}]`,
+        payment_method: 'Cash',
+        selected_days: activeMonthlyBooking.selected_days,
+        booking_month: nextBookingMonthStr,
+        phone: activeMonthlyBooking.phone,
+        stall_details: activeMonthlyBooking.stall_details,
+        customer_type: activeMonthlyBooking.customer_type || 'Standard',
+        storage_fee: storageFeeVal,
+        renewal_status: ''
+      };
+
+      const { error: mbError } = await supabase
+        .from('monthly_bookings')
+        .insert([monthlyData]);
+      if (mbError) throw mbError;
+
+      showAlert(`ต่อสัญญาผู้เช่า "${activeMonthlyBooking.booker_name}" ไปยังรอบเดือน ${nextMonthFormatted} เรียบร้อยแล้ว`, "สำเร็จ");
+      fetchAllMonthly();
+      fetchBookingsAndStorage();
+    } catch (err) {
+      console.error(err);
+      showAlert("เกิดข้อผิดพลาดในการต่อสัญญา: " + err.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
   const handleMonthlyPaymentSubmit = async (e) => {
     e.preventDefault();
     if (!activeMonthlyBooking) return;
@@ -2263,6 +2427,11 @@ export default function BookingPage() {
   stalls.forEach(s => {
     if (s.row > maxRow) maxRow = s.row;
     if (s.col > maxCol) maxCol = s.col;
+  });
+
+  const filteredMonthlyList = monthlyList.filter(item => {
+    if (monthlyMonthFilter === 'ทั้งหมด') return true;
+    return formatBookingMonth(item.booking_month) === monthlyMonthFilter;
   });
 
   return (
@@ -3883,11 +4052,60 @@ export default function BookingPage() {
               <button onClick={() => setShowMonthlyMgmtModal(false)} className="text-purple-200 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             
-            <div className="p-5 flex flex-col md:flex-row gap-5 h-[calc(90vh-100px)] overflow-hidden">
+            {/* Top Toolbar Action Bar */}
+            <div className="bg-gray-50 px-5 py-3 border-b flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMonthlyMgmtModal(false);
+                    setBookingType('รายเดือน');
+                    showAlert("กรุณาคลิกเลือกแผงค้าว่างบนแผนที่ แล้วทำการจองรายเดือนใหม่", "จองแผงค้ารายเดือนใหม่");
+                  }}
+                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  จองใหม่
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRenewMonthlyBooking}
+                  disabled={!activeMonthlyBooking}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 ${
+                    activeMonthlyBooking 
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' 
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  ต่อสัญญา
+                </button>
+              </div>
+
+              {/* ตัวกรองรายเดือน */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-600 flex items-center gap-1">
+                  <CalendarDays className="w-4 h-4 text-purple-600" />
+                  ตัวกรองรายเดือน:
+                </span>
+                <select
+                  value={monthlyMonthFilter}
+                  onChange={(e) => setMonthlyMonthFilter(e.target.value)}
+                  className="p-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                >
+                  <option value="ทั้งหมด">ทั้งหมด</option>
+                  {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
+                    <option key={month} value={month}>{month}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="p-5 flex flex-col md:flex-row gap-5 flex-1 overflow-hidden">
               {/* Left Side: List panel */}
               <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                 <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center shrink-0">
-                  <span>รายชื่อลูกค้ารายเดือน ({monthlyList.length} คน)</span>
+                  <span>รายชื่อลูกค้ารายเดือน ({filteredMonthlyList.length} คน)</span>
                   {loadingMonthly && <Loader2 className="w-4 h-4 text-purple-800 animate-spin" />}
                 </h4>
                 
@@ -3904,7 +4122,7 @@ export default function BookingPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
-                      {monthlyList.map((item) => (
+                      {filteredMonthlyList.map((item) => (
                         <tr 
                           key={item.id} 
                           onClick={() => {
