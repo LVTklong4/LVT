@@ -148,7 +148,12 @@ export default function BookingPage() {
   const [loadingMonthlyTxns, setLoadingMonthlyTxns] = useState(false);
   const [showMonthlyPaymentModal, setShowMonthlyPaymentModal] = useState(false);
   const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
-  const [monthlyMonthFilter, setMonthlyMonthFilter] = useState('ทั้งหมด');
+  const [monthlyMonthFilter, setMonthlyMonthFilter] = useState(() => {
+    const now = new Date();
+    const thaiMonth = monthNamesFull[now.getMonth()];
+    const thaiYear = now.getFullYear() + 543;
+    return `${thaiMonth} ${thaiYear}`;
+  });
   const [monthlySearchQuery, setMonthlySearchQuery] = useState('');
   const [isMonthlyPageOnly, setIsMonthlyPageOnly] = useState(false);
   const [monthlySortField, setMonthlySortField] = useState(null); // 'total_price' | 'paid_amount' | 'remaining'
@@ -3312,9 +3317,15 @@ export default function BookingPage() {
                 className="p-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
               >
                 <option value="ทั้งหมด">ทั้งหมด</option>
-                {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
-                  <option key={month} value={month}>{month}</option>
-                ))}
+                {(() => {
+                  const now = new Date();
+                  const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
+                  const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
+                  monthSet.add(currentMonthYear);
+                  return Array.from(monthSet).sort().map(month => (
+                    <option key={month} value={month}>{month}</option>
+                  ));
+                })()}
               </select>
             </div>
           </div>
@@ -5499,9 +5510,15 @@ export default function BookingPage() {
                     className="p-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
                   >
                     <option value="ทั้งหมด">ทั้งหมด</option>
-                    {Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))).sort().map(month => (
-                      <option key={month} value={month}>{month}</option>
-                    ))}
+                    {(() => {
+                      const now = new Date();
+                      const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
+                      const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
+                      monthSet.add(currentMonthYear);
+                      return Array.from(monthSet).sort().map(month => (
+                        <option key={month} value={month}>{month}</option>
+                      ));
+                    })()}
                   </select>
                 </div>
               </div>
