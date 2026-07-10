@@ -2892,16 +2892,48 @@ export default function BookingPage() {
         });
       }
 
-      if (newMonthlyResetLayout && dailyBookings.length > 0) {
-        const datesToClear = Array.from(new Set(dailyBookings.map(b => b.date)));
-        const stallNamesToClear = allSelectedStallNames;
+      // Check for conflicting bookings in the database bookings table
+      if (dailyBookings.length > 0) {
+        const datesToCheck = Array.from(new Set(dailyBookings.map(b => b.date)));
+        const stallNamesToCheck = allSelectedStallNames;
         
-        const { error: clearError } = await supabase
+        const { data: conflicts, error: conflictError } = await supabase
           .from('bookings')
-          .delete()
-          .in('date', datesToClear)
-          .in('stall_name', stallNamesToClear);
-        if (clearError) throw clearError;
+          .select('date, stall_name, booker_name')
+          .in('date', datesToCheck)
+          .in('stall_name', stallNamesToCheck);
+          
+        if (conflictError) throw conflictError;
+        
+        if (conflicts && conflicts.length > 0) {
+          const actualConflicts = [];
+          conflicts.forEach(c => {
+            const cStalls = c.stall_name.split(',').map(s => s.trim());
+            cStalls.forEach(cs => {
+              if (stallNamesToCheck.includes(cs)) {
+                const isRequested = dailyBookings.some(db => db.date === c.date && db.stall_name === cs);
+                if (isRequested) {
+                  const dateParts = c.date.split('-');
+                  const dObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                  const formattedDate = dObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                  actualConflicts.push(`- วันที่ ${formattedDate}: ล็อค ${cs} (จองโดย คุณ ${c.booker_name})`);
+                }
+              }
+            });
+          });
+          
+          if (actualConflicts.length > 0) {
+            showAlert(
+              `ไม่สามารถบันทึกการจองรายเดือนได้ เนื่องจากแผงค้าไม่ว่างในวันต่อไปนี้:\n\n` + 
+              actualConflicts.join('\n') + 
+              `\n\nกรุณาเลือกแผงค้าอื่นหรือเปลี่ยนวัน/รอบการจอง`,
+              "แผงค้าไม่ว่าง",
+              true
+            );
+            setLoadingMonthly(false);
+            return;
+          }
+        }
       }
 
       if (dailyBookings.length > 0) {
@@ -4195,17 +4227,9 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Reset layout & Customer Type */}
+                {/* Customer Type Selection */}
                 <div className="flex justify-between items-center bg-[#F5E6D3]/20 p-2.5 rounded-lg border border-dashed border-[#D7CCC8]">
-                  <label className="flex items-center gap-1.5 cursor-pointer font-bold text-gray-700">
-                    <input 
-                      type="checkbox"
-                      checked={newMonthlyResetLayout}
-                      onChange={() => setNewMonthlyResetLayout(!newMonthlyResetLayout)}
-                      className="rounded text-amber-600 focus:ring-amber-500"
-                    />
-                    <span>รีเซ็ตในผัง (ล้างการจองทับซ้อน)</span>
-                  </label>
+                  <span className="font-bold text-gray-700">ประเภทลูกค้า:</span>
 
                   <div className="flex gap-2.5">
                     {[
@@ -6401,17 +6425,9 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Reset layout & Customer Type */}
+              {/* Customer Type Selection */}
               <div className="flex justify-between items-center bg-[#F5E6D3]/20 p-2.5 rounded-lg border border-dashed border-[#D7CCC8]">
-                <label className="flex items-center gap-1.5 cursor-pointer font-bold text-gray-700">
-                  <input 
-                    type="checkbox"
-                    checked={newMonthlyResetLayout}
-                    onChange={() => setNewMonthlyResetLayout(!newMonthlyResetLayout)}
-                    className="rounded text-amber-600 focus:ring-amber-500"
-                  />
-                  <span>รีเซ็ตในผัง (ล้างการจองทับซ้อน)</span>
-                </label>
+                <span className="font-bold text-gray-700">ประเภทลูกค้า:</span>
 
                 <div className="flex gap-2.5">
                   {[
