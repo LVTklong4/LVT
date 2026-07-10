@@ -37,7 +37,8 @@ import {
   Shirt,
   Banknote,
   Check,
-  Tag
+  Tag,
+  CalendarX
 } from 'lucide-react';
 
 // Date and formatting helpers for Thai locale
@@ -98,6 +99,8 @@ export default function BookingPage() {
   const [selectedStall, setSelectedStall] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showMonthlyStallMapModal, setShowMonthlyStallMapModal] = useState(false);
+  const [selectedMonthlyStallBooking, setSelectedMonthlyStallBooking] = useState(null);
   
   // Forms States
   const [bookerName, setBookerName] = useState('');
@@ -588,11 +591,50 @@ export default function BookingPage() {
     }, 0);
   };
 
+  const handleVacateMonthlyStallToday = async () => {
+    if (!selectedMonthlyStallBooking) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'ลา', note: 'ลูกค้ารายเดือนลา คืนล็อคขายรายวัน' })
+        .eq('id', selectedMonthlyStallBooking.id);
+      if (error) throw error;
+      
+      showAlert("คืนล็อคเฉพาะวันนี้สำเร็จ! แผงค้าจะเปลี่ยนเป็นสีว่างเพื่อให้จองรายวันได้แล้วครับ", "สำเร็จ");
+      setShowMonthlyStallMapModal(false);
+      fetchBookingsAndStorage();
+    } catch (err) {
+      console.error(err);
+      showAlert("เกิดข้อผิดพลาดในการคืนล็อค: " + err.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Click Stall handler
   const handleStallClick = (stall) => {
     if (stall.type === 'ทางเดิน' || stall.type === 'อื่นๆ') return;
-    
-    const booking = bookings.find(b => b.stall_name === stall.name || (b.stall_name && b.stall_name.split(',').map(s => s.trim()).includes(stall.name)));
+    const matchedBookings = bookings.filter(b => b.stall_name === stall.name || (b.stall_name && b.stall_name.split(',').map(s => s.trim()).includes(stall.name)));
+    let booking = matchedBookings.sort((a, b) => {
+      if (a.status === 'ลา' && b.status !== 'ลา') return 1;
+      if (a.status !== 'ลา' && b.status === 'ลา') return -1;
+      return 0;
+    })[0];
+
+    // If active monthly booking (not 'ลา'), open our new Monthly Stall Map Modal instead of daily form
+    if (booking && booking.type === 'รายเดือน' && booking.status !== 'ลา') {
+      setSelectedStall(stall);
+      setSelectedMonthlyStallBooking(booking);
+      setShowMonthlyStallMapModal(true);
+      return;
+    }
+
+    // If booking status is 'ลา', we treat it as vacant for daily rental
+    if (booking && booking.status === 'ลา') {
+      booking = null;
+    }
+
     setSelectedStall(stall);
     setSelectedBooking(booking || null);
     setCashReceived('');
@@ -5288,6 +5330,63 @@ export default function BookingPage() {
                 เข้าสู่ระบบ (Bypass)
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗓️ 2.4 Monthly Stall Details & Vacate Modal (from Map) */}
+      {showMonthlyStallMapModal && selectedStall && selectedMonthlyStallBooking && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border border-[#8B4513]/10 overflow-hidden flex flex-col p-6 relative animate-pop-in">
+            {/* Close button */}
+            <button 
+              onClick={() => setShowMonthlyStallMapModal(false)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Top Icon */}
+            <div className="flex justify-center mt-2 mb-3">
+              <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center border border-purple-100">
+                <Store className="w-7 h-7 text-purple-600" />
+              </div>
+            </div>
+
+            {/* Title / Stall Name */}
+            <div className="text-center flex flex-col items-center gap-1.5 mb-5">
+              <h2 className="text-3xl font-black text-slate-800 tracking-tight">
+                {cleanStallName(selectedStall.name)}
+              </h2>
+              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-0.5 rounded-full">
+                ลูกค้ารายเดือน
+              </span>
+            </div>
+
+            {/* Customer & Product Card */}
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-col gap-3">
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">ผู้เช่า</span>
+                <span className="text-sm font-bold text-gray-850">{selectedMonthlyStallBooking.booker_name}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">สินค้า</span>
+                <span className="text-sm font-bold text-gray-700">{selectedMonthlyStallBooking.product || 'ไม่มีชื่อสินค้า'}</span>
+              </div>
+            </div>
+
+            {/* Vacate Button */}
+            <button
+              onClick={handleVacateMonthlyStallToday}
+              className="w-full mt-6 py-3 bg-[#E53935] hover:bg-[#D32F2F] text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <CalendarX className="w-4 h-4" /> คืนล็อคเฉพาะวันนี้
+            </button>
+
+            {/* Footnote */}
+            <p className="text-[9px] text-gray-400 text-center mt-3 font-semibold">
+              * กดปุ่มนี้เพื่อให้ล็อคว่างสำหรับขายรายวัน (สัญญาหลักไม่หาย)
+            </p>
           </div>
         </div>
       )}
