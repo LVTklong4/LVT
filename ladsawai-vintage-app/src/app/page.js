@@ -76,6 +76,13 @@ const getModalDateFormat = (dateStr) => {
   return `${day} ที่ ${dateNum} ${month} ${year}`;
 };
 
+const getBookingMonthStr = (startDate) => {
+  if (!startDate) return '';
+  const d = new Date(startDate);
+  const dateThai = new Date(d.getFullYear() + 543, d.getMonth(), 1);
+  return dateThai.toString();
+};
+
 export default function BookingPage() {
   // States
   const [stalls, setStalls] = useState([]);
@@ -217,6 +224,22 @@ export default function BookingPage() {
   const addStallDropdownRefWed = useRef(null);
   const addStallDropdownRefSat = useRef(null);
   const addStallDropdownRefSun = useRef(null);
+
+  const getOccupiedStallsInRound = () => {
+    if (!newMonthlyStartDate) return [];
+    const activeRoundMonthStr = getBookingMonthStr(newMonthlyStartDate);
+    const occupied = [];
+    if (monthlyList && monthlyList.length > 0) {
+      monthlyList.forEach(mb => {
+        if (mb.booking_month === activeRoundMonthStr) {
+          if (mb.stalls) {
+            mb.stalls.split(',').forEach(s => occupied.push(s.trim()));
+          }
+        }
+      });
+    }
+    return occupied;
+  };
 
   // Finance Modal States
   const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
@@ -2925,6 +2948,7 @@ export default function BookingPage() {
   };
 
   const handleOpenNewMonthlyModal = () => {
+    fetchAllMonthly();
     setNewMonthlyStartDate(new Date().toISOString().split('T')[0]);
     setNewMonthlyDays({ wed: true, sat: true, sun: true });
     setNewMonthlyResetLayout(true);
@@ -4465,10 +4489,12 @@ export default function BookingPage() {
                                 autoFocus
                               />
                               {(() => {
+                                const occupiedStalls = getOccupiedStallsInRound();
                                 const filtered = stalls.filter(s => 
                                   s.type !== 'ทางเดิน' && 
                                   s.type !== 'อื่นๆ' && 
                                   !newMonthlyStallsWed.includes(s.name) && 
+                                  !occupiedStalls.includes(s.name) &&
                                   s.name.toLowerCase().includes(stallFilterWed.toLowerCase())
                                 );
                                 
@@ -4540,10 +4566,12 @@ export default function BookingPage() {
                                 autoFocus
                               />
                               {(() => {
+                                const occupiedStalls = getOccupiedStallsInRound();
                                 const filtered = stalls.filter(s => 
                                   s.type !== 'ทางเดิน' && 
                                   s.type !== 'อื่นๆ' && 
                                   !newMonthlyStallsSat.includes(s.name) && 
+                                  !occupiedStalls.includes(s.name) &&
                                   s.name.toLowerCase().includes(stallFilterSat.toLowerCase())
                                 );
                                 
@@ -4615,10 +4643,12 @@ export default function BookingPage() {
                                 autoFocus
                               />
                               {(() => {
+                                const occupiedStalls = getOccupiedStallsInRound();
                                 const filtered = stalls.filter(s => 
                                   s.type !== 'ทางเดิน' && 
                                   s.type !== 'อื่นๆ' && 
                                   !newMonthlyStallsSun.includes(s.name) && 
+                                  !occupiedStalls.includes(s.name) &&
                                   s.name.toLowerCase().includes(stallFilterSun.toLowerCase())
                                 );
                                 
@@ -6921,10 +6951,12 @@ export default function BookingPage() {
                               autoFocus
                             />
                             {(() => {
+                              const occupiedStalls = getOccupiedStallsInRound();
                               const filtered = stalls.filter(s => 
                                 s.type !== 'ทางเดิน' && 
                                 s.type !== 'อื่นๆ' && 
                                 !newMonthlyStallsWed.includes(s.name) && 
+                                !occupiedStalls.includes(s.name) &&
                                 s.name.toLowerCase().includes(stallFilterWed.toLowerCase())
                               );
                               
@@ -6996,10 +7028,12 @@ export default function BookingPage() {
                               autoFocus
                             />
                             {(() => {
+                              const occupiedStalls = getOccupiedStallsInRound();
                               const filtered = stalls.filter(s => 
                                 s.type !== 'ทางเดิน' && 
                                 s.type !== 'อื่นๆ' && 
                                 !newMonthlyStallsSat.includes(s.name) && 
+                                !occupiedStalls.includes(s.name) &&
                                 s.name.toLowerCase().includes(stallFilterSat.toLowerCase())
                               );
                               
@@ -7071,10 +7105,12 @@ export default function BookingPage() {
                               autoFocus
                             />
                             {(() => {
+                              const occupiedStalls = getOccupiedStallsInRound();
                               const filtered = stalls.filter(s => 
                                 s.type !== 'ทางเดิน' && 
                                 s.type !== 'อื่นๆ' && 
                                 !newMonthlyStallsSun.includes(s.name) && 
+                                !occupiedStalls.includes(s.name) &&
                                 s.name.toLowerCase().includes(stallFilterSun.toLowerCase())
                               );
                               
