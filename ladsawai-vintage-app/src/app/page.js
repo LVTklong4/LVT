@@ -170,6 +170,21 @@ export default function BookingPage() {
   const [monthlySortField, setMonthlySortField] = useState(null); // 'total_price' | 'paid_amount' | 'remaining'
   const [monthlySortOrder, setMonthlySortOrder] = useState('asc'); // 'asc' | 'desc'
 
+  const [isEditingMonthlyMode, setIsEditingMonthlyMode] = useState(false);
+  const [editingMonthlyId, setEditingMonthlyId] = useState(null);
+  const [editMonthlyPaidAmount, setEditMonthlyPaidAmount] = useState('0');
+  const [editMonthlyStatus, setEditMonthlyStatus] = useState('ค้างชำระ');
+  const [editMonthlyRenewalStatus, setEditMonthlyRenewalStatus] = useState('');
+  const [slipPreviewUrl, setSlipPreviewUrl] = useState(null);
+  const [invoicePreviewItem, setInvoicePreviewItem] = useState(null);
+
+  const [showBulkRenewModal, setShowBulkRenewModal] = useState(false);
+  const [bulkRenewFromMonth, setBulkRenewFromMonth] = useState('');
+  const [bulkRenewToMonth, setBulkRenewToMonth] = useState('');
+  const [bulkRenewCheckedIds, setBulkRenewCheckedIds] = useState([]);
+  const [bulkRenewEditData, setBulkRenewEditData] = useState({}); // stores pre-renewal edits
+  const [bulkRenewEditingItem, setBulkRenewEditingItem] = useState(null); // items being edited in sub-modal
+
   // Monthly Print Settings States
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
   const [monthlyPrintItem, setMonthlyPrintItem] = useState(null);
@@ -2082,282 +2097,110 @@ export default function BookingPage() {
 
   const handlePrintMonthlyInvoice = (item) => {
     if (!item) return;
+    setInvoicePreviewItem(item);
+  };
 
-    const stallObj = stalls.find(s => s.name === item.stalls);
-    const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
-    const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
-    const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
-    const elecRate = item && item.elec_unit !== undefined && item.elec_unit !== null ? parseNumber(item.elec_unit) * 10 : 20;
+  const getDayOccurrences = (startDateStr, dayOfWeek, daysActive) => {
+    if (!daysActive || !daysActive.includes(dayOfWeek)) return 0;
+    const startD = new Date(startDateStr);
+    const year = startD.getFullYear();
+    const monthVal = startD.getMonth();
+    const lastDay = new Date(year, monthVal + 1, 0).getDate();
+    let count = 0;
+    for (let d = startD.getDate(); d <= lastDay; d++) {
+      const currentD = new Date(year, monthVal, d);
+      if (currentD.getDay() === dayOfWeek) {
+        count++;
+      }
+    }
+    return count;
+  };
 
-    // Get current date time for billing date
-    const now = new Date();
-    const formattedTransaction = now.toLocaleDateString('th-TH', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+  const computeNextMonthThai = (monthYearStr) => {
+    if (!monthYearStr) return '';
+    const parts = monthYearStr.split(' ');
+    if (parts.length < 2) return '';
+    const monthsMap = {
+      'มกราคม': 0, 'กุมภาพันธ์': 1, 'มีนาคม': 2, 'เมษายน': 3,
+      'พฤษภาคม': 4, 'มิถุนายน': 5, 'กรกฎาคม': 6, 'สิงหาคม': 7,
+      'กันยายน': 8, 'ตุลาคม': 9, 'พฤศจิกายน': 10, 'ธันวาคม': 11
+    };
+    const mIdx = monthsMap[parts[0]];
+    const yearCE = parseInt(parts[1]) - 543;
+    if (mIdx === undefined || isNaN(yearCE)) return '';
+    
+    const nextDate = new Date(yearCE, mIdx + 1, 1);
+    return `${monthNamesFull[nextDate.getMonth()]} ${nextDate.getFullYear() + 543}`;
+  };
 
-    const empCode = adminUser?.employee_id || adminUser?.name || 'lvt-admin';
-
-    // Parse booking month name
-    let invoiceMonth = formatBookingMonth(item.booking_month);
-    if (invoiceMonth === '-') {
-      const thaiMonth = monthNamesFull[now.getMonth()];
-      const thaiYear = now.getFullYear() + 543;
-      invoiceMonth = `${thaiMonth} ${thaiYear}`;
+  const extractAmountFromText = (text) => {
+    if (!text) return '';
+    const lines = text.split('\n');
+    let matchedAmount = '';
+    const amtRegex = /[0-9,]+\.[0-9]{2}/;
+    
+    for (const line of lines) {
+      if (line.includes('จำนวนเงิน') || line.toLowerCase().includes('amount') || line.toLowerCase().includes('บาท') || line.includes('ยอดเงิน')) {
+        const match = line.replace(/\s/g, '').match(amtRegex);
+        if (match) {
+          matchedAmount = match[0].replace(/,/g, '');
+          break;
+        }
+      }
     }
 
-    // Default counts to 4 Saturdays and 4 Sundays, 0 Wednesdays
-    const satCount = 4;
-    const sunCount = 4;
-    const wedCount = 0;
-
-    // Build day detail rows
-    let dayDetailsHtml = '';
-    if (satCount > 0) {
-      const satTotal = (satPrice + elecRate) * satCount;
-      dayDetailsHtml += `
-        <tr>
-          <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(item.stalls)}</td>
-          <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
-        </tr>
-        <tr class="calc-row">
-          <td>(${satPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
-          <td></td>
-        </tr>
-      `;
+    if (!matchedAmount) {
+      const allMatches = text.match(/[0-9,]+\.[0-9]{2}/g);
+      if (allMatches) {
+        const parsedVals = allMatches.map(m => parseFloat(m.replace(/,/g, ''))).filter(v => v > 10);
+        if (parsedVals.length > 0) {
+          matchedAmount = String(Math.max(...parsedVals));
+        }
+      }
     }
-    if (sunCount > 0) {
-      const sunTotal = (sunPrice + elecRate) * sunCount;
-      dayDetailsHtml += `
-        <tr>
-          <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(item.stalls)}</td>
-          <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
-        </tr>
-        <tr class="calc-row">
-          <td>(${sunPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
-          <td></td>
-        </tr>
-      `;
+    
+    return matchedAmount;
+  };
+
+  const handleSlipChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const localUrl = URL.createObjectURL(file);
+    setSlipPreviewUrl(localUrl);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result;
+      setMonthlyPaymentForm(prev => ({
+        ...prev,
+        slip_base64: base64
+      }));
+    };
+    reader.readAsDataURL(file);
+
+    showAlert("กำลังสแกนรูปภาพสลิป...", "ข้อมูล");
+    try {
+      const Tesseract = (await import('tesseract.js')).default;
+      const result = await Tesseract.recognize(
+        file,
+        'tha+eng'
+      );
+      const text = result.data.text;
+      const detectedAmount = extractAmountFromText(text);
+      if (detectedAmount) {
+        setMonthlyPaymentForm(prev => ({
+          ...prev,
+          amount: detectedAmount
+        }));
+        showAlert(`สแกนสำเร็จ: พบยอดเงิน ${parseFloat(detectedAmount).toLocaleString()} บาท`, "สำเร็จ");
+      } else {
+        showAlert("สแกนเรียบร้อย แต่ไม่พบยอดเงินที่ชัดเจน โปรดระบุยอดเงินด้วยตนเอง", "แจ้งเตือน");
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert("การสแกนสลิปขัดข้อง โปรดระบุยอดเงินด้วยตนเอง", "แจ้งเตือน", true);
     }
-    if (wedCount > 0) {
-      const wedTotal = (wedPrice + elecRate) * wedCount;
-      dayDetailsHtml += `
-        <tr>
-          <td class="bold">วันพุธ ล็อค : ${cleanStallName(item.stalls)}</td>
-          <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
-        </tr>
-        <tr class="calc-row">
-          <td>(${wedPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
-          <td></td>
-        </tr>
-      `;
-    }
-
-    const grandTotal = parseNumber(item.total_price);
-    const paidVal = parseNumber(item.paid_amount || 0);
-    const remaining = grandTotal - paidVal;
-
-    const printWindow = window.open('', '_blank', 'width=600,height=800');
-    if (!printWindow) {
-      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ใบแจ้งหนี้');
-      return;
-    }
-
-    const htmlContent = `
-      <html>
-        <head>
-          <title>พิมพ์ใบแจ้งหนี้ (รายเดือน)</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
-            @page {
-              size: 80mm auto;
-              margin: 0;
-            }
-            body {
-              font-family: 'Sarabun', sans-serif;
-              width: 72mm;
-              margin: 0 auto;
-              padding: 4mm 2mm;
-              background: #fff;
-              color: #000;
-              font-size: 11pt;
-              line-height: 1.4;
-            }
-            .center {
-              text-align: center;
-            }
-            .bold {
-              font-weight: bold;
-            }
-            .logo {
-              width: 32mm;
-              height: auto;
-              margin: 0 auto 2mm auto;
-              display: block;
-            }
-            .divider {
-              border-top: 1.5px dashed #000;
-              margin: 3mm 0;
-            }
-            .title {
-              font-size: 13pt;
-              font-weight: 800;
-              margin: 2mm 0 1mm 0;
-            }
-            .subtitle {
-              font-size: 9.5pt;
-              font-weight: bold;
-            }
-            .info-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .info-table td {
-              padding: 1.2mm 0;
-              vertical-align: top;
-              font-size: 10.5pt;
-            }
-            .info-table td.label {
-              width: 32%;
-              white-space: nowrap;
-            }
-            .price-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .price-table td {
-              padding: 1.2mm 0;
-              font-size: 10.5pt;
-            }
-            .calc-row td {
-              font-size: 9.5pt;
-              color: #333;
-              padding-top: 0 !important;
-              padding-bottom: 2mm !important;
-            }
-            .total-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .total-table td {
-              padding: 1.2mm 0;
-            }
-            .total-table td.label {
-              text-align: right;
-              font-size: 11pt;
-              font-weight: bold;
-              padding-right: 2mm;
-            }
-            .total-table td.val {
-              text-align: right;
-              font-size: 11.5pt;
-              font-weight: bold;
-            }
-            .grand-total-row td {
-              padding-top: 2mm;
-            }
-            .grand-total-row td.label {
-              font-size: 11.5pt;
-              font-weight: 800;
-            }
-            .grand-total-row td.val {
-              font-size: 13pt;
-              font-weight: 800;
-            }
-            .footer {
-              margin-top: 6mm;
-              font-size: 9.5pt;
-              text-align: center;
-              line-height: 1.5;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="center">
-            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
-            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
-            <div class="subtitle">ใบแจ้งหนี้ / ใบเตือนชำระเงิน</div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <table class="info-table">
-            <tr>
-              <td class="label">วันที่ออกเอกสาร:</td>
-              <td style="text-align: right;">${formattedTransaction}</td>
-            </tr>
-            <tr>
-              <td class="label">รหัสพนักงาน :</td>
-              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
-            </tr>
-            <tr>
-              <td class="label">ประจำเดือน :</td>
-              <td style="text-align: right;" class="bold">${invoiceMonth}</td>
-            </tr>
-            <tr>
-              <td class="label">ผู้เช่า :</td>
-              <td style="text-align: right;" class="bold">${item.booker_name}</td>
-            </tr>
-            <tr>
-              <td class="label">สินค้า :</td>
-              <td style="text-align: right;" class="bold">${item.product || 'ของชำทั่วไป'}</td>
-            </tr>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <div class="center bold" style="font-size: 10.5pt; margin-bottom: 2mm;">รายละเอียดค่าเช่าประจำเดือน</div>
-          <table class="price-table">
-            ${dayDetailsHtml}
-            ${item.storage_fee > 0 ? `
-              <tr>
-                <td class="bold">ค่าฝากของสะสม :</td>
-                <td style="text-align: right;" class="bold">${parseNumber(item.storage_fee).toFixed(2)}</td>
-              </tr>
-            ` : ''}
-          </table>
-          
-          <div class="divider"></div>
-          
-          <table class="total-table">
-            <tr class="grand-total-row">
-              <td class="label">รวมยอดต้องชำระ :</td>
-              <td class="val">${grandTotal.toFixed(2)} บาท</td>
-            </tr>
-            <tr>
-              <td class="label" style="border-top: 1px dashed #000; padding-top: 1.5mm;">ชำระแล้ว :</td>
-              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm; text-align: right; color: green;">${paidVal.toFixed(2)} บาท</td>
-            </tr>
-            <tr class="grand-total-row">
-              <td class="label" style="border-top: 1.5px solid #000; padding-top: 2mm;">ยอดค้างชำระสุทธิ :</td>
-              <td class="val" style="border-top: 1.5px solid #000; padding-top: 2mm; text-align: right; color: red; font-size: 12.5pt;">${remaining.toFixed(2)} บาท</td>
-            </tr>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <div class="footer">
-            <span class="bold">กรุณาชำระเงินภายในระยะเวลาที่กำหนด</span><br/>
-            ขอขอบพระคุณที่ร่วมร่วมมือกับทางตลาดนัด<br/>
-            ตลาดนัดลาดสวายวินเทจ
-          </div>
-          
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
   };
 
   // Open storage print modal and compute default values
@@ -3008,6 +2851,8 @@ export default function BookingPage() {
 
   const handleOpenNewMonthlyModal = () => {
     fetchAllMonthly();
+    setIsEditingMonthlyMode(false);
+    setEditingMonthlyId(null);
     setNewMonthlyStartDate(new Date().toISOString().split('T')[0]);
     setNewMonthlyDays({ wed: true, sat: true, sun: true });
     setNewMonthlyResetLayout(true);
@@ -3028,6 +2873,219 @@ export default function BookingPage() {
     setStallFilterSat('');
     setStallFilterSun('');
     setShowNewMonthlyModal(true);
+  };
+
+  const handleOpenEditMonthlyModal = (item) => {
+    if (!item) return;
+    fetchAllMonthly();
+    setIsEditingMonthlyMode(true);
+    setEditingMonthlyId(item.id);
+    setNewMonthlyStartDate(item.start_date);
+    setNewMonthlyCustomerType(item.customer_type || 'Standard');
+    setNewMonthlyBookerName(item.booker_name || '');
+    setNewMonthlyProduct(item.product || '');
+    setNewMonthlyPhone(item.phone || '');
+    setNewMonthlyNote(item.note || '');
+    setNewMonthlyStorageFee(String(item.storage_fee || ''));
+    setNewMonthlyElecUnit(String(item.elec_unit || ''));
+    
+    // Parse days
+    const daysStr = String(item.selected_days || '').toLowerCase();
+    const wed = daysStr.includes('wed') || daysStr.includes('พุธ');
+    const sat = daysStr.includes('sat') || daysStr.includes('เสาร์');
+    const sun = daysStr.includes('sun') || daysStr.includes('อาทิตย์');
+    setNewMonthlyDays({ wed, sat, sun });
+    
+    // Parse stalls per day
+    let details = [];
+    try {
+      details = JSON.parse(item.stall_details || '[]');
+    } catch (e) {}
+    
+    const wedStalls = [];
+    const satStalls = [];
+    const sunStalls = [];
+    details.forEach(st => {
+      const days = st.days || [];
+      if (days.includes(3)) wedStalls.push(st.name);
+      if (days.includes(6)) satStalls.push(st.name);
+      if (days.includes(0)) sunStalls.push(st.name);
+    });
+    setNewMonthlyStallsWed(wedStalls);
+    setNewMonthlyStallsSat(satStalls);
+    setNewMonthlyStallsSun(sunStalls);
+    
+    setEditMonthlyPaidAmount(String(item.paid_amount || '0'));
+    setEditMonthlyStatus(item.status || 'ค้างชำระ');
+    setEditMonthlyRenewalStatus(item.renewal_status || '');
+    
+    setShowAddStallSelectWed(false);
+    setShowAddStallSelectSat(false);
+    setShowAddStallSelectSun(false);
+    setStallFilterWed('');
+    setStallFilterSat('');
+    setStallFilterSun('');
+    setShowNewMonthlyModal(true);
+  };
+
+  const handleSaveEditedMonthlyBooking = async () => {
+    if (!editingMonthlyId) return;
+    if (!newMonthlyBookerName.trim()) {
+      showAlert("โปรดกรอกชื่อผู้เช่า", "แจ้งเตือน", true);
+      return;
+    }
+
+    const hasWed = newMonthlyDays.wed && newMonthlyStallsWed.length > 0;
+    const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
+    const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
+    
+    if (newMonthlyCustomerType !== 'VIP' && !hasWed && !hasSat && !hasSun) {
+      showAlert("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
+      return;
+    }
+
+    setLoadingMonthly(true);
+    try {
+      const startD = new Date(newMonthlyStartDate);
+      const year = startD.getFullYear();
+      const monthVal = startD.getMonth();
+      const lastDay = new Date(year, monthVal + 1, 0).getDate();
+      
+      const dateThai = new Date(year + 543, monthVal, 1);
+      const bookingMonthStr = dateThai.toString();
+      
+      const allSelectedStallNames = Array.from(new Set([
+        ...newMonthlyStallsWed,
+        ...newMonthlyStallsSat,
+        ...newMonthlyStallsSun
+      ]));
+      
+      const stallDetails = allSelectedStallNames.map(stallName => {
+        const days = [];
+        if (newMonthlyDays.wed && newMonthlyStallsWed.includes(stallName)) days.push(3);
+        if (newMonthlyDays.sat && newMonthlyStallsSat.includes(stallName)) days.push(6);
+        if (newMonthlyDays.sun && newMonthlyStallsSun.includes(stallName)) days.push(0);
+        return { name: stallName, days };
+      });
+
+      const dailyBookings = [];
+      const timestamp = new Date().toISOString();
+      const isFullPackage = newMonthlyDays.wed && newMonthlyDays.sat && newMonthlyDays.sun;
+
+      for (let d = startD.getDate(); d <= lastDay; d++) {
+        const currentD = new Date(year, monthVal, d);
+        const dayOfWeek = currentD.getDay(); // 0-6
+        
+        stallDetails.forEach(stallDetail => {
+          const myDays = stallDetail.days || [];
+          if (myDays.includes(dayOfWeek)) {
+            const stallName = stallDetail.name;
+            const sMaster = stalls.find(s => s.name === stallName);
+            let price = sMaster ? sMaster.price_wed : 0;
+            if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
+            if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
+            
+            if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
+              price = sMaster.price_month;
+            }
+            if (newMonthlyCustomerType === 'VIP') price = 0;
+            
+            const dateStr = `${year}-${String(monthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const uniqueDailyId = `${editingMonthlyId}-${dateStr}-${stallName.replace(/[\[\]]/g, '')}`;
+            
+            dailyBookings.push({
+              id: uniqueDailyId,
+              date: dateStr,
+              stall_name: stallName,
+              booker_name: newMonthlyBookerName,
+              product: newMonthlyProduct,
+              type: 'รายเดือน',
+              elec_unit: parseNumber(newMonthlyElecUnit || 0),
+              elec_price: parseNumber(newMonthlyElecUnit || 0) * 10,
+              stall_price: price,
+              total_price: price + (parseNumber(newMonthlyElecUnit || 0) * 10),
+              payment_method: 'Cash',
+              status: editMonthlyStatus,
+              note: 'จองรายเดือน (แก้ไข)',
+              master_id: editingMonthlyId
+            });
+          }
+        });
+      }
+
+      // 1. Delete old bookings
+      const { error: delError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('master_id', editingMonthlyId);
+      if (delError) throw delError;
+
+      // 2. Insert new bookings
+      if (dailyBookings.length > 0) {
+        const { error: insError } = await supabase
+          .from('bookings')
+          .insert(dailyBookings);
+        if (insError) throw insError;
+      }
+
+      // 3. Update monthly booking row
+      const rentTotal = dailyBookings.reduce((sum, b) => sum + b.stall_price, 0);
+      const totalElecCharged = Array.from(new Set(dailyBookings.map(b => b.date))).length;
+      const totalElecPrice = totalElecCharged * (parseNumber(newMonthlyElecUnit || 0) * 10);
+      const storageFeeVal = parseNumber(newMonthlyStorageFee || 0);
+      
+      let monthlyTotal = rentTotal + totalElecPrice + storageFeeVal;
+      let monthlyStatus = editMonthlyStatus;
+      if (newMonthlyCustomerType === 'Regular') {
+        monthlyTotal = 0;
+        monthlyStatus = 'ชำระรายวัน';
+      } else if (newMonthlyCustomerType === 'VIP') {
+        monthlyTotal = 0;
+        monthlyStatus = 'ชำระแล้ว';
+      }
+
+      const stallsString = allSelectedStallNames.join(', ');
+      
+      const { error: updateError } = await supabase
+        .from('monthly_bookings')
+        .update({
+          start_date: newMonthlyStartDate,
+          booker_name: newMonthlyBookerName,
+          stalls: stallsString,
+          product: newMonthlyProduct,
+          status: monthlyStatus,
+          elec_unit: parseNumber(newMonthlyElecUnit || 0),
+          total_price: monthlyTotal,
+          paid_amount: parseNumber(editMonthlyPaidAmount),
+          note: newMonthlyNote.trim(),
+          selected_days: Object.keys(newMonthlyDays).filter(day => newMonthlyDays[day]).map(day => day === 'wed' ? 'Wed' : day === 'sat' ? 'Sat' : 'Sun').join(', '),
+          booking_month: bookingMonthStr,
+          phone: newMonthlyPhone,
+          stall_details: JSON.stringify(stallDetails),
+          customer_type: newMonthlyCustomerType,
+          storage_fee: storageFeeVal,
+          renewal_status: editMonthlyRenewalStatus
+        })
+        .eq('id', editingMonthlyId);
+      if (updateError) throw updateError;
+
+      showAlert("แก้ไขการจองรายเดือนสำเร็จ", "สำเร็จ");
+      setShowNewMonthlyModal(false);
+      
+      // Update active state
+      if (activeMonthlyBooking && activeMonthlyBooking.id === editingMonthlyId) {
+        setActiveMonthlyBooking(null);
+        setActiveMonthlyTransactions([]);
+      }
+      
+      fetchAllMonthly();
+      fetchBookingsAndStorage();
+    } catch (err) {
+      console.error(err);
+      showAlert("เกิดข้อผิดพลาดในการบันทึกการแก้ไข: " + err.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
   };
 
   const handleCreateNewMonthlyBooking = async (e) => {
@@ -3402,6 +3460,198 @@ export default function BookingPage() {
     }
   };
 
+  const handleBulkRenewSubmit = async () => {
+    if (bulkRenewCheckedIds.length === 0) {
+      showAlert("กรุณาเลือกผู้เช่าที่ต้องการต่อสัญญาอย่างน้อย 1 ราย", "แจ้งเตือน", true);
+      return;
+    }
+
+    if (!bulkRenewFromMonth || !bulkRenewToMonth) {
+      showAlert("ระบุเดือนต้นทางและปลายทางไม่ถูกต้อง", "แจ้งเตือน", true);
+      return;
+    }
+
+    setLoadingMonthly(true);
+    try {
+      let successCount = 0;
+      let skippedCount = 0;
+
+      for (const oldId of bulkRenewCheckedIds) {
+        const item = monthlyList.find(b => b.id === oldId);
+        if (!item) continue;
+
+        // Parse target month dates
+        const parts = item.start_date ? item.start_date.split('-') : ['2026', '07', '01'];
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1;
+
+        const nextDate = new Date(year, month + 1, 1);
+        const nextYear = nextDate.getFullYear();
+        const nextMonthVal = nextDate.getMonth();
+        const nextStartDateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-01`;
+
+        const nextDateThai = new Date(year + 543, month + 1, 1);
+        const nextBookingMonthStr = nextDateThai.toString();
+        const nextMonthFormatted = formatBookingMonth(nextBookingMonthStr);
+
+        // Safety check if already exists in next month
+        const { data: existing, error: existError } = await supabase
+          .from('monthly_bookings')
+          .select('id')
+          .eq('booker_name', item.booker_name)
+          .eq('booking_month', nextBookingMonthStr)
+          .limit(1);
+        if (existError) throw existError;
+        if (existing && existing.length > 0) {
+          skippedCount++;
+          continue;
+        }
+
+        // Apply edits if pre-edited
+        const customEdit = bulkRenewEditData[oldId] || {};
+        const customerType = customEdit.customer_type || item.customer_type || 'Standard';
+        const product = customEdit.product !== undefined ? customEdit.product : item.product || '';
+        const phone = customEdit.phone !== undefined ? customEdit.phone : item.phone || '';
+        const note = customEdit.note !== undefined ? customEdit.note : item.note || '';
+        const storageFeeVal = customEdit.storage_fee !== undefined ? parseNumber(customEdit.storage_fee) : parseNumber(item.storage_fee || 0);
+        const elecUnitVal = customEdit.elec_unit !== undefined ? parseNumber(customEdit.elec_unit) : parseNumber(item.elec_unit || 0);
+        
+        let selectedDays = item.selected_days;
+        let stallDetailsStr = item.stall_details;
+        
+        if (customEdit.selected_days) {
+          selectedDays = customEdit.selected_days;
+        }
+        if (customEdit.stall_details) {
+          stallDetailsStr = customEdit.stall_details;
+        }
+
+        const newBookingId = `BK-${String(nextYear).substr(-2)}${String(nextMonthVal + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const lastDay = new Date(nextYear, nextMonthVal + 1, 0).getDate();
+        const dailyBookings = [];
+        
+        let details = [];
+        try {
+          details = JSON.parse(stallDetailsStr || '[]');
+        } catch (e) {}
+
+        const allDays = new Set();
+        details.forEach(st => {
+          if (st.days) st.days.forEach(dayVal => allDays.add(dayVal));
+        });
+        const isFullPackage = allDays.has(0) && allDays.has(3) && allDays.has(6);
+
+        for (let d = 1; d <= lastDay; d++) {
+          const currentD = new Date(nextYear, nextMonthVal, d);
+          const dayOfWeek = currentD.getDay(); // 0-6
+          
+          details.forEach(stallDetail => {
+            const myDays = stallDetail.days || [];
+            if (myDays.includes(dayOfWeek)) {
+              const stallName = stallDetail.name;
+              const sMaster = stalls.find(s => s.name === stallName);
+              let price = sMaster ? sMaster.price_wed : 0;
+              if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
+              if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
+              
+              if (customerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
+                price = sMaster.price_month;
+              }
+              if (customerType === 'VIP') price = 0;
+              
+              const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+              const uniqueDailyId = `${newBookingId}-${dateStr}-${stallName.replace(/[\[\]]/g, '')}`;
+              
+              dailyBookings.push({
+                id: uniqueDailyId,
+                date: dateStr,
+                stall_name: stallName,
+                booker_name: item.booker_name,
+                product: product,
+                type: 'รายเดือน',
+                elec_unit: elecUnitVal,
+                elec_price: elecUnitVal * 10,
+                stall_price: price,
+                total_price: price + (elecUnitVal * 10),
+                payment_method: 'Cash',
+                status: 'ค้างชำระ',
+                note: 'ต่ออายุอัตโนมัติ (กลุ่ม)',
+                storage_fee: storageFeeVal,
+                master_id: newBookingId
+              });
+            }
+          });
+        }
+
+        // Insert daily bookings
+        if (dailyBookings.length > 0) {
+          const { error: dbError } = await supabase
+            .from('bookings')
+            .insert(dailyBookings);
+          if (dbError) throw dbError;
+        }
+
+        // Calculate monthly totals
+        const rentTotal = dailyBookings.reduce((sum, b) => sum + b.stall_price, 0);
+        const totalElecCharged = Array.from(new Set(dailyBookings.map(b => b.date))).length;
+        const totalElecPrice = totalElecCharged * (elecUnitVal * 10);
+        
+        let monthlyTotal = rentTotal + totalElecPrice + storageFeeVal;
+        let monthlyStatus = 'ค้างชำระ';
+        if (customerType === 'Regular') {
+          monthlyTotal = 0;
+          monthlyStatus = 'ชำระรายวัน';
+        } else if (customerType === 'VIP') {
+          monthlyTotal = 0;
+          monthlyStatus = 'ชำระแล้ว';
+        }
+
+        const stallsString = details.map(d => d.name).join(', ');
+
+        const monthlyData = {
+          id: newBookingId,
+          timestamp: new Date().toISOString(),
+          start_date: nextStartDateStr,
+          booker_name: item.booker_name,
+          stalls: stallsString,
+          product: product,
+          status: monthlyStatus,
+          elec_unit: elecUnitVal,
+          total_price: monthlyTotal,
+          paid_amount: 0,
+          note: note.trim() || `ต่ออายุอัตโนมัติแบบกลุ่ม [${customerType}]`,
+          payment_method: 'Cash',
+          selected_days: selectedDays,
+          booking_month: nextBookingMonthStr,
+          phone: phone,
+          stall_details: stallDetailsStr,
+          customer_type: customerType,
+          storage_fee: storageFeeVal,
+          renewal_status: ''
+        };
+
+        const { error: mbError } = await supabase
+          .from('monthly_bookings')
+          .insert([monthlyData]);
+        if (mbError) throw mbError;
+
+        successCount++;
+      }
+
+      showAlert(`ต่อสัญญากลุ่มสำเร็จจำนวน ${successCount} ราย (ข้ามที่ซ้ำไป ${skippedCount} ราย)`, "สำเร็จ");
+      setShowBulkRenewModal(false);
+      setBulkRenewCheckedIds([]);
+      setBulkRenewEditData({});
+      fetchAllMonthly();
+      fetchBookingsAndStorage();
+    } catch (err) {
+      console.error(err);
+      showAlert("เกิดข้อผิดพลาดในการต่อสัญญากลุ่ม: " + err.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
   const handleMonthlyPaymentSubmit = async (e) => {
     e.preventDefault();
     if (!activeMonthlyBooking) return;
@@ -3436,7 +3686,8 @@ export default function BookingPage() {
         stall_amt: amountVal,
         elec_amt: 0,
         storage_amt: 0,
-        bill_type: 'General'
+        bill_type: 'General',
+        slip_url: monthlyPaymentForm.method === 'โอนจ่าย' ? (monthlyPaymentForm.slip_base64 || null) : null
       };
 
       const { error: txnError } = await supabase
@@ -3462,6 +3713,7 @@ export default function BookingPage() {
       showAlert("บันทึกการชำระเงินสำเร็จ", "สำเร็จ");
       setShowMonthlyPaymentModal(false);
       setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+      setSlipPreviewUrl(null);
       
       // Refresh details
       fetchAllMonthly();
@@ -3571,6 +3823,37 @@ export default function BookingPage() {
     } catch (e) {
       console.error(e);
       showAlert("เกิดข้อผิดพลาดในการลบข้อมูล: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
+  const handleToggleNonRenewal = async (item) => {
+    if (!adminUser) {
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
+      return;
+    }
+    if (!item) return;
+
+    const newStatus = item.renewal_status === 'ไม่ต่อสัญญา' ? '' : 'ไม่ต่อสัญญา';
+    setLoadingMonthly(true);
+    try {
+      const { error } = await supabase
+        .from('monthly_bookings')
+        .update({ renewal_status: newStatus })
+        .eq('id', item.id);
+      if (error) throw error;
+
+      showAlert(newStatus === 'ไม่ต่อสัญญา' ? "บันทึกแจ้งไม่ต่อสัญญาแล้ว" : "ยกเลิกการแจ้งไม่ต่อสัญญาแล้ว", "สำเร็จ");
+      
+      if (activeMonthlyBooking && activeMonthlyBooking.id === item.id) {
+        setActiveMonthlyBooking({ ...activeMonthlyBooking, renewal_status: newStatus });
+      }
+      
+      fetchAllMonthly();
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการบันทึกสถานะ: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingMonthly(false);
     }
@@ -3992,8 +4275,19 @@ export default function BookingPage() {
                         </td>
                         <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-1 justify-center">
+                            <button
+                              onClick={() => handleToggleNonRenewal(item)}
+                              className={`px-2 py-1 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                                item.renewal_status === 'ไม่ต่อสัญญา'
+                                  ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-sm'
+                                  : 'bg-red-50/40 text-red-500 border-red-200 hover:bg-red-100/60'
+                              }`}
+                              title={item.renewal_status === 'ไม่ต่อสัญญา' ? "คลิกเพื่อยกเลิกแจ้งไม่ต่อสัญญา" : "คลิกเพื่อแจ้งไม่ต่อสัญญา"}
+                            >
+                              แจ้งไม่ต่อ
+                            </button>
                             <button 
-                              onClick={() => setSelectedMonthlyItem(item)}
+                              onClick={() => handleOpenEditMonthlyModal(item)}
                               className="px-2 py-1 bg-[#F5E6D3] text-[#8B4513] border border-[#D7CCC8] rounded text-[10px] font-bold hover:bg-[#EFEBE9] cursor-pointer"
                             >
                               แก้ไข
@@ -4075,6 +4369,18 @@ export default function BookingPage() {
                           {txn.note && (
                             <div className="text-[10px] text-gray-500 italic bg-white p-1 rounded border border-gray-100 mt-0.5">
                               โน้ต: {txn.note}
+                            </div>
+                          )}
+                          {txn.slip_url && (
+                            <div className="mt-1.5 flex items-center justify-between bg-blue-50/50 p-1.5 rounded border border-blue-100/50 text-[10px]">
+                              <span className="text-blue-900 font-bold flex items-center gap-1">📎 มีหลักฐานการโอนเงิน (สลิป)</span>
+                              <button
+                                type="button"
+                                onClick={() => setSlipPreviewUrl(txn.slip_url)}
+                                className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer transition-all active:scale-95 text-[9px]"
+                              >
+                                ดูรูปภาพสลิป
+                              </button>
                             </div>
                           )}
                           <div className="text-[9px] text-gray-400 text-right mt-0.5">ผู้ทำรายการ: {txn.officer || '-'}</div>
@@ -4291,6 +4597,45 @@ export default function BookingPage() {
                   </div>
                 </div>
 
+                {monthlyPaymentForm.method === 'โอนจ่าย' && (
+                  <div className="flex flex-col gap-1.5 p-3 bg-blue-50/30 rounded-xl border border-blue-100/60 text-left text-xs">
+                    <label className="text-xs font-bold text-blue-900 flex justify-between">
+                      <span>แนบภาพสลิปโอนเงิน (สแกนอัตโนมัติ)</span>
+                      {slipPreviewUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSlipPreviewUrl(null);
+                            setMonthlyPaymentForm(prev => ({ ...prev, slip_base64: null }));
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ลบรูป
+                        </button>
+                      )}
+                    </label>
+                    <div className="relative border-2 border-dashed border-blue-200 hover:border-blue-400 bg-white rounded-lg p-2 transition-colors">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleSlipChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                      />
+                      {slipPreviewUrl ? (
+                        <div className="flex flex-col items-center gap-1.5 py-1">
+                          <img src={slipPreviewUrl} alt="Slip Preview" className="h-28 w-auto object-contain rounded-md shadow border border-gray-200" />
+                          <span className="text-[10px] text-gray-500 font-semibold">อัปโหลดสลิปเรียบร้อย</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1.5 py-3 text-blue-500/80">
+                          <CreditCard className="w-6 h-6 animate-pulse" />
+                          <span className="text-[10px] font-bold">คลิกเพื่ออัปโหลดไฟล์สลิป</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* โน้ต / หมายเหตุ */}
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-gray-700">โน้ต / หมายเหตุ</label>
@@ -4406,7 +4751,9 @@ export default function BookingPage() {
               {/* Header */}
               <div className="bg-[#5D4037] text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-[#8B4513]">
                 <div>
-                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-white">🗓️ จัดการข้อมูลรายเดือน (จองล็อคใหม่)</h3>
+                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-white">
+                    {isEditingMonthlyMode ? "🗓️ จัดการข้อมูลรายเดือน (แก้ไขการจอง)" : "🗓️ จัดการข้อมูลรายเดือน (จองล็อคใหม่)"}
+                  </h3>
                   <p className="text-[10px] text-amber-200 font-bold mt-0.5">
                     เริ่ม: {(() => {
                       if (!newMonthlyStartDate) return '-';
@@ -4432,7 +4779,17 @@ export default function BookingPage() {
               </div>
 
               {/* Content Form */}
-              <form onSubmit={handleCreateNewMonthlyBooking} className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs">
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (isEditingMonthlyMode) {
+                    handleSaveEditedMonthlyBooking();
+                  } else {
+                    handleCreateNewMonthlyBooking(e);
+                  }
+                }} 
+                className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs"
+              >
                 
                 {/* Date & Days Row */}
                 <div className="grid grid-cols-2 gap-3 bg-[#F5E6D3]/40 p-3 rounded-lg border border-[#D7CCC8]">
@@ -4886,27 +5243,792 @@ export default function BookingPage() {
                     />
                   </div>
                 </div>
+                {isEditingMonthlyMode && (
+                  <div className="bg-[#F5E6D3]/15 p-3 rounded-lg border border-[#D7CCC8]/60 flex flex-col gap-3 text-left">
+                    <div className="font-bold text-xs text-amber-900 border-b border-dashed pb-1.5 mb-0.5">เฉพาะข้อมูลการแก้ไขสัญญา</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
+                        <input 
+                          type="number"
+                          value={editMonthlyPaidAmount}
+                          onChange={(e) => setEditMonthlyPaidAmount(e.target.value)}
+                          className="p-2 border border-gray-300 rounded bg-white font-bold"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-bold text-gray-700">สถานะการชำระเงิน</label>
+                        <select 
+                          value={editMonthlyStatus}
+                          onChange={(e) => setEditMonthlyStatus(e.target.value)}
+                          className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
+                        >
+                          <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
+                          <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">สถานะต่อสัญญา</label>
+                      <select 
+                        value={editMonthlyRenewalStatus}
+                        onChange={(e) => setEditMonthlyRenewalStatus(e.target.value)}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
+                      >
+                        <option value="">(ยังไม่ระบุ)</option>
+                        <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
+                        <option value="รอยืนยัน">รอยืนยัน</option>
+                        <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={loadingMonthly}
-                  className="w-full py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-sm shadow transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                >
-                  {loadingMonthly ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>กำลังบันทึกข้อมูล...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4.5 h-4.5" />
-                      <span>บันทึกข้อมูล</span>
-                    </>
-                  )}
-                </button>
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loadingMonthly}
+                className="w-full py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-sm shadow transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+              >
+                {loadingMonthly ? (
+                  <>
+                    <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                    <span>กำลังบันทึกข้อมูล...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4.5 h-4.5" />
+                    <span>{isEditingMonthlyMode ? "บันทึกการแก้ไข" : "บันทึกข้อมูล"}</span>
+                  </>
+                )}
+              </button>
 
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* 🧾 3. Invoice Preview Modal */}
+        {invoicePreviewItem && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-sm border border-[#8B4513]/30 overflow-hidden flex flex-col animate-pop-in text-gray-800 font-sans text-xs">
+              {/* Modal Actions Header */}
+              <div className="bg-[#5D4037] text-white px-4 py-2 flex justify-between items-center shrink-0 border-b border-[#8B4513] text-xs">
+                <span className="font-bold">พรีวิวใบแจ้งยอดชำระเงิน</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const printContents = document.getElementById('lvt-invoice-print-area').innerHTML;
+                      const originalContents = document.body.innerHTML;
+                      document.body.innerHTML = printContents;
+                      window.print();
+                      window.location.reload(); // Reload to restore React state
+                    }}
+                    className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer"
+                  >
+                    พิมพ์
+                  </button>
+                  <button 
+                    onClick={() => setInvoicePreviewItem(null)} 
+                    className="p-0.5 rounded-full hover:bg-white/10 text-white cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Area */}
+              <div id="lvt-invoice-print-area" className="p-6 bg-[#FFFDF9] text-left flex flex-col gap-4">
+                {/* Header Info */}
+                <div className="flex flex-col items-center text-center gap-1">
+                  <img src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" className="h-14 w-14 object-contain" />
+                  <h2 className="font-extrabold text-base text-gray-900 mt-1">ตลาดนัดลาดสวายวินเทจ</h2>
+                  <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-0.5 rounded-full border border-purple-200">
+                    ใบแจ้งยอดชำระเงิน (Invoice)
+                  </div>
+                </div>
+
+                {/* Customer Box */}
+                <div className="bg-purple-50/40 border border-purple-100 rounded-lg p-3 text-xs flex flex-col gap-1.5 font-bold">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ประจำเดือน</span>
+                    <span className="text-purple-700">{formatBookingMonth(invoicePreviewItem.booking_month)}</span>
+                  </div>
+                  <div className="flex flex-col border-t border-purple-100/50 pt-1.5 mt-0.5">
+                    <span className="text-gray-500 mb-0.5">ผู้จอง/สินค้า</span>
+                    <span className="text-gray-800">{invoicePreviewItem.booker_name} / {invoicePreviewItem.product || 'ทั่วไป'}</span>
+                  </div>
+                </div>
+
+                {/* Billing Table */}
+                <div className="flex flex-col text-xs">
+                  <div className="flex justify-between border-b pb-1.5 text-gray-500 font-bold text-[10px]">
+                    <span>รายการ (รายละเอียด)</span>
+                    <span className="w-20 text-right">จำนวนเงิน</span>
+                  </div>
+
+                  <div className="divide-y divide-gray-100">
+                    {(() => {
+                      let details = [];
+                      try {
+                        details = JSON.parse(invoicePreviewItem.stall_details || '[]');
+                      } catch (e) {}
+
+                      const isFullPackage = invoicePreviewItem.selected_days?.toLowerCase().includes('wed') &&
+                                            invoicePreviewItem.selected_days?.toLowerCase().includes('sat') &&
+                                            invoicePreviewItem.selected_days?.toLowerCase().includes('sun');
+
+                      const monthDStr = formatBookingMonth(invoicePreviewItem.booking_month).split(' ')[0] || '';
+                      const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
+
+                      let itemsHtml = [];
+                      let totalNadsCount = 0;
+
+                      details.forEach((stallDetail) => {
+                        const stallName = stallDetail.name;
+                        const sMaster = stalls.find(s => s.name === stallName);
+                        if (!sMaster) return;
+
+                        // Count occurrences per day
+                        const dayCounts = {
+                          3: getDayOccurrences(invoicePreviewItem.start_date, 3, stallDetail.days),
+                          6: getDayOccurrences(invoicePreviewItem.start_date, 6, stallDetail.days),
+                          0: getDayOccurrences(invoicePreviewItem.start_date, 0, stallDetail.days)
+                        };
+
+                        const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
+
+                        [3, 6, 0].forEach((dNum) => {
+                          const count = dayCounts[dNum];
+                          if (count > 0) {
+                            totalNadsCount += count;
+                            let price = sMaster.price_wed;
+                            if (dNum === 6) price = sMaster.price_sat;
+                            if (dNum === 0) price = sMaster.price_sun;
+
+                            if (invoicePreviewItem.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
+                              price = sMaster.price_month;
+                            }
+                            if (invoicePreviewItem.customer_type === 'VIP') price = 0;
+
+                            const subTotal = (price + elecRate) * count;
+
+                            itemsHtml.push(
+                              <div key={`${stallName}-${dNum}`} className="py-2 flex flex-col gap-0.5">
+                                <span className="font-extrabold text-gray-800">
+                                  {monthDStr} {dayNames[dNum]} ล็อค : {cleanStallName(stallName)}
+                                </span>
+                                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                                  <span>({price} x {count}) + ({elecRate} x {count})</span>
+                                  <span className="font-extrabold text-gray-700 text-xs">{subTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                </div>
+                              </div>
+                            );
+                          }
+                        });
+                      });
+
+                      // Storage fee row
+                      if (parseNumber(invoicePreviewItem.storage_fee) > 0) {
+                        itemsHtml.push(
+                          <div key="storage" className="py-2 flex justify-between font-bold">
+                            <span className="text-gray-800">📦 ค่าฝากของ</span>
+                            <span className="text-gray-700">{parseNumber(invoicePreviewItem.storage_fee).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <>
+                          <div className="text-[10px] text-gray-400 font-bold mt-1.5 mb-1">จำนวนทั้งหมด {totalNadsCount} นัด</div>
+                          {itemsHtml}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Totals Section */}
+                <div className="border-t border-dashed border-gray-300 pt-2 flex flex-col gap-1.5 font-bold text-xs mt-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ยอดรวมทั้งสิ้น</span>
+                    <span className="text-purple-700 text-sm font-extrabold">
+                      {parseNumber(invoicePreviewItem.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ชำระแล้ว</span>
+                    <span className="text-green-700">
+                      {parseNumber(invoicePreviewItem.paid_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-dashed pt-1.5 mt-0.5">
+                    <span className="text-gray-500">ยอดค้างชำระสุทธิ</span>
+                    <span className="text-red-600 text-sm font-extrabold">
+                      {(parseNumber(invoicePreviewItem.total_price) - parseNumber(invoicePreviewItem.paid_amount || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bank Account Footer Info */}
+                <div className="bg-[#E8F5E9] border border-green-200 rounded-lg p-3 flex flex-col gap-1 mt-2 text-xs font-bold text-green-800">
+                  <span className="text-[10px] text-green-700 block mb-0.5 font-bold">ช่องทางการชำระเงิน</span>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shrink-0">K</div>
+                    <span className="text-sm font-black text-green-950">204-1-25235-1</span>
+                    <span className="text-[10px] font-bold text-green-600">ธนาคารกสิกรไทย</span>
+                  </div>
+                  <div className="text-[10px] text-green-905 border-t border-green-200/50 pt-1 mt-0.5 font-bold">
+                    ชื่อบัญชี : บจก.เดอะเบสพัฒนาและธุรกิจ
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🔄 4. Bulk Renewal Manager Modal */}
+        {showBulkRenewModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-5xl border-2 border-purple-800 overflow-hidden flex flex-col max-h-[90vh] animate-pop-in text-left text-xs font-sans text-gray-800">
+              {/* Header */}
+              <div className="bg-purple-900 text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-purple-950">
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-white">🔄 จัดการต่อสัญญาลูกค้ารายเดือนแบบกลุ่ม</h3>
+                  <p className="text-[10px] text-purple-200 font-bold mt-0.5">คัดลอกและอัปเดตข้อมูลสัญญาสำหรับรอบเดือนถัดไป</p>
+                </div>
+                <button 
+                  onClick={() => setShowBulkRenewModal(false)} 
+                  className="p-1 rounded-full bg-red-600/80 hover:bg-red-700 text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Month Selectors bar */}
+              <div className="bg-purple-50/50 px-5 py-3 border-b border-purple-100 flex items-center gap-4 shrink-0 font-bold text-gray-700">
+                <div className="flex items-center gap-2">
+                  <span>จากรอบเดือน:</span>
+                  <select
+                    value={bulkRenewFromMonth}
+                    onChange={(e) => {
+                      setBulkRenewFromMonth(e.target.value);
+                      setBulkRenewCheckedIds([]);
+                      setBulkRenewEditData({});
+                    }}
+                    className="p-1.5 border border-purple-200 rounded bg-white text-purple-900 cursor-pointer font-bold focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    {sortThaiMonthsDescending(Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-')))).map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span>➡️ ไปยังรอบเดือนปลายทาง:</span>
+                  <span className="bg-purple-100 text-purple-800 px-3 py-1.5 rounded-lg border border-purple-200 font-extrabold">
+                    {computeNextMonthThai(bulkRenewFromMonth) || '(ระบุเดือนต้นทาง)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Main Table Area */}
+              <div className="flex-1 overflow-auto p-4 min-h-[300px]">
+                {(() => {
+                  const targetMonth = computeNextMonthThai(bulkRenewFromMonth);
+                  const sourceBookings = monthlyList.filter(item =>
+                    formatBookingMonth(item.booking_month) === bulkRenewFromMonth &&
+                    item.renewal_status !== 'ไม่ต่อสัญญา'
+                  );
+
+                  if (sourceBookings.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-20 text-gray-400 font-bold gap-2">
+                        <span>ไม่พบลูกค้ารายเดือนในรอบเดือน {bulkRenewFromMonth}</span>
+                        <span className="text-[10px] text-gray-400 font-normal">(หรือผู้เช่าทั้งหมดได้รับการตั้งค่าสถานะไม่ต่อสัญญา)</span>
+                      </div>
+                    );
+                  }
+
+                  const isAlreadyRenewed = (item) => {
+                    return monthlyList.some(mb => mb.booker_name === item.booker_name && formatBookingMonth(mb.booking_month) === targetMonth);
+                  };
+
+                  const nonRenewedBookings = sourceBookings.filter(item => !isAlreadyRenewed(item));
+                  const allChecked = nonRenewedBookings.length > 0 && bulkRenewCheckedIds.length === nonRenewedBookings.length;
+
+                  return (
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-purple-100/60 border-b border-purple-200 text-purple-955 font-bold">
+                          <th className="p-2 w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              disabled={nonRenewedBookings.length === 0}
+                              onChange={() => {
+                                if (allChecked) {
+                                  setBulkRenewCheckedIds([]);
+                                } else {
+                                  setBulkRenewCheckedIds(nonRenewedBookings.map(b => b.id));
+                                }
+                              }}
+                              className="w-4 h-4 cursor-pointer rounded"
+                            />
+                          </th>
+                          <th className="p-2">ชื่อลูกค้า</th>
+                          <th className="p-2">ล็อคต้นทาง</th>
+                          <th className="p-2">วันลงขาย</th>
+                          <th className="p-2 text-center">จำนวนไฟ</th>
+                          <th className="p-2 text-center">ค่าฝากของ</th>
+                          <th className="p-2 text-center">ยอดเช่ารวม</th>
+                          <th className="p-2 text-center">สถานะ/จัดการ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {sourceBookings.map(item => {
+                          const renewed = isAlreadyRenewed(item);
+                          const isChecked = bulkRenewCheckedIds.includes(item.id);
+                          const customEdit = bulkRenewEditData[item.id] || {};
+                          
+                          // Resolve display properties with custom edits
+                          const dispType = customEdit.customer_type || item.customer_type || 'Standard';
+                          const dispProduct = customEdit.product !== undefined ? customEdit.product : item.product || '';
+                          const dispPhone = customEdit.phone !== undefined ? customEdit.phone : item.phone || '';
+                          const dispStorage = customEdit.storage_fee !== undefined ? parseNumber(customEdit.storage_fee) : parseNumber(item.storage_fee || 0);
+                          const dispElec = customEdit.elec_unit !== undefined ? parseNumber(customEdit.elec_unit) : parseNumber(item.elec_unit || 0);
+                          const dispDays = customEdit.selected_days || item.selected_days;
+                          
+                          let dispStalls = item.stalls;
+                          if (customEdit.stall_details) {
+                            try {
+                              const sDet = JSON.parse(customEdit.stall_details);
+                              dispStalls = sDet.map(x => x.name).join(', ');
+                            } catch(e){}
+                          }
+
+                          // Compute simulated price if edited
+                          let dispPrice = item.total_price;
+                          if (customEdit.stall_details || customEdit.elec_unit !== undefined || customEdit.storage_fee !== undefined || customEdit.selected_days) {
+                            try {
+                              const sDet = JSON.parse(customEdit.stall_details || item.stall_details || '[]');
+                              const startD = new Date(item.start_date);
+                              const year = startD.getFullYear();
+                              const monthVal = startD.getMonth();
+                              const lastDay = new Date(year, monthVal + 1, 0).getDate();
+                              let totalRent = 0;
+                              let datesSet = new Set();
+                              const isFullPkg = dispDays.toLowerCase().includes('wed') && dispDays.toLowerCase().includes('sat') && dispDays.toLowerCase().includes('sun');
+                              
+                              for (let d = 1; d <= lastDay; d++) {
+                                const curD = new Date(year, monthVal, d);
+                                const dayOfWeek = curD.getDay();
+                                sDet.forEach(st => {
+                                  const myDays = st.days || [];
+                                  if (myDays.includes(dayOfWeek)) {
+                                    datesSet.add(`${year}-${monthVal+1}-${d}`);
+                                    const sMaster = stalls.find(s => s.name === st.name);
+                                    let price = sMaster ? sMaster.price_wed : 0;
+                                    if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
+                                    if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
+                                    if (dispType === 'Standard' && isFullPkg && sMaster && sMaster.price_month > 0) {
+                                      price = sMaster.price_month;
+                                    }
+                                    if (dispType === 'VIP') price = 0;
+                                    totalRent += price;
+                                  }
+                                });
+                              }
+                              const totalElecCharged = datesSet.size;
+                              const totalElecPrice = totalElecCharged * (dispElec * 10);
+                              dispPrice = totalRent + totalElecPrice + dispStorage;
+                              if (dispType === 'Regular' || dispType === 'VIP') dispPrice = 0;
+                            } catch(e){}
+                          }
+
+                          let statusText = "ยังไม่ต่อ";
+                          let statusColor = "bg-gray-100 text-gray-600";
+                          if (renewed) {
+                            statusText = "ต่อแล้ว";
+                            statusColor = "bg-green-100 text-green-800";
+                          } else if (bulkRenewEditData[item.id]) {
+                            statusText = "พร้อม (แก้ไขแล้ว)";
+                            statusColor = "bg-blue-100 text-blue-800";
+                          }
+
+                          return (
+                            <tr key={item.id} className="hover:bg-purple-50/20 font-medium border-b border-gray-100">
+                              <td className="p-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  disabled={renewed}
+                                  onChange={() => {
+                                    if (isChecked) {
+                                      setBulkRenewCheckedIds(bulkRenewCheckedIds.filter(id => id !== item.id));
+                                    } else {
+                                      setBulkRenewCheckedIds([...bulkRenewCheckedIds, item.id]);
+                                    }
+                                  }}
+                                  className="w-4 h-4 cursor-pointer rounded"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <div className="font-bold text-gray-800">{item.booker_name}</div>
+                                <div className="text-[10px] text-gray-500">{dispPhone || '-'} | สินค้า: {dispProduct || '-'}</div>
+                              </td>
+                              <td className="p-2 font-bold text-purple-950 font-mono">{cleanStallName(dispStalls)}</td>
+                              <td className="p-2 text-[10px]">{dispDays}</td>
+                              <td className="p-2 text-center font-mono font-bold">{dispElec} หน่วย</td>
+                              <td className="p-2 text-center font-mono font-semibold">{dispStorage.toLocaleString()}.-</td>
+                              <td className="p-2 text-center font-mono font-bold text-purple-900">{dispPrice.toLocaleString()}.-</td>
+                              <td className="p-2 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${statusColor}`}>{statusText}</span>
+                                  {!renewed && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        let editStailsJSON = item.stall_details;
+                                        setBulkRenewEditingItem({
+                                          id: item.id,
+                                          booker_name: item.booker_name,
+                                          customer_type: dispType,
+                                          product: dispProduct,
+                                          phone: dispPhone,
+                                          note: customEdit.note || item.note || '',
+                                          storage_fee: String(dispStorage),
+                                          elec_unit: String(dispElec),
+                                          selected_days: dispDays,
+                                          stall_details: dispStalls,
+                                          raw_stall_details: JSON.parse(editStailsJSON || '[]')
+                                        });
+                                      }}
+                                      className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 rounded text-[10px] font-bold cursor-pointer"
+                                    >
+                                      แก้ไขก่อนต่อ
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+
+              {/* Action Buttons Footer */}
+              <div className="bg-purple-50 px-4 py-3 shrink-0 border-t border-purple-100 flex justify-between items-center">
+                <span className="text-[10px] text-purple-800 font-bold">เลือกทำรายการต่อสัญญา {bulkRenewCheckedIds.length} รายการ</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBulkRenewSubmit}
+                    disabled={loadingMonthly || bulkRenewCheckedIds.length === 0}
+                    className={`px-4 py-2 rounded text-xs font-bold shadow transition-all flex items-center gap-1 cursor-pointer ${
+                      bulkRenewCheckedIds.length > 0
+                        ? 'bg-purple-700 hover:bg-purple-800 text-white'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {loadingMonthly ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    ยืนยันต่อสัญญาแผงเช่ากลุ่ม
+                  </button>
+                  <button
+                    onClick={() => setShowBulkRenewModal(false)}
+                    className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold"
+                  >
+                    ปิดหน้าต่าง
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 📝 4.1 Pre-renewal Edit Sub-modal */}
+        {bulkRenewEditingItem && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-md border-2 border-purple-850 overflow-hidden flex flex-col max-h-[85vh] animate-pop-in text-left text-xs font-sans text-gray-800">
+              <div className="bg-purple-950 text-white px-4 py-3 flex justify-between items-center border-b border-purple-850">
+                <h3 className="font-bold text-sm">แก้ไขข้อมูลล่วงหน้า: {bulkRenewEditingItem.booker_name}</h3>
+                <button onClick={() => setBulkRenewEditingItem(null)} className="text-purple-200 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+              </div>
+
+              <div className="p-4 overflow-y-auto flex flex-col gap-3.5">
+                {/* Customer Type */}
+                <div className="flex flex-col gap-1">
+                  <label className="font-bold text-gray-700">ประเภทลูกค้า</label>
+                  <select
+                    value={bulkRenewEditingItem.customer_type}
+                    onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, customer_type: e.target.value })}
+                    className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
+                  >
+                    <option value="Standard">Standard (รายเดือนทั่วไป)</option>
+                    <option value="Regular">Regular (ประจำ)</option>
+                    <option value="VIP">VIP (ลูกค้าพิเศษ)</option>
+                  </select>
+                </div>
+
+                {/* Selected Days */}
+                <div className="flex flex-col gap-1">
+                  <label className="font-bold text-gray-700">วันลงขายในเดือนเป้าหมาย</label>
+                  <div className="flex gap-2 mt-1">
+                    {[
+                      { key: 'Wed', num: 3, label: 'พุธ' },
+                      { key: 'Sat', num: 6, label: 'เสาร์' },
+                      { key: 'Sun', num: 0, label: 'อาทิตย์' }
+                    ].map(dayOpt => {
+                      const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
+                      const checked = daysArr.includes(dayOpt.key.toLowerCase());
+                      return (
+                        <label 
+                          key={dayOpt.key}
+                          className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer transition-all ${
+                            checked
+                              ? 'bg-purple-700 text-white border-purple-850 shadow-sm'
+                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              let newArr = [...daysArr];
+                              if (checked) {
+                                newArr = newArr.filter(x => x !== dayOpt.key.toLowerCase());
+                              } else {
+                                newArr.push(dayOpt.key.toLowerCase());
+                              }
+                              const ordered = [];
+                              if (newArr.includes('wed')) ordered.push('Wed');
+                              if (newArr.includes('sat')) ordered.push('Sat');
+                              if (newArr.includes('sun')) ordered.push('Sun');
+                              const selStr = ordered.join(', ');
+                              
+                              const rawStalls = bulkRenewEditingItem.raw_stall_details.map(st => {
+                                const newDays = [];
+                                if (ordered.includes('Wed')) newDays.push(3);
+                                if (ordered.includes('Sat')) newDays.push(6);
+                                if (ordered.includes('Sun')) newDays.push(0);
+                                return { ...st, days: newDays };
+                              });
+
+                              setBulkRenewEditingItem({
+                                ...bulkRenewEditingItem,
+                                selected_days: selStr,
+                                raw_stall_details: rawStalls
+                              });
+                            }}
+                            className="hidden"
+                          />
+                          {dayOpt.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Stalls per Day details */}
+                <div className="flex flex-col gap-2 p-3 bg-purple-50/40 rounded-lg border border-purple-100 text-left">
+                  <span className="font-bold text-purple-950 block mb-0.5">ระบุแผงค้าของแต่ละวัน</span>
+                  {['Wed', 'Sat', 'Sun'].map(dayName => {
+                    const dayNum = dayName === 'Wed' ? 3 : dayName === 'Sat' ? 6 : 0;
+                    const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
+                    const isActive = daysArr.includes(dayName.toLowerCase());
+                    if (!isActive) return null;
+
+                    const dayStalls = bulkRenewEditingItem.raw_stall_details.map(st => st.name);
+
+                    return (
+                      <div key={dayName} className="flex flex-wrap gap-2 items-center bg-white p-2 rounded border border-purple-100">
+                        <span className="w-12 font-bold text-purple-700 shrink-0">วัน{dayName === 'Wed' ? 'พุธ' : dayName === 'Sat' ? 'เสาร์' : 'อาทิตย์'}</span>
+                        <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                          {dayStalls.map((stName) => (
+                            <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-[10px] px-1.5 py-0.5 rounded shadow-xs">
+                              {cleanStallName(stName)}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedStalls = bulkRenewEditingItem.raw_stall_details.filter(x => x.name !== stName);
+                                  setBulkRenewEditingItem({
+                                    ...bulkRenewEditingItem,
+                                    raw_stall_details: updatedStalls
+                                  });
+                                }}
+                                className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                          
+                          <div className="relative">
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val && !dayStalls.includes(val)) {
+                                  const newDays = [];
+                                  const ordered = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
+                                  if (ordered.includes('wed')) newDays.push(3);
+                                  if (ordered.includes('sat')) newDays.push(6);
+                                  if (ordered.includes('sun')) newDays.push(0);
+                                  
+                                  const updatedStalls = [...bulkRenewEditingItem.raw_stall_details, { name: val, days: newDays }];
+                                  setBulkRenewEditingItem({
+                                    ...bulkRenewEditingItem,
+                                    raw_stall_details: updatedStalls
+                                  });
+                                }
+                              }}
+                              className="px-1 py-0.5 bg-purple-900 hover:bg-purple-950 text-white rounded text-[10px] font-bold shadow-sm transition-all cursor-pointer border-none outline-none"
+                            >
+                              <option value="">+ เพิ่มล็อค</option>
+                              {(() => {
+                                const targetMonthStr = computeNextMonthThai(bulkRenewFromMonth);
+                                const occupied = [];
+                                monthlyList.forEach(mb => {
+                                  if (formatBookingMonth(mb.booking_month) === targetMonthStr) {
+                                    let det = [];
+                                    try {
+                                      det = JSON.parse(mb.stall_details || '[]');
+                                    } catch(e){}
+                                    det.forEach(st => {
+                                      if (st.days && st.days.includes(dayNum)) occupied.push(st.name);
+                                    });
+                                  }
+                                });
+
+                                return stalls
+                                  .filter(s => s.type !== 'ทางเดิน' && s.type !== 'อื่นๆ' && !dayStalls.includes(s.name) && !occupied.includes(s.name))
+                                  .map(s => (
+                                    <option key={s.name} value={s.name}>{cleanStallName(s.name)}</option>
+                                  ));
+                              })()}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Extra Fees */}
+                <div className="grid grid-cols-2 gap-3 text-left">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-gray-700">📦 ค่าฝากของ</label>
+                    <input
+                      type="number"
+                      value={bulkRenewEditingItem.storage_fee}
+                      onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, storage_fee: e.target.value })}
+                      className="p-2 border border-gray-300 rounded bg-white font-bold"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-gray-700">⚡ ค่าไฟ (เหมา)</label>
+                    <input
+                      type="number"
+                      value={bulkRenewEditingItem.elec_unit}
+                      onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, elec_unit: e.target.value })}
+                      className="p-2 border border-gray-300 rounded bg-white font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Info and Notes */}
+                <div className="flex flex-col gap-2.5">
+                  <div className="grid grid-cols-2 gap-3 text-left">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">สินค้า</label>
+                      <input
+                        type="text"
+                        value={bulkRenewEditingItem.product}
+                        onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, product: e.target.value })}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">เบอร์โทรศัพท์</label>
+                      <input
+                        type="text"
+                        value={bulkRenewEditingItem.phone}
+                        onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, phone: e.target.value })}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="font-bold text-gray-700">หมายเหตุ</label>
+                    <textarea
+                      value={bulkRenewEditingItem.note}
+                      onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, note: e.target.value })}
+                      className="p-2 border border-gray-300 rounded bg-white h-12 resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit submodal Footer */}
+              <div className="bg-purple-50 px-4 py-3 shrink-0 border-t border-purple-100 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setBulkRenewEditData({
+                      ...bulkRenewEditData,
+                      [bulkRenewEditingItem.id]: {
+                        customer_type: bulkRenewEditingItem.customer_type,
+                        product: bulkRenewEditingItem.product,
+                        phone: bulkRenewEditingItem.phone,
+                        note: bulkRenewEditingItem.note,
+                        storage_fee: bulkRenewEditingItem.storage_fee,
+                        elec_unit: bulkRenewEditingItem.elec_unit,
+                        selected_days: bulkRenewEditingItem.selected_days,
+                        stall_details: JSON.stringify(bulkRenewEditingItem.raw_stall_details)
+                      }
+                    });
+                    setBulkRenewEditingItem(null);
+                  }}
+                  className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded font-bold cursor-pointer"
+                >
+                  บันทึกแก้ไข
+                </button>
+                <button
+                  onClick={() => setBulkRenewEditingItem(null)}
+                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded font-bold"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🖼️ 5. Slip Image Preview Overlay Modal */}
+        {slipPreviewUrl && !showMonthlyPaymentModal && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-[#FFFDF9] rounded-xl shadow-2xl overflow-hidden flex flex-col max-w-sm w-full border border-gray-200">
+              <div className="bg-[#5D4037] text-white px-4 py-2.5 flex justify-between items-center shrink-0 border-b border-[#8B4513]">
+                <span className="font-bold text-xs">ภาพหลักฐานสลิปการโอนเงิน</span>
+                <button 
+                  onClick={() => setSlipPreviewUrl(null)} 
+                  className="p-0.5 rounded-full hover:bg-white/10 text-white cursor-pointer"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+              <div className="p-4 bg-white flex items-center justify-center min-h-[250px]">
+                <img src={slipPreviewUrl} alt="Transfer Slip" className="max-h-[65vh] w-full object-contain rounded border border-gray-100 shadow-sm" />
+              </div>
+              <div className="bg-gray-50 px-4 py-2.5 flex justify-end">
+                <button
+                  onClick={() => setSlipPreviewUrl(null)}
+                  className="px-3.5 py-1.5 bg-[#8B4513] hover:bg-[#5D4037] text-white font-bold text-xs rounded transition-all active:scale-98 cursor-pointer"
+                >
+                  ปิดภาพ
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -6649,6 +7771,19 @@ export default function BookingPage() {
                   <RotateCcw className="w-4 h-4" />
                   ต่อสัญญา
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBulkRenewModal(true);
+                    setBulkRenewFromMonth(monthlyMonthFilter === 'ทั้งหมด' ? (sortThaiMonthsDescending(Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))))[0] || '') : monthlyMonthFilter);
+                    setBulkRenewCheckedIds([]);
+                    setBulkRenewEditData({});
+                  }}
+                  className="px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  ต่อสัญญาแบบกลุ่ม
+                </button>
               </div>
 
               {/* ค้นหาและตัวกรองรายเดือน */}
@@ -6773,8 +7908,19 @@ export default function BookingPage() {
                             </td>
                             <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="flex gap-1 justify-center">
+                                <button
+                                  onClick={() => handleToggleNonRenewal(item)}
+                                  className={`px-2 py-1 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                                    item.renewal_status === 'ไม่ต่อสัญญา'
+                                      ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-sm'
+                                      : 'bg-red-50/40 text-red-500 border-red-200 hover:bg-red-100/60'
+                                  }`}
+                                  title={item.renewal_status === 'ไม่ต่อสัญญา' ? "คลิกเพื่อยกเลิกแจ้งไม่ต่อสัญญา" : "คลิกเพื่อแจ้งไม่ต่อสัญญา"}
+                                >
+                                  แจ้งไม่ต่อ
+                                </button>
                                 <button 
-                                  onClick={() => setSelectedMonthlyItem(item)}
+                                  onClick={() => handleOpenEditMonthlyModal(item)}
                                   className="px-2 py-1 bg-[#F5E6D3] text-[#8B4513] border border-[#D7CCC8] rounded text-[10px] font-bold hover:bg-[#EFEBE9] cursor-pointer"
                                 >
                                   แก้ไข
@@ -6858,6 +8004,18 @@ export default function BookingPage() {
                                   โน้ต: {txn.note}
                                 </div>
                               )}
+                              {txn.slip_url && (
+                                <div className="mt-1.5 flex items-center justify-between bg-blue-50/50 p-1.5 rounded border border-blue-100/50 text-[10px]">
+                                  <span className="text-blue-900 font-bold flex items-center gap-1">📎 มีหลักฐานการโอนเงิน (สลิป)</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSlipPreviewUrl(txn.slip_url)}
+                                    className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer transition-all active:scale-95 text-[9px]"
+                                  >
+                                    ดูรูปภาพสลิป
+                                  </button>
+                                </div>
+                              )}
                               <div className="text-[9px] text-gray-400 text-right mt-0.5">ผู้ทำรายการ: {txn.officer || '-'}</div>
                             </div>
                           ))}
@@ -6889,7 +8047,9 @@ export default function BookingPage() {
             {/* Header */}
             <div className="bg-[#5D4037] text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-[#8B4513]">
               <div>
-                <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการข้อมูลรายเดือน (จองล็อคใหม่)</h3>
+                <h3 className="font-bold text-sm flex items-center gap-1.5">
+                  {isEditingMonthlyMode ? "🗓️ จัดการข้อมูลรายเดือน (แก้ไขการจอง)" : "🗓️ จัดการข้อมูลรายเดือน (จองล็อคใหม่)"}
+                </h3>
                 <p className="text-[10px] text-amber-200 font-bold mt-0.5">
                   เริ่ม: {(() => {
                     if (!newMonthlyStartDate) return '-';
@@ -6915,7 +8075,17 @@ export default function BookingPage() {
             </div>
 
             {/* Content Form */}
-            <form onSubmit={handleCreateNewMonthlyBooking} className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (isEditingMonthlyMode) {
+                  handleSaveEditedMonthlyBooking();
+                } else {
+                  handleCreateNewMonthlyBooking(e);
+                }
+              }} 
+              className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs"
+            >
               
               {/* Date & Days Row */}
               <div className="grid grid-cols-2 gap-3 bg-[#F5E6D3]/40 p-3 rounded-lg border border-[#D7CCC8]">
@@ -7368,6 +8538,46 @@ export default function BookingPage() {
                     placeholder="..."
                   />
                 </div>
+                {isEditingMonthlyMode && (
+                  <div className="bg-[#F5E6D3]/15 p-3 rounded-lg border border-[#D7CCC8]/60 flex flex-col gap-3 text-left">
+                    <div className="font-bold text-xs text-amber-900 border-b border-dashed pb-1.5 mb-0.5">เฉพาะข้อมูลการแก้ไขสัญญา</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
+                        <input 
+                          type="number"
+                          value={editMonthlyPaidAmount}
+                          onChange={(e) => setEditMonthlyPaidAmount(e.target.value)}
+                          className="p-2 border border-gray-300 rounded bg-white font-bold"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-bold text-gray-700">สถานะการชำระเงิน</label>
+                        <select 
+                          value={editMonthlyStatus}
+                          onChange={(e) => setEditMonthlyStatus(e.target.value)}
+                          className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
+                        >
+                          <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
+                          <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">สถานะต่อสัญญา</label>
+                      <select 
+                        value={editMonthlyRenewalStatus}
+                        onChange={(e) => setEditMonthlyRenewalStatus(e.target.value)}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
+                      >
+                        <option value="">(ยังไม่ระบุ)</option>
+                        <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
+                        <option value="รอยืนยัน">รอยืนยัน</option>
+                        <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Button */}
@@ -7384,7 +8594,7 @@ export default function BookingPage() {
                 ) : (
                   <>
                     <Check className="w-4.5 h-4.5" />
-                    <span>บันทึกข้อมูล</span>
+                    <span>{isEditingMonthlyMode ? "บันทึกการแก้ไข" : "บันทึกข้อมูล"}</span>
                   </>
                 )}
               </button>
@@ -7500,6 +8710,45 @@ export default function BookingPage() {
                   })}
                 </div>
               </div>
+
+              {monthlyPaymentForm.method === 'โอนจ่าย' && (
+                <div className="flex flex-col gap-1.5 p-3 bg-blue-50/30 rounded-xl border border-blue-100/60 text-left text-xs">
+                  <label className="text-xs font-bold text-blue-900 flex justify-between">
+                    <span>แนบภาพสลิปโอนเงิน (สแกนอัตโนมัติ)</span>
+                    {slipPreviewUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSlipPreviewUrl(null);
+                          setMonthlyPaymentForm(prev => ({ ...prev, slip_base64: null }));
+                        }}
+                        className="text-red-500 hover:text-red-700 font-bold"
+                      >
+                        ลบรูป
+                      </button>
+                    )}
+                  </label>
+                  <div className="relative border-2 border-dashed border-blue-200 hover:border-blue-400 bg-white rounded-lg p-2 transition-colors">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleSlipChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    />
+                    {slipPreviewUrl ? (
+                      <div className="flex flex-col items-center gap-1.5 py-1">
+                        <img src={slipPreviewUrl} alt="Slip Preview" className="h-28 w-auto object-contain rounded-md shadow border border-gray-200" />
+                        <span className="text-[10px] text-gray-500 font-semibold">อัปโหลดสลิปเรียบร้อย</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 py-3 text-blue-500/80">
+                        <CreditCard className="w-6 h-6 animate-pulse" />
+                        <span className="text-[10px] font-bold">คลิกเพื่ออัปโหลดไฟล์สลิป</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* โน้ต / หมายเหตุ */}
               <div className="flex flex-col gap-1">
