@@ -15,7 +15,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
  * ฟังก์ชันหลักที่ใช้ตั้งค่าใน Trigger เพื่อให้รันอัตโนมัติ (เช่น ทุก 10-15 นาที)
  */
 function syncAllDataToSupabase() {
-  Logger.log("เริ่มต้นกระบวนการซิงก์ข้อมูลไปยัง Supabase...");
+  Logger.log("การซิงก์ข้อมูลถูกปิดใช้งานชั่วคราวตามความต้องการ...");
+  return;
   
   try {
     syncStalls();
