@@ -227,13 +227,20 @@ export default function BookingPage() {
 
   const getOccupiedStallsInRound = () => {
     if (!newMonthlyStartDate) return [];
-    const activeRoundMonthStr = getBookingMonthStr(newMonthlyStartDate);
+    const activeRoundMonthFormatted = formatBookingMonth(getBookingMonthStr(newMonthlyStartDate));
     const occupied = [];
     if (monthlyList && monthlyList.length > 0) {
       monthlyList.forEach(mb => {
-        if (mb.booking_month === activeRoundMonthStr) {
+        const mbMonthFormatted = formatBookingMonth(mb.booking_month);
+        if (mbMonthFormatted === activeRoundMonthFormatted) {
           if (mb.stalls) {
-            mb.stalls.split(',').forEach(s => occupied.push(s.trim()));
+            mb.stalls.split(',').forEach(s => {
+              const cleanS = s.replace(/[\[\]]/g, '').trim();
+              if (cleanS) {
+                occupied.push(cleanS);
+                occupied.push(`[${cleanS}]`);
+              }
+            });
           }
         }
       });
