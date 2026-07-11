@@ -2935,6 +2935,40 @@ export default function BookingPage() {
       return;
     }
 
+    // Confirmation Diff Alert
+    const original = activeMonthlyBooking;
+    if (original) {
+      const changes = [];
+      if (original.booker_name !== newMonthlyBookerName) {
+        changes.push(`- ชื่อผู้จอง: "${original.booker_name}" -> "${newMonthlyBookerName}"`);
+      }
+      if ((original.product || '') !== newMonthlyProduct) {
+        changes.push(`- สินค้า: "${original.product || '-'}" -> "${newMonthlyProduct || '-'}"`);
+      }
+      if ((original.phone || '') !== newMonthlyPhone) {
+        changes.push(`- เบอร์โทรศัพท์: "${original.phone || '-'}" -> "${newMonthlyPhone || '-'}"`);
+      }
+      if (parseNumber(original.storage_fee) !== parseNumber(newMonthlyStorageFee)) {
+        changes.push(`- ค่าฝากของ: ${original.storage_fee} -> ${newMonthlyStorageFee}`);
+      }
+      if (parseNumber(original.elec_unit) !== parseNumber(newMonthlyElecUnit)) {
+        changes.push(`- ค่าไฟ (หน่วย): ${original.elec_unit} -> ${newMonthlyElecUnit}`);
+      }
+      if ((original.note || '') !== newMonthlyNote) {
+        changes.push(`- โน้ตเพิ่มเติม: "${original.note || '-'}" -> "${newMonthlyNote || '-'}"`);
+      }
+
+      if (changes.length === 0) {
+        showAlert("ไม่มีการเปลี่ยนแปลงข้อมูล", "แจ้งเตือน");
+        return;
+      }
+
+      const confirmMsg = `ยืนยันการบันทึกการแก้ไขข้อมูลดังต่อไปนี้ใช่หรือไม่?\n\n` + changes.join('\n');
+      if (!confirm(confirmMsg)) {
+        return;
+      }
+    }
+
     const hasWed = newMonthlyDays.wed && newMonthlyStallsWed.length > 0;
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
@@ -3299,6 +3333,13 @@ export default function BookingPage() {
     };
     const thaiMonth = monthsMap[monthAbbr] || monthAbbr;
     return `${thaiMonth} ${yearStr}`;
+  };
+
+  const handleOpenBulkRenewModal = () => {
+    setShowBulkRenewModal(true);
+    setBulkRenewFromMonth(monthlyMonthFilter === 'ทั้งหมด' ? (sortThaiMonthsDescending(Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))))[0] || '') : monthlyMonthFilter);
+    setBulkRenewCheckedIds([]);
+    setBulkRenewEditData({});
   };
 
   const handleRenewMonthlyBooking = async () => {
@@ -4139,13 +4180,8 @@ export default function BookingPage() {
             </button>
             <button
               type="button"
-              onClick={handleRenewMonthlyBooking}
-              disabled={!activeMonthlyBooking}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 ${
-                activeMonthlyBooking 
-                  ? 'bg-amber-800 hover:bg-amber-900 text-white cursor-pointer' 
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
+              onClick={handleOpenBulkRenewModal}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 bg-purple-700 hover:bg-purple-800 text-white cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
               ต่อสัญญา
@@ -4791,7 +4827,9 @@ export default function BookingPage() {
                 className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs"
               >
                 
-                {/* Date & Days Row */}
+                {!isEditingMonthlyMode && (
+                  <>
+                    {/* Date & Days Row */}
                 <div className="grid grid-cols-2 gap-3 bg-[#F5E6D3]/40 p-3 rounded-lg border border-[#D7CCC8]">
                   {/* Start Date */}
                   <div className="flex flex-col gap-1 text-left">
@@ -5107,6 +5145,8 @@ export default function BookingPage() {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
 
                 {/* Extra fees row */}
                 <div className="grid grid-cols-2 gap-3 text-left">
@@ -5243,46 +5283,7 @@ export default function BookingPage() {
                     />
                   </div>
                 </div>
-                {isEditingMonthlyMode && (
-                  <div className="bg-[#F5E6D3]/15 p-3 rounded-lg border border-[#D7CCC8]/60 flex flex-col gap-3 text-left">
-                    <div className="font-bold text-xs text-amber-900 border-b border-dashed pb-1.5 mb-0.5">เฉพาะข้อมูลการแก้ไขสัญญา</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1">
-                        <label className="font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
-                        <input 
-                          type="number"
-                          value={editMonthlyPaidAmount}
-                          onChange={(e) => setEditMonthlyPaidAmount(e.target.value)}
-                          className="p-2 border border-gray-300 rounded bg-white font-bold"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="font-bold text-gray-700">สถานะการชำระเงิน</label>
-                        <select 
-                          value={editMonthlyStatus}
-                          onChange={(e) => setEditMonthlyStatus(e.target.value)}
-                          className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
-                        >
-                          <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
-                          <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="font-bold text-gray-700">สถานะต่อสัญญา</label>
-                      <select 
-                        value={editMonthlyRenewalStatus}
-                        onChange={(e) => setEditMonthlyRenewalStatus(e.target.value)}
-                        className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
-                      >
-                        <option value="">(ยังไม่ระบุ)</option>
-                        <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
-                        <option value="รอยืนยัน">รอยืนยัน</option>
-                        <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
+
 
               {/* Submit Button */}
               <button
@@ -5592,6 +5593,7 @@ export default function BookingPage() {
                           const customEdit = bulkRenewEditData[item.id] || {};
                           
                           // Resolve display properties with custom edits
+                          const dispBookerName = customEdit.booker_name !== undefined ? customEdit.booker_name : item.booker_name;
                           const dispType = customEdit.customer_type || item.customer_type || 'Standard';
                           const dispProduct = customEdit.product !== undefined ? customEdit.product : item.product || '';
                           const dispPhone = customEdit.phone !== undefined ? customEdit.phone : item.phone || '';
@@ -5674,7 +5676,7 @@ export default function BookingPage() {
                                 />
                               </td>
                               <td className="p-2">
-                                <div className="font-bold text-gray-800">{item.booker_name}</div>
+                                <div className="font-bold text-gray-800">{dispBookerName}</div>
                                 <div className="text-[10px] text-gray-500">{dispPhone || '-'} | สินค้า: {dispProduct || '-'}</div>
                               </td>
                               <td className="p-2 font-bold text-purple-950 font-mono">{cleanStallName(dispStalls)}</td>
@@ -6006,8 +6008,8 @@ export default function BookingPage() {
         )}
 
         {/* 🖼️ 5. Slip Image Preview Overlay Modal */}
-        {slipPreviewUrl && !showMonthlyPaymentModal && (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+        {slipPreviewUrl && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-[#FFFDF9] rounded-xl shadow-2xl overflow-hidden flex flex-col max-w-sm w-full border border-gray-200">
               <div className="bg-[#5D4037] text-white px-4 py-2.5 flex justify-between items-center shrink-0 border-b border-[#8B4513]">
                 <span className="font-bold text-xs">ภาพหลักฐานสลิปการโอนเงิน</span>
@@ -7760,29 +7762,11 @@ export default function BookingPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleRenewMonthlyBooking}
-                  disabled={!activeMonthlyBooking}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 ${
-                    activeMonthlyBooking 
-                      ? 'bg-amber-800 hover:bg-amber-900 text-white cursor-pointer' 
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  ต่อสัญญา
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBulkRenewModal(true);
-                    setBulkRenewFromMonth(monthlyMonthFilter === 'ทั้งหมด' ? (sortThaiMonthsDescending(Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))))[0] || '') : monthlyMonthFilter);
-                    setBulkRenewCheckedIds([]);
-                    setBulkRenewEditData({});
-                  }}
+                  onClick={handleOpenBulkRenewModal}
                   className="px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  ต่อสัญญาแบบกลุ่ม
+                  ต่อสัญญา
                 </button>
               </div>
 
@@ -8087,7 +8071,9 @@ export default function BookingPage() {
               className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs"
             >
               
-              {/* Date & Days Row */}
+              {!isEditingMonthlyMode && (
+                <>
+                  {/* Date & Days Row */}
               <div className="grid grid-cols-2 gap-3 bg-[#F5E6D3]/40 p-3 rounded-lg border border-[#D7CCC8]">
                 {/* Start Date */}
                 <div className="flex flex-col gap-1">
@@ -8403,6 +8389,8 @@ export default function BookingPage() {
                   </div>
                 )}
               </div>
+                </>
+              )}
 
               {/* Extra fees row */}
               <div className="grid grid-cols-2 gap-3">
@@ -8538,46 +8526,7 @@ export default function BookingPage() {
                     placeholder="..."
                   />
                 </div>
-                {isEditingMonthlyMode && (
-                  <div className="bg-[#F5E6D3]/15 p-3 rounded-lg border border-[#D7CCC8]/60 flex flex-col gap-3 text-left">
-                    <div className="font-bold text-xs text-amber-900 border-b border-dashed pb-1.5 mb-0.5">เฉพาะข้อมูลการแก้ไขสัญญา</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1">
-                        <label className="font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>
-                        <input 
-                          type="number"
-                          value={editMonthlyPaidAmount}
-                          onChange={(e) => setEditMonthlyPaidAmount(e.target.value)}
-                          className="p-2 border border-gray-300 rounded bg-white font-bold"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="font-bold text-gray-700">สถานะการชำระเงิน</label>
-                        <select 
-                          value={editMonthlyStatus}
-                          onChange={(e) => setEditMonthlyStatus(e.target.value)}
-                          className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
-                        >
-                          <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
-                          <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="font-bold text-gray-700">สถานะต่อสัญญา</label>
-                      <select 
-                        value={editMonthlyRenewalStatus}
-                        onChange={(e) => setEditMonthlyRenewalStatus(e.target.value)}
-                        className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
-                      >
-                        <option value="">(ยังไม่ระบุ)</option>
-                        <option value="ต่อสัญญาแล้ว">ต่อสัญญาแล้ว</option>
-                        <option value="รอยืนยัน">รอยืนยัน</option>
-                        <option value="ไม่ต่อสัญญา">ไม่ต่อสัญญา</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
+
               </div>
 
               {/* Submit Button */}
