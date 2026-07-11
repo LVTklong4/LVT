@@ -80,30 +80,22 @@ export default function InvoicePreviewModal() {
                                             invoicePreviewItem.selected_days?.toLowerCase().includes('sat') &&
                                             invoicePreviewItem.selected_days?.toLowerCase().includes('sun');
 
-                      const monthDStr = formatBookingMonth(invoicePreviewItem.booking_month).split(' ')[0] || '';
                       const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
-
                       let itemsHtml = [];
                       let totalNadsCount = 0;
+                      const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
+
+                      // Group by day of week
+                      const dayGroups = { 3: [], 6: [], 0: [] };
 
                       details.forEach((stallDetail) => {
                         const stallName = stallDetail.name;
                         const sMaster = stalls.find(s => s.name === stallName);
                         if (!sMaster) return;
 
-                        // Count occurrences per day
-                        const dayCounts = {
-                          3: getDayOccurrences(invoicePreviewItem.start_date, 3, stallDetail.days),
-                          6: getDayOccurrences(invoicePreviewItem.start_date, 6, stallDetail.days),
-                          0: getDayOccurrences(invoicePreviewItem.start_date, 0, stallDetail.days)
-                        };
-
-                        const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
-
+                        const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
                         [3, 6, 0].forEach((dNum) => {
-                          const count = dayCounts[dNum];
-                          if (count > 0) {
-                            totalNadsCount += count;
+                          if (stallDays.includes(dNum)) {
                             let price = sMaster.price_wed;
                             if (dNum === 6) price = sMaster.price_sat;
                             if (dNum === 0) price = sMaster.price_sun;
@@ -113,21 +105,40 @@ export default function InvoicePreviewModal() {
                             }
                             if (invoicePreviewItem.customer_type === 'VIP') price = 0;
 
-                            const subTotal = (price + elecRate) * count;
+                            dayGroups[dNum].push({
+                              name: stallName,
+                              price: price,
+                              elec: elecRate
+                            });
+                          }
+                        });
+                      });
+
+                      // Process each day group
+                      [3, 6, 0].forEach((dNum) => {
+                        const group = dayGroups[dNum];
+                        if (group.length > 0) {
+                          const count = getDayOccurrences(invoicePreviewItem.start_date, dNum, [dNum]);
+                          if (count > 0) {
+                            totalNadsCount += count;
+                            const totalStallPrice = group.reduce((sum, item) => sum + item.price, 0);
+                            const totalElecRate = group.reduce((sum, item) => sum + item.elec, 0);
+                            const subTotal = (totalStallPrice + totalElecRate) * count;
+                            const stallNamesStr = group.map(item => cleanStallName(item.name)).join(', ');
 
                             itemsHtml.push(
-                              <div key={`${stallName}-${dNum}`} className="py-2 flex flex-col gap-0.5">
+                              <div key={dNum} className="py-2 flex flex-col gap-0.5">
                                 <span className="font-extrabold text-gray-800">
-                                  {monthDStr} {dayNames[dNum]} ล็อค : {cleanStallName(stallName)}
+                                  {dayNames[dNum]} ล็อค : {stallNamesStr}
                                 </span>
                                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                                  <span>({price} x {count}) + ({elecRate} x {count})</span>
+                                  <span>({totalStallPrice} x {count}) + ({totalElecRate} x {count})</span>
                                   <span className="font-extrabold text-gray-700 text-xs">{subTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                                 </div>
                               </div>
                             );
                           }
-                        });
+                        }
                       });
 
                       // Storage fee row

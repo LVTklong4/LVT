@@ -154,9 +154,12 @@ export default function NewMonthlyModal() {
                           {cleanStallName(stName)}
                           <button
                             type="button"
+                            disabled={isEditingMonthlyMode}
                             onClick={() => setNewMonthlyStallsWed(newMonthlyStallsWed.filter(s => s !== stName))}
-                            className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
-                            title="ลบออก"
+                            className={`font-black ml-1 text-[10px] transition-colors ${
+                              isEditingMonthlyMode ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                            }`}
+                            title={isEditingMonthlyMode ? "" : "ลบออก"}
                           >
                             ✕
                           </button>
@@ -166,13 +169,18 @@ export default function NewMonthlyModal() {
                       <div className="relative" ref={addStallDropdownRefWed}>
                         <button
                           type="button"
+                          disabled={isEditingMonthlyMode}
                           onClick={() => {
                             setShowAddStallSelectWed(!showAddStallSelectWed);
                             setShowAddStallSelectSat(false);
                             setShowAddStallSelectSun(false);
                             setStallFilterWed('');
                           }}
-                          className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
+                            isEditingMonthlyMode 
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                              : 'bg-[#8B4513] hover:bg-[#5D4037] text-white cursor-pointer'
+                          }`}
                         >
                           + เพิ่มล็อค
                         </button>
@@ -231,9 +239,12 @@ export default function NewMonthlyModal() {
                           {cleanStallName(stName)}
                           <button
                             type="button"
+                            disabled={isEditingMonthlyMode}
                             onClick={() => setNewMonthlyStallsSat(newMonthlyStallsSat.filter(s => s !== stName))}
-                            className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
-                            title="ลบออก"
+                            className={`font-black ml-1 text-[10px] transition-colors ${
+                              isEditingMonthlyMode ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                            }`}
+                            title={isEditingMonthlyMode ? "" : "ลบออก"}
                           >
                             ✕
                           </button>
@@ -243,13 +254,18 @@ export default function NewMonthlyModal() {
                       <div className="relative" ref={addStallDropdownRefSat}>
                         <button
                           type="button"
+                          disabled={isEditingMonthlyMode}
                           onClick={() => {
                             setShowAddStallSelectSat(!showAddStallSelectSat);
                             setShowAddStallSelectWed(false);
                             setShowAddStallSelectSun(false);
                             setStallFilterSat('');
                           }}
-                          className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
+                            isEditingMonthlyMode 
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                              : 'bg-[#8B4513] hover:bg-[#5D4037] text-white cursor-pointer'
+                          }`}
                         >
                           + เพิ่มล็อค
                         </button>
@@ -308,9 +324,12 @@ export default function NewMonthlyModal() {
                           {cleanStallName(stName)}
                           <button
                             type="button"
+                            disabled={isEditingMonthlyMode}
                             onClick={() => setNewMonthlyStallsSun(newMonthlyStallsSun.filter(s => s !== stName))}
-                            className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
-                            title="ลบออก"
+                            className={`font-black ml-1 text-[10px] transition-colors ${
+                              isEditingMonthlyMode ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                            }`}
+                            title={isEditingMonthlyMode ? "" : "ลบออก"}
                           >
                             ✕
                           </button>
@@ -320,13 +339,18 @@ export default function NewMonthlyModal() {
                       <div className="relative" ref={addStallDropdownRefSun}>
                         <button
                           type="button"
+                          disabled={isEditingMonthlyMode}
                           onClick={() => {
                             setShowAddStallSelectSun(!showAddStallSelectSun);
                             setShowAddStallSelectWed(false);
                             setShowAddStallSelectSat(false);
                             setStallFilterSun('');
                           }}
-                          className="px-2 py-0.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-[10px] font-bold shadow-sm transition-all flex items-center cursor-pointer"
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
+                            isEditingMonthlyMode 
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                              : 'bg-[#8B4513] hover:bg-[#5D4037] text-white cursor-pointer'
+                          }`}
                         >
                           + เพิ่มล็อค
                         </button>

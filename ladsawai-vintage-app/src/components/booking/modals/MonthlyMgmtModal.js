@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote } from 'lucide-react';
+import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX } from 'lucide-react';
 import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function MonthlyMgmtModal() {
@@ -165,14 +165,14 @@ export default function MonthlyMgmtModal() {
                               <div className="flex gap-1 justify-center">
                                 <button
                                   onClick={() => handleToggleNonRenewal(item)}
-                                  className={`px-2 py-1 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                                  className={`p-1.5 rounded border transition-all cursor-pointer ${
                                     item.renewal_status === 'ไม่ต่อสัญญา'
                                       ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-sm'
                                       : 'bg-red-50/40 text-red-500 border-red-200 hover:bg-red-100/60'
                                   }`}
                                   title={item.renewal_status === 'ไม่ต่อสัญญา' ? "คลิกเพื่อยกเลิกแจ้งไม่ต่อสัญญา" : "คลิกเพื่อแจ้งไม่ต่อสัญญา"}
                                 >
-                                  แจ้งไม่ต่อ
+                                  <CalendarX className="w-3.5 h-3.5" />
                                 </button>
                                 <button 
                                   onClick={() => handleOpenEditMonthlyModal(item)}

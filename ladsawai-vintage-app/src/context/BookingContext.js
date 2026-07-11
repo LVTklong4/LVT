@@ -1193,15 +1193,15 @@ export function BookingProvider({ children }) {
           <table class="price-table">
             <tr>
               <td class="label">ค่าล็อครวม :</td>
-              <td class="val">${stallPriceVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(stallPriceVal)}</td>
             </tr>
             <tr>
               <td class="label">ค่าไฟฟ้ารวม :</td>
-              <td class="val">${elecPriceVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(elecPriceVal)}</td>
             </tr>
             <tr>
               <td class="label">ค่าฝากของ :</td>
-              <td class="val">${storageFeeVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(storageFeeVal)}</td>
             </tr>
           </table>
           
@@ -1210,11 +1210,11 @@ export function BookingProvider({ children }) {
           <table class="total-table">
             <tr>
               <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
-              <td class="val">${totalAmountVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(totalAmountVal)}</td>
             </tr>
             <tr>
               <td class="label">การชำระเงิน [${paymentMethodText}] :</td>
-              <td class="val">${totalAmountVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(totalAmountVal)}</td>
             </tr>
           </table>
           
@@ -1331,7 +1331,7 @@ export function BookingProvider({ children }) {
       dayDetailsHtml += `
         <tr>
           <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(item.stalls)}</td>
-          <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
+          <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
         </tr>
         <tr class="calc-row">
           <td>(${satPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
@@ -1344,7 +1344,7 @@ export function BookingProvider({ children }) {
       dayDetailsHtml += `
         <tr>
           <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(item.stalls)}</td>
-          <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
+          <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
         </tr>
         <tr class="calc-row">
           <td>(${sunPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
@@ -1357,7 +1357,7 @@ export function BookingProvider({ children }) {
       dayDetailsHtml += `
         <tr>
           <td class="bold">วันพุธ ล็อค : ${cleanStallName(item.stalls)}</td>
-          <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
+          <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
         </tr>
         <tr class="calc-row">
           <td>(${wedPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
@@ -1384,7 +1384,7 @@ export function BookingProvider({ children }) {
           <tr>
             <td>${pDateStr}</td>
             <td style="text-align: center;">${p.method || 'โอนจ่าย'}</td>
-            <td style="text-align: right;" class="bold">${amt.toFixed(2)}</td>
+            <td style="text-align: right;" class="bold">${formatPrice(amt)}</td>
           </tr>
         `;
       });
@@ -1395,7 +1395,7 @@ export function BookingProvider({ children }) {
         <tr>
           <td>${todayStr}</td>
           <td style="text-align: center;">โอนจ่าย</td>
-          <td style="text-align: right;" class="bold">${totalPaidFromPayments.toFixed(2)}</td>
+          <td style="text-align: right;" class="bold">${formatPrice(totalPaidFromPayments)}</td>
         </tr>
       `;
     }
@@ -1635,11 +1635,11 @@ export function BookingProvider({ children }) {
           <table class="total-table">
             <tr class="grand-total-row">
               <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
-              <td class="val">${grandTotal.toFixed(2)}</td>
+              <td class="val">${formatPrice(grandTotal)}</td>
             </tr>
             <tr>
               <td class="label" style="border-top: 1px dashed #000; padding-top: 1.5mm;">ชำระแล้วรวมทั้งสิ้น :</td>
-              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm;">${totalPaidFromPayments.toFixed(2)}</td>
+              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm;">${formatPrice(totalPaidFromPayments)}</td>
             </tr>
             <tr>
               <td class="label">คิดเป็นเปอร์เซ็นต์ :</td>
@@ -1647,7 +1647,7 @@ export function BookingProvider({ children }) {
             </tr>
             <tr class="remaining-row">
               <td class="label">ค้างชำระ/คงเหลือ :</td>
-              <td class="val">${remaining.toFixed(2)}</td>
+              <td class="val">${formatPrice(remaining)}</td>
             </tr>
           </table>
           
@@ -1701,7 +1701,7 @@ export function BookingProvider({ children }) {
       dayDetailsHtml += `
         <tr>
           <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
-          <td class="val" style="text-align: right;">${satTotal.toFixed(2)}</td>
+          <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
         </tr>
         <tr class="calc-row">
           <td>(${satPrice} x ${monthlyPrintSatCount}) + (${elecRate} x ${monthlyPrintSatCount})</td>
@@ -1715,7 +1715,7 @@ export function BookingProvider({ children }) {
       dayDetailsHtml += `
         <tr>
           <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
-          <td class="val" style="text-align: right;">${sunTotal.toFixed(2)}</td>
+          <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
         </tr>
         <tr class="calc-row">
           <td>(${sunPrice} x ${monthlyPrintSunCount}) + (${elecRate} x ${monthlyPrintSunCount})</td>
@@ -1729,7 +1729,7 @@ export function BookingProvider({ children }) {
       dayDetailsHtml += `
         <tr>
           <td class="bold">วันพุธ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
-          <td class="val" style="text-align: right;">${wedTotal.toFixed(2)}</td>
+          <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
         </tr>
         <tr class="calc-row">
           <td>(${wedPrice} x ${monthlyPrintWedCount}) + (${elecRate} x ${monthlyPrintWedCount})</td>
@@ -1747,7 +1747,7 @@ export function BookingProvider({ children }) {
         <tr>
           <td>${p.dateStr}</td>
           <td style="text-align: center;">${p.method}</td>
-          <td style="text-align: right;" class="bold">${parseNumber(p.amount).toFixed(2)}</td>
+          <td style="text-align: right;" class="bold">${formatPrice(p.amount)}</td>
         </tr>
       `;
     });
@@ -1986,11 +1986,11 @@ export function BookingProvider({ children }) {
           <table class="total-table">
             <tr class="grand-total-row">
               <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
-              <td class="val">${grandTotal.toFixed(2)}</td>
+              <td class="val">${formatPrice(grandTotal)}</td>
             </tr>
             <tr>
               <td class="label" style="border-top: 1px dashed #000; padding-top: 1.5mm;">ชำระแล้วรวมทั้งสิ้น :</td>
-              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm;">${totalPaidFromPayments.toFixed(2)}</td>
+              <td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm;">${formatPrice(totalPaidFromPayments)}</td>
             </tr>
             <tr>
               <td class="label">คิดเป็นเปอร์เซ็นต์ :</td>
@@ -1998,7 +1998,7 @@ export function BookingProvider({ children }) {
             </tr>
             <tr class="remaining-row">
               <td class="label">ค้างชำระ/คงเหลือ :</td>
-              <td class="val">${remaining.toFixed(2)}</td>
+              <td class="val">${formatPrice(remaining)}</td>
             </tr>
           </table>
           
@@ -2336,7 +2336,7 @@ export function BookingProvider({ children }) {
             </tr>
             <tr>
               <td class="label">ค่าฝากของ :</td>
-              <td style="text-align: right;" class="bold">${feeVal.toFixed(2)}</td>
+              <td style="text-align: right;" class="bold">${formatPrice(feeVal)}</td>
             </tr>
           </table>
           
@@ -2354,11 +2354,11 @@ export function BookingProvider({ children }) {
           <table class="total-table">
             <tr>
               <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
-              <td class="val">${feeVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(feeVal)}</td>
             </tr>
             <tr>
               <td class="label">การชำระเงิน [${paymentText}] :</td>
-              <td class="val">${feeVal.toFixed(2)}</td>
+              <td class="val">${formatPrice(feeVal)}</td>
             </tr>
           </table>
           
@@ -4005,6 +4005,11 @@ export function BookingProvider({ children }) {
     return isNaN(num) ? 0 : num;
   };
 
+  const formatPrice = (val) => {
+    const num = parseNumber(val);
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const cleanStallName = (name) => {
     if (!name) return '';
     return String(name)
@@ -4073,6 +4078,7 @@ export function BookingProvider({ children }) {
     expenseForm,
     expenseList,
     extractAmountFromText,
+    formatPrice,
     fetchAdminRoles,
     fetchAdminRolesData,
     fetchAllMonthly,
