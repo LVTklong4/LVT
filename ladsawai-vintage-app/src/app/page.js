@@ -225,7 +225,7 @@ export default function BookingPage() {
   const addStallDropdownRefSat = useRef(null);
   const addStallDropdownRefSun = useRef(null);
 
-  const getOccupiedStallsInRound = () => {
+  const getOccupiedStallsInRound = (dayOfWeek) => {
     if (!newMonthlyStartDate) return [];
     const activeRoundMonthFormatted = formatBookingMonth(getBookingMonthStr(newMonthlyStartDate));
     const occupied = [];
@@ -233,19 +233,66 @@ export default function BookingPage() {
       monthlyList.forEach(mb => {
         const mbMonthFormatted = formatBookingMonth(mb.booking_month);
         if (mbMonthFormatted === activeRoundMonthFormatted) {
-          if (mb.stalls) {
-            mb.stalls.split(',').forEach(s => {
-              const cleanS = s.replace(/[\[\]]/g, '').trim();
-              if (cleanS) {
-                occupied.push(cleanS);
-                occupied.push(`[${cleanS}]`);
+          // Try parsing stall_details first
+          let parsedDetails = null;
+          try {
+            if (mb.stall_details) {
+              parsedDetails = JSON.parse(mb.stall_details);
+            }
+          } catch (e) {}
+
+          if (Array.isArray(parsedDetails) && parsedDetails.length > 0) {
+            parsedDetails.forEach(item => {
+              const days = item.days || [];
+              if (days.includes(dayOfWeek)) {
+                const cleanName = (item.name || '').replace(/[\[\]]/g, '').trim();
+                if (cleanName) {
+                  occupied.push(cleanName);
+                  occupied.push(`[${cleanName}]`);
+                }
               }
             });
+          } else {
+            // Fallback to selected_days & stalls
+            const selDaysStr = String(mb.selected_days || '').toLowerCase();
+            let dayActive = false;
+            if (dayOfWeek === 3 && (selDaysStr.includes('wed') || selDaysStr.includes('พุธ'))) dayActive = true;
+            if (dayOfWeek === 6 && (selDaysStr.includes('sat') || selDaysStr.includes('เสาร์'))) dayActive = true;
+            if (dayOfWeek === 0 && (selDaysStr.includes('sun') || selDaysStr.includes('อาทิตย์'))) dayActive = true;
+
+            if (dayActive && mb.stalls) {
+              mb.stalls.split(',').forEach(s => {
+                const cleanS = s.replace(/[\[\]]/g, '').trim();
+                if (cleanS) {
+                  occupied.push(cleanS);
+                  occupied.push(`[${cleanS}]`);
+                }
+              });
+            }
           }
         }
       });
     }
     return occupied;
+  };
+
+  const getBookingCustomerType = (booking) => {
+    if (!booking) return 'Standard';
+    if (booking.master_id) {
+      const mb = monthlyList.find(m => m.id === booking.master_id);
+      if (mb) return mb.customer_type || 'Standard';
+    }
+    const bookingMonthFormatted = formatBookingMonth(getBookingMonthStr(booking.date));
+    const mb = monthlyList.find(m => {
+      const mbMonthFormatted = formatBookingMonth(m.booking_month);
+      if (mbMonthFormatted !== bookingMonthFormatted) return false;
+      if (!m.stalls) return false;
+      const cleanStalls = m.stalls.split(',').map(s => s.replace(/[\[\]]/g, '').trim());
+      const cleanBookingStall = (booking.stall_name || '').replace(/[\[\]]/g, '').trim();
+      return cleanStalls.includes(cleanBookingStall);
+    });
+    if (mb) return mb.customer_type || 'Standard';
+    return 'Standard';
   };
 
   // Finance Modal States
@@ -2893,7 +2940,7 @@ export default function BookingPage() {
     let sunCount = 0;
     let totalElecCharged = 0;
     
-    for (let d = 1; d <= lastDay; d++) {
+    for (let d = startD.getDate(); d <= lastDay; d++) {
       const currentD = new Date(year, monthVal, d);
       const dayOfWeek = currentD.getDay();
       let hasTradingDayOnDate = false;
@@ -2916,6 +2963,8 @@ export default function BookingPage() {
       }
     }
     
+    const isFullPackage = newMonthlyDays.wed && newMonthlyDays.sat && newMonthlyDays.sun;
+
     const getStallsPrice = (stallsList, dayOfWeek) => {
       let sum = 0;
       stallsList.forEach(sName => {
@@ -2925,6 +2974,9 @@ export default function BookingPage() {
           if (dayOfWeek === 6) price = sMaster.price_sat;
           if (dayOfWeek === 0) price = sMaster.price_sun;
           
+          if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster.price_month > 0) {
+            price = sMaster.price_month;
+          }
           if (newMonthlyCustomerType === 'VIP') price = 0;
           sum += price;
         }
@@ -2993,7 +3045,7 @@ export default function BookingPage() {
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
     
-    if (!hasWed && !hasSat && !hasSun) {
+    if (newMonthlyCustomerType !== 'VIP' && !hasWed && !hasSat && !hasSun) {
       showAlert("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
       return;
     }
@@ -3026,7 +3078,9 @@ export default function BookingPage() {
       const dailyBookings = [];
       const timestamp = new Date().toISOString();
       
-      for (let d = 1; d <= lastDay; d++) {
+      const isFullPackage = newMonthlyDays.wed && newMonthlyDays.sat && newMonthlyDays.sun;
+
+      for (let d = startD.getDate(); d <= lastDay; d++) {
         const currentD = new Date(year, monthVal, d);
         const dayOfWeek = currentD.getDay(); // 0-6
         
@@ -3039,6 +3093,9 @@ export default function BookingPage() {
             if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
             if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
             
+            if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
+              price = sMaster.price_month;
+            }
             if (newMonthlyCustomerType === 'VIP') price = 0;
             
             const dateStr = `${year}-${String(monthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -3234,6 +3291,12 @@ export default function BookingPage() {
       const details = JSON.parse(activeMonthlyBooking.stall_details || '[]');
       const timestamp = new Date().toISOString();
 
+      const allDays = new Set();
+      details.forEach(st => {
+        if (st.days) st.days.forEach(dayVal => allDays.add(dayVal));
+      });
+      const isFullPackage = allDays.has(0) && allDays.has(3) && allDays.has(6);
+
       for (let d = 1; d <= lastDay; d++) {
         const currentD = new Date(nextYear, nextMonthVal, d);
         const dayOfWeek = currentD.getDay(); // 0-6
@@ -3247,6 +3310,9 @@ export default function BookingPage() {
             if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
             if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
             
+            if (activeMonthlyBooking.customer_type === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
+              price = sMaster.price_month;
+            }
             if (activeMonthlyBooking.customer_type === 'VIP') price = 0;
             
             const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -4496,7 +4562,7 @@ export default function BookingPage() {
                                 autoFocus
                               />
                               {(() => {
-                                const occupiedStalls = getOccupiedStallsInRound();
+                                const occupiedStalls = getOccupiedStallsInRound(3);
                                 const filtered = stalls.filter(s => 
                                   s.type !== 'ทางเดิน' && 
                                   s.type !== 'อื่นๆ' && 
@@ -4573,7 +4639,7 @@ export default function BookingPage() {
                                 autoFocus
                               />
                               {(() => {
-                                const occupiedStalls = getOccupiedStallsInRound();
+                                const occupiedStalls = getOccupiedStallsInRound(6);
                                 const filtered = stalls.filter(s => 
                                   s.type !== 'ทางเดิน' && 
                                   s.type !== 'อื่นๆ' && 
@@ -4650,7 +4716,7 @@ export default function BookingPage() {
                                 autoFocus
                               />
                               {(() => {
-                                const occupiedStalls = getOccupiedStallsInRound();
+                                const occupiedStalls = getOccupiedStallsInRound(0);
                                 const filtered = stalls.filter(s => 
                                   s.type !== 'ทางเดิน' && 
                                   s.type !== 'อื่นๆ' && 
@@ -4721,6 +4787,9 @@ export default function BookingPage() {
                 {/* Pricing breakdown summary */}
                 {(() => {
                   const pricing = getNewMonthlyPricing();
+                  const totalNads = (newMonthlyDays.wed && newMonthlyStallsWed.length > 0 ? pricing.wedCount : 0) +
+                                    (newMonthlyDays.sat && newMonthlyStallsSat.length > 0 ? pricing.satCount : 0) +
+                                    (newMonthlyDays.sun && newMonthlyStallsSun.length > 0 ? pricing.sunCount : 0);
                   return (
                     <div className="bg-[#FFFDF9] border border-[#8B4513]/30 rounded-lg p-3 flex flex-col gap-2 shadow-xs text-left">
                       <div className="font-bold text-gray-800 border-b border-dashed pb-1 mb-1">สรุปรายละเอียดราคา</div>
@@ -4753,6 +4822,12 @@ export default function BookingPage() {
                           <div className="flex justify-between text-amber-900">
                             <span>ค่าฝากของ:</span>
                             <span className="font-bold">{pricing.storageFeeVal.toLocaleString()}.-</span>
+                          </div>
+                        )}
+                        {totalNads > 0 && (
+                          <div className="flex justify-between border-t border-dashed border-gray-200 pt-1 mt-1 text-slate-700 text-xs">
+                            <span>จำนวนวันลงขายรวม:</span>
+                            <span className="font-extrabold">{totalNads} นัด (ครั้ง)</span>
                           </div>
                         )}
                       </div>
@@ -5128,8 +5203,14 @@ export default function BookingPage() {
                         statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                         statusText = priceText;
                       } else if (booking.type === 'รายเดือน') {
-                        statusClass = "bg-monthly-stall";
-                        statusText = booking.product || "รายเดือน";
+                        const custType = getBookingCustomerType(booking);
+                        if (custType === 'Regular' && !isFood) {
+                          statusClass = "bg-unpaid text-amber-900";
+                          statusText = booking.product || "ประจำ";
+                        } else {
+                          statusClass = "bg-monthly-stall";
+                          statusText = booking.product || "รายเดือน";
+                        }
                       } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
                         statusClass = "bg-occupied text-red-900";
                         statusText = booking.product || "จองแล้ว";
@@ -5150,8 +5231,14 @@ export default function BookingPage() {
                         statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                         statusText = priceText;
                       } else if (booking.type === 'รายเดือน') {
-                        statusClass = "bg-monthly-stall";
-                        statusText = booking.product || "รายเดือน";
+                        const custType = getBookingCustomerType(booking);
+                        if (custType === 'Regular' && !isFood) {
+                          statusClass = "bg-unpaid text-amber-900";
+                          statusText = booking.product || "ประจำ";
+                        } else {
+                          statusClass = "bg-monthly-stall";
+                          statusText = booking.product || "รายเดือน";
+                        }
                       } else if (booking.status === 'ชำrateแล้ว' || booking.status === 'ไม่ว่าง' || booking.status === 'ชำระแล้ว') {
                         statusClass = "bg-occupied text-red-900";
                         statusText = booking.product || "จองแล้ว";
@@ -6958,7 +7045,7 @@ export default function BookingPage() {
                               autoFocus
                             />
                             {(() => {
-                              const occupiedStalls = getOccupiedStallsInRound();
+                              const occupiedStalls = getOccupiedStallsInRound(3);
                               const filtered = stalls.filter(s => 
                                 s.type !== 'ทางเดิน' && 
                                 s.type !== 'อื่นๆ' && 
@@ -7035,7 +7122,7 @@ export default function BookingPage() {
                               autoFocus
                             />
                             {(() => {
-                              const occupiedStalls = getOccupiedStallsInRound();
+                              const occupiedStalls = getOccupiedStallsInRound(6);
                               const filtered = stalls.filter(s => 
                                 s.type !== 'ทางเดิน' && 
                                 s.type !== 'อื่นๆ' && 
@@ -7112,7 +7199,7 @@ export default function BookingPage() {
                               autoFocus
                             />
                             {(() => {
-                              const occupiedStalls = getOccupiedStallsInRound();
+                              const occupiedStalls = getOccupiedStallsInRound(0);
                               const filtered = stalls.filter(s => 
                                 s.type !== 'ทางเดิน' && 
                                 s.type !== 'อื่นๆ' && 
@@ -7183,6 +7270,9 @@ export default function BookingPage() {
               {/* Pricing breakdown summary */}
               {(() => {
                 const pricing = getNewMonthlyPricing();
+                const totalNads = (newMonthlyDays.wed && newMonthlyStallsWed.length > 0 ? pricing.wedCount : 0) +
+                                  (newMonthlyDays.sat && newMonthlyStallsSat.length > 0 ? pricing.satCount : 0) +
+                                  (newMonthlyDays.sun && newMonthlyStallsSun.length > 0 ? pricing.sunCount : 0);
                 return (
                   <div className="bg-[#FFFDF9] border border-[#8B4513]/30 rounded-lg p-3 flex flex-col gap-2 shadow-xs">
                     <div className="font-bold text-gray-800 border-b border-dashed pb-1 mb-1">สรุปรายละเอียดราคา</div>
@@ -7215,6 +7305,12 @@ export default function BookingPage() {
                         <div className="flex justify-between text-amber-900">
                           <span>ค่าฝากของ:</span>
                           <span className="font-bold">{pricing.storageFeeVal.toLocaleString()}.-</span>
+                        </div>
+                      )}
+                      {totalNads > 0 && (
+                        <div className="flex justify-between border-t border-dashed border-gray-200 pt-1 mt-1 text-slate-700 text-xs text-left">
+                          <span>จำนวนวันลงขายรวม:</span>
+                          <span className="font-extrabold">{totalNads} นัด (ครั้ง)</span>
                         </div>
                       )}
                     </div>
