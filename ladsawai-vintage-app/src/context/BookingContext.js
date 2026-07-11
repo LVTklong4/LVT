@@ -3999,6 +3999,55 @@ export function BookingProvider({ children }) {
     };
   }, []);
 
+  // Filtered & Sorted Monthly List
+  const filteredMonthlyList = React.useMemo(() => {
+    let list = monthlyList || [];
+    
+    // 1. Filter by Month Filter
+    if (monthlyMonthFilter && monthlyMonthFilter !== 'ทั้งหมด') {
+      list = list.filter(item => {
+        const itemMonthStr = formatBookingMonth(item.booking_month);
+        return itemMonthStr === monthlyMonthFilter;
+      });
+    }
+
+    // 2. Filter by Search Query
+    if (monthlySearchQuery && monthlySearchQuery.trim() !== '') {
+      const q = monthlySearchQuery.toLowerCase();
+      list = list.filter(item => {
+        const nameMatch = item.booker_name?.toLowerCase().includes(q);
+        const phoneMatch = item.phone?.toLowerCase().includes(q);
+        const stallsMatch = item.stalls?.toLowerCase().includes(q);
+        return nameMatch || phoneMatch || stallsMatch;
+      });
+    }
+
+    // 3. Sort
+    if (monthlySortField) {
+      list = [...list].sort((a, b) => {
+        let valA = a[monthlySortField];
+        let valB = b[monthlySortField];
+
+        if (monthlySortField === 'remaining') {
+          valA = a.total_price - (a.paid_amount || 0);
+          valB = b.total_price - (b.paid_amount || 0);
+        }
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return monthlySortOrder === 'asc' 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA);
+        }
+
+        const numA = parseFloat(valA) || 0;
+        const numB = parseFloat(valB) || 0;
+        return monthlySortOrder === 'asc' ? numA - numB : numB - numA;
+      });
+    }
+
+    return list;
+  }, [monthlyList, monthlyMonthFilter, monthlySearchQuery, monthlySortField, monthlySortOrder]);
+
   // Helper utility parse
   const parseNumber = (val) => {
     const num = parseFloat(String(val));
@@ -4139,6 +4188,7 @@ export function BookingProvider({ children }) {
     invoicePreviewItem,
     isEditingMonthlyMode,
     isMonthlyPageOnly,
+    filteredMonthlyList,
     loading,
     loadingFinance,
     loadingMonthly,
