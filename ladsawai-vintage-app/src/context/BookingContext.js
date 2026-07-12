@@ -1166,8 +1166,24 @@ export function BookingProvider({ children }) {
     const elecPriceVal = parseNumber(bookingObj.elec_price);
     const storageFeeVal = parseNumber(bookingObj.storage_fee);
     const totalAmountVal = stallPriceVal + elecPriceVal + storageFeeVal;
-    
-    const paymentMethodText = bookingObj.payment_method === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
+
+    const rawPayments = bookingObj.payment_method || '';
+    const paymentLines = [];
+    if (rawPayments.includes('+') || rawPayments.includes(':')) {
+      rawPayments.split('+').forEach(p => {
+        const parts = p.trim().split(':');
+        if (parts.length >= 2) {
+          paymentLines.push({ method: parts[0].trim() === 'โอนเงิน' ? 'โอนจ่าย' : parts[0].trim(), amount: parseNumber(parts[1]) });
+        } else {
+          paymentLines.push({ method: p.trim(), amount: totalAmountVal });
+        }
+      });
+    } else {
+      paymentLines.push({ method: rawPayments === 'โอนเงิน' ? 'โอนจ่าย' : rawPayments || 'เงินสด', amount: totalAmountVal });
+    }
+
+    const totalPaidVal = paymentLines.reduce((sum, p) => sum + p.amount, 0);
+    const changeVal = totalPaidVal > totalAmountVal ? (totalPaidVal - totalAmountVal) : 0;
 
     const printWindow = window.open('', '_blank', 'width=600,height=800');
     if (!printWindow) {
@@ -1180,7 +1196,7 @@ export function BookingProvider({ children }) {
         <head>
           <title>พิมพ์ตั๋ว/ใบเสร็จ</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800;950&display=swap');
             @page {
               size: 80mm auto;
               margin: 0;
@@ -1192,7 +1208,7 @@ export function BookingProvider({ children }) {
               padding: 4mm 2mm;
               background: #fff;
               color: #000;
-              font-size: 11pt;
+              font-size: 10pt;
               line-height: 1.4;
             }
             .center {
@@ -1202,158 +1218,196 @@ export function BookingProvider({ children }) {
               font-weight: bold;
             }
             .logo {
-              width: 32mm;
-              height: auto;
-              margin: 0 auto 2mm auto;
+              width: 16mm;
+              height: 16mm;
+              margin: 0 auto 1.5mm auto;
               display: block;
+              object-fit: contain;
             }
             .divider {
-              border-top: 1.5px dashed #000;
-              margin: 3mm 0;
+              border-top: 1.2px dashed #000;
+              margin: 2.5mm 0;
             }
             .title {
-              font-size: 13pt;
+              font-size: 11.5pt;
               font-weight: 800;
-              margin: 2mm 0 1mm 0;
+              margin: 1.5mm 0 0.5mm 0;
             }
             .subtitle {
-              font-size: 9.5pt;
+              font-size: 8pt;
               font-weight: bold;
+              color: #555;
+            }
+            .flex-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 3.5px;
+              font-size: 9.5pt;
+            }
+            .metadata {
+              font-size: 8.5pt;
+              color: #333;
+              font-weight: bold;
+            }
+            .trade-details {
+              font-size: 9.5pt;
+            }
+            .trade-details .val {
+              font-weight: 800;
               color: #000;
             }
-            .info-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .info-table td {
-              padding: 1.2mm 0;
-              vertical-align: top;
-              font-size: 10.5pt;
-            }
-            .info-table td.label {
-              width: 32%;
-              white-space: nowrap;
-            }
-            .info-table td.val {
-              text-align: right;
-              font-weight: bold;
+            .trade-details .red-val {
+              font-weight: 800;
+              color: #b91c1c;
             }
             .price-table {
               width: 100%;
               border-collapse: collapse;
-              margin: 2mm 0;
+              margin: 1.5mm 0;
+            }
+            .price-table th {
+              border-bottom: 1.2px dashed #000;
+              padding: 1mm 0;
+              font-size: 9pt;
+              font-weight: bold;
+              text-align: left;
             }
             .price-table td {
               padding: 1.2mm 0;
-              font-size: 10.5pt;
-            }
-            .price-table td.label {
-              text-align: left;
+              font-size: 9.5pt;
+              font-weight: bold;
             }
             .price-table td.val {
               text-align: right;
-              font-weight: bold;
+              font-family: monospace;
             }
-            .total-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .total-table td {
-              padding: 1.5mm 0;
-            }
-            .total-table td.label {
-              text-align: right;
+            .total-row {
+              display: flex;
+              justify-content: space-between;
               font-size: 11pt;
-              font-weight: bold;
-              padding-right: 2mm;
+              font-weight: 900;
+              margin-bottom: 4px;
             }
-            .total-table td.val {
-              text-align: right;
-              font-size: 13pt;
-              font-weight: 800;
+            .payment-breakdown {
+              font-size: 8.5pt;
+              color: #444;
+              font-weight: bold;
+              margin-top: 1.5mm;
             }
             .footer {
-              margin-top: 4mm;
-              font-size: 9.5pt;
+              margin-top: 4.5mm;
+              font-size: 8.5pt;
               text-align: center;
-              line-height: 1.5;
+              line-height: 1.4;
+              font-weight: bold;
+              color: #444;
             }
           </style>
         </head>
         <body>
           <div class="center">
             <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
-            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
-            <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
-            <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
-            <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
+            <div class="title">ตลาดลาดสวายวินเทจ</div>
+            <div class="subtitle">Ladsawai Vintage Market</div>
+            <div class="subtitle" style="font-weight: normal;">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน-รายเดือน</div>
+            <div class="subtitle" style="font-weight: normal;">โทร. 096-841-8411</div>
           </div>
           
           <div class="divider"></div>
           
-          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (รายวัน)</div>
+          <div class="metadata">
+            <div class="flex-row">
+              <span>เลขที่เอกสาร:</span>
+              <span style="font-family: monospace;">${bookingObj.id}</span>
+            </div>
+            <div class="flex-row">
+              <span>ผู้ทำรายการ:</span>
+              <span>${empCode}</span>
+            </div>
+            <div class="flex-row">
+              <span>วันที่ทำรายการ:</span>
+              <span style="font-family: monospace;">${formattedTransaction}</span>
+            </div>
+          </div>
           
-          <table class="info-table">
-            <tr>
-              <td class="label">วันที่ทำรายการ :</td>
-              <td style="text-align: right;">${formattedTransaction}</td>
-            </tr>
-            <tr>
-              <td class="label">รหัสพนักงาน :</td>
-              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
-            </tr>
-            <tr>
-              <td class="label">วันที่ทำการค้า :</td>
-              <td style="text-align: right;" class="bold">${tradingDateFormatted}</td>
-            </tr>
-            <tr>
-              <td class="label">สินค้า :</td>
-              <td style="text-align: right;" class="bold">${bookingObj.product || '-'}</td>
-            </tr>
-            <tr>
-              <td class="label">ล็อค :</td>
-              <td style="text-align: right;" class="bold">${formattedStallName}</td>
-            </tr>
-          </table>
+          <div class="divider"></div>
+          
+          <div class="trade-details">
+            <div class="flex-row">
+              <span style="color: #555;">วันที่ทำการค้า:</span>
+              <span class="val">${tradingDateFormatted}</span>
+            </div>
+            <div class="flex-row">
+              <span style="color: #555;">ล็อกที่เช่า:</span>
+              <span class="red-val">${formattedStallName}</span>
+            </div>
+            <div class="flex-row">
+              <span style="color: #555;">ผู้ค้า:</span>
+              <span class="val">${bookingObj.booker_name || '-'}</span>
+            </div>
+            <div class="flex-row">
+              <span style="color: #555;">สินค้าที่ขาย:</span>
+              <span class="val">${bookingObj.product || '-'}</span>
+            </div>
+          </div>
           
           <div class="divider"></div>
           
           <table class="price-table">
-            <tr>
-              <td class="label">ค่าล็อครวม :</td>
-              <td class="val">${formatPrice(stallPriceVal)}</td>
-            </tr>
-            <tr>
-              <td class="label">ค่าไฟฟ้ารวม :</td>
-              <td class="val">${formatPrice(elecPriceVal)}</td>
-            </tr>
-            <tr>
-              <td class="label">ค่าฝากของ :</td>
-              <td class="val">${formatPrice(storageFeeVal)}</td>
-            </tr>
+            <thead>
+              <tr>
+                <th style="text-align: left; color: #555;">รายการ</th>
+                <th style="text-align: right; color: #555;">จำนวนเงิน</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>ค่าล็อกสะสม</td>
+                <td class="val">${stallPriceVal.toFixed(2)} บ.</td>
+              </tr>
+              ${elecPriceVal > 0 ? `
+                <tr>
+                  <td>ค่าไฟ (${bookingObj.elec_unit || 0} หน่วย)</td>
+                  <td class="val">${elecPriceVal.toFixed(2)} บ.</td>
+                </tr>
+              ` : ''}
+              ${storageFeeVal > 0 ? `
+                <tr>
+                  <td>ค่าฝากของ</td>
+                  <td class="val">${storageFeeVal.toFixed(2)} บ.</td>
+                </tr>
+              ` : ''}
+            </tbody>
           </table>
           
           <div class="divider"></div>
           
-          <table class="total-table">
-            <tr>
-              <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
-              <td class="val">${formatPrice(totalAmountVal)}</td>
-            </tr>
-            <tr>
-              <td class="label">การชำระเงิน [${paymentMethodText}] :</td>
-              <td class="val">${formatPrice(totalAmountVal)}</td>
-            </tr>
-          </table>
+          <div class="total-row">
+            <span>รวมเงินทั้งสิ้น:</span>
+            <span style="font-family: monospace;">${totalAmountVal.toFixed(2)} บ.</span>
+          </div>
+          
+          <div class="payment-breakdown">
+            ${paymentLines.map(p => `
+              <div class="flex-row">
+                <span>ชำระด้วย [${p.method}]:</span>
+                <span style="font-family: monospace;">${p.amount.toFixed(2)} บ.</span>
+              </div>
+            `).join('')}
+            ${changeVal > 0 ? `
+              <div class="flex-row" style="color: #b91c1c;">
+                <span>เงินทอน:</span>
+                <span style="font-family: monospace;">${changeVal.toFixed(2)} บ.</span>
+              </div>
+            ` : ''}
+          </div>
           
           <div class="divider"></div>
           
           <div class="footer">
-            <div>ติดต่อสอบถามเพิ่มเติมได้ที่</div>
-            <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
-            <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
+            <p style="margin: 0;">Line Official: @ladsawaivintage</p>
+            <p style="margin: 1.5mm 0 0 0; color: #000; font-size: 9pt; font-weight: 800;">ขอบคุณที่ใช้บริการครับ/ค่ะ</p>
+            <p style="margin: 3.5mm 0 0 0; font-size: 7.5pt; color: #888; font-weight: normal;">Powered by PJMJK</p>
           </div>
           
           <script>
