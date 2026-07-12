@@ -817,11 +817,22 @@ export default function StandardBookingLayout() {
                                       s.name.toLowerCase().includes(stallFilter.toLowerCase())
                                     );
                                     
-                                    if (filteredVacant.length === 0) {
+                                    const sortedVacant = [...filteredVacant].sort((a, b) => {
+                                      const isFoodA = a.type === 'อาหาร';
+                                      const isFoodB = b.type === 'อาหาร';
+                                      if (isFoodA && !isFoodB) return -1;
+                                      if (!isFoodA && isFoodB) return 1;
+                                      
+                                      const nameA = a.name.replace(/[\[\]]/g, '');
+                                      const nameB = b.name.replace(/[\[\]]/g, '');
+                                      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+                                    });
+                                    
+                                    if (sortedVacant.length === 0) {
                                       return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อคที่ตรงกัน</span>;
                                     }
                                     
-                                    return filteredVacant.map((vSt) => (
+                                    return sortedVacant.map((vSt) => (
                                       <button
                                         key={vSt.name}
                                         type="button"
@@ -862,7 +873,7 @@ export default function StandardBookingLayout() {
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-[#5D4037] flex items-center gap-1">
-                            <Store className="w-3.5 h-3.5 text-[#8B4513] shrink-0" /> สินค้าที่ขาย
+                            <Store className="w-3.5 h-3.5 text-[#8B4513] shrink-0" /> สินค้าที่ขาย *
                           </label>
                           <input 
                             type="text" 

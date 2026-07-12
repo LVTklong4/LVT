@@ -735,6 +735,10 @@ export function BookingProvider({ children }) {
       showAlert("โปรดกรอกชื่อผู้ค้า/เบอร์โทร", "แจ้งเตือน", true);
       return;
     }
+    if (!product.trim()) {
+      showAlert("โปรดกรอกสินค้าที่ขาย", "แจ้งเตือน", true);
+      return;
+    }
 
     const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
     const totalPaid = paymentList
@@ -746,12 +750,10 @@ export function BookingProvider({ children }) {
       return;
     }
 
-    if (status === 'ชำระแล้ว') {
-      const incomplete = paymentList.some(p => p.amount && !p.method);
-      if (incomplete) {
-        showAlert("กรุณาเลือกวิธีการชำระเงิน (เงินสด/โอนจ่าย) สำหรับยอดเงินที่ระบุไว้", "แจ้งเตือน", true);
-        return;
-      }
+    const incomplete = paymentList.some(p => p.amount !== undefined && p.amount !== null && p.amount.toString().trim() !== '' && !p.method);
+    if (incomplete) {
+      showAlert("กรุณาเลือกวิธีการชำระเงิน (เงินสด/โอนจ่าย) สำหรับยอดเงินที่ระบุไว้", "แจ้งเตือน", true);
+      return;
     }
 
     setLoading(true);

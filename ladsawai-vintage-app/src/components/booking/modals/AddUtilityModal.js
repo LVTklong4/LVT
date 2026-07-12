@@ -9,7 +9,7 @@ export default function AddUtilityModal() {
     addUtilityMethod,    addUtilityPrice,    addUtilityUnit,    handleAddUtility,    parseNumber,    selectedBooking,    setAddUtilityMethod,    setAddUtilityPrice,    setAddUtilityUnit,    setShowAddUtilityModal,    showAddUtilityModal
   } = useBooking();
 
-  if (!showAddUtilityModal && !selectedBooking) return null;
+  if (!showAddUtilityModal || !selectedBooking) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

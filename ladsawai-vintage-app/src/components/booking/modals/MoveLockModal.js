@@ -9,7 +9,7 @@ export default function MoveLockModal() {
     fetchVacantStallsForDate,    getStallPriceForDate,    handleConfirmMoveLock,    loading,    loadingVacantStalls,    moveStallFilter,    moveTargetDate,    moveTargetStall,    parseNumber,    paymentList,    selectedBooking,    setMoveStallFilter,    setMoveTargetDate,    setMoveTargetStall,    setShowMoveLockModal,    showMoveLockModal,    vacantStallsOnTargetDate
   } = useBooking();
 
-  if (!showMoveLockModal && !selectedBooking) return null;
+  if (!showMoveLockModal || !selectedBooking) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
