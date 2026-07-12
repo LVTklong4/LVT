@@ -970,50 +970,162 @@ export function BookingProvider({ children }) {
   };
 
   // Confirm Lock Transfer
-  const handleConfirmMoveLock = async () => {
+  const handleConfirmMoveLock = async (sourceStallName, customTargetStall, customTargetDate) => {
     if (!adminUser) {
       showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
-    if (!selectedBooking || !moveTargetStall) {
-      showAlert("โปรดเลือกล็อคที่ต้องการย้ายไป", "แจ้งเตือน", true);
+
+    const targetStall = customTargetStall || moveTargetStall;
+    const targetDate = customTargetDate || moveTargetDate;
+    const srcStallName = sourceStallName || (selectedBooking ? selectedBooking.stall_name.split(',')[0].trim() : '');
+
+    if (!selectedBooking || !targetStall || !targetDate || !srcStallName) {
+      showAlert("ข้อมูลไม่ครบถ้วนสำหรับการย้ายล็อค", "แจ้งเตือน", true);
       return;
     }
 
     setLoading(true);
     try {
-      const currentPaid = paymentList
-        .filter(p => p.method && p.amount)
-        .reduce((sum, p) => sum + parseNumber(p.amount), 0);
+      const allStalls = selectedBooking.stall_name.split(',').map(s => s.trim());
+      const isMultiStall = allStalls.length > 1;
 
-      const newStallPrice = getStallPriceForDate(moveTargetStall, moveTargetDate);
-      const finalStallPrice = Math.max(newStallPrice, currentPaid);
-      const originalStall = selectedBooking.stall_name;
+      // 1. Calculate current paid amount for the whole booking
+      let currentPaid = 0;
+      if (selectedBooking.payment_method) {
+        const parts = selectedBooking.payment_method.split('+');
+        parts.forEach(part => {
+          if (part.includes(':')) {
+            const [, amtStr] = part.split(':');
+            currentPaid += parseNumber(amtStr);
+          } else {
+            currentPaid += parseNumber(part);
+          }
+        });
+      }
+
+      if (currentPaid === 0 && selectedBooking.status === 'ชำระแล้ว') {
+        currentPaid = parseNumber(selectedBooking.total_price);
+      }
+
+      // 2. Calculate standard prices of the stalls to find ratio
+      const standardSourcePrice = getStallPriceForDate(stalls.find(s => s.name === srcStallName) || { name: srcStallName }, selectedBooking.date);
+      let totalStandard = standardSourcePrice;
+      if (isMultiStall) {
+        totalStandard = allStalls.reduce((sum, name) => {
+          const sObj = stalls.find(s => s.name === name);
+          return sum + (sObj ? getStallPriceForDate(sObj, selectedBooking.date) : 0);
+        }, 0);
+      }
+
+      const ratio = standardSourcePrice / (totalStandard || 1);
+
+      // Allocated prices & fees
+      const allocatedSourcePrice = Math.round(selectedBooking.stall_price * ratio);
+      const allocatedSourcePaid = Math.round(currentPaid * ratio);
+      
+      const allocatedSourceElecUnit = parseNumber((selectedBooking.elec_unit || 0) * ratio);
+      const allocatedSourceElecPrice = Math.round(parseNumber(selectedBooking.elec_price || 0) * ratio);
+      const allocatedSourceStorageFee = Math.round(parseNumber(selectedBooking.storage_fee || 0) * ratio);
+
+      // New target price
+      const newTargetPrice = getStallPriceForDate(targetStall, targetDate);
+      const finalSourcePrice = Math.max(newTargetPrice, allocatedSourcePaid);
+      const finalSourceTotal = finalSourcePrice + allocatedSourceElecPrice + allocatedSourceStorageFee;
+      const isPaidSource = allocatedSourcePaid >= finalSourceTotal && finalSourceTotal > 0;
+      const newStatusSource = isPaidSource ? 'ชำระแล้ว' : 'ค้างชำระ';
+
+      // Move Note
       const originalDate = selectedBooking.date;
-
-      const finalTotal = finalStallPrice + parseNumber(elecPrice) + parseNumber(storageFee);
-      const isPaid = currentPaid >= finalTotal && finalTotal > 0;
-      const newStatus = isPaid ? 'ชำระแล้ว' : 'ค้างชำระ';
-
       const dateObj = new Date(originalDate);
       const dateFormatted = `${dateObj.getDate()}/${(dateObj.getMonth() + 1)}`;
-      const moveNote = `[ย้ายจาก ${originalStall} วันที่ ${dateFormatted}] ${note}`;
+      const moveNote = `[ย้ายจาก ${srcStallName} วันที่ ${dateFormatted}] ${selectedBooking.note || ''}`;
 
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({
-          date: moveTargetDate,
-          stall_name: moveTargetStall.name,
-          stall_price: finalStallPrice,
-          total_price: finalTotal,
-          status: newStatus,
-          note: moveNote
-        })
-        .eq('id', selectedBooking.id);
+      if (!isMultiStall) {
+        // Single Stall: Update in place
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update({
+            date: targetDate,
+            stall_name: targetStall.name,
+            stall_price: finalSourcePrice,
+            total_price: finalSourceTotal,
+            status: newStatusSource,
+            note: moveNote
+          })
+          .eq('id', selectedBooking.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      } else {
+        // Multi Stall: Split!
+        const remainingStalls = allStalls.filter(name => name !== srcStallName);
+        const allocatedRemainingPrice = selectedBooking.stall_price - allocatedSourcePrice;
+        const allocatedRemainingPaid = currentPaid - allocatedSourcePaid;
+        const allocatedRemainingElecUnit = parseNumber((selectedBooking.elec_unit || 0) - allocatedSourceElecUnit);
+        const allocatedRemainingElecPrice = Math.round(parseNumber(selectedBooking.elec_price || 0) - allocatedSourceElecPrice);
+        const allocatedRemainingStorageFee = Math.round(parseNumber(selectedBooking.storage_fee || 0) - allocatedSourceStorageFee);
+        const finalRemainingTotal = allocatedRemainingPrice + allocatedRemainingElecPrice + allocatedRemainingStorageFee;
+        const isPaidRemaining = allocatedRemainingPaid >= finalRemainingTotal && finalRemainingTotal > 0;
+        const newStatusRemaining = isPaidRemaining ? 'ชำระแล้ว' : 'ค้างชำระ';
 
-      showAlert(`ย้ายล็อคสำเร็จไปยัง ${moveTargetStall.name} ในวันที่ ${getModalDateFormat(moveTargetDate)}`, "สำเร็จ");
+        const splitPaymentMethod = (paymentMethodStr, splitRatio) => {
+          if (!paymentMethodStr) return 'เงินสด';
+          return paymentMethodStr.split('+').map(part => {
+            const trimPart = part.trim();
+            if (trimPart.includes(':')) {
+              const [method, amtStr] = trimPart.split(':');
+              const amt = parseNumber(amtStr);
+              return `${method}:${Math.round(amt * splitRatio)}`;
+            }
+            return trimPart;
+          }).join(' + ');
+        };
+
+        const paymentMethodSource = splitPaymentMethod(selectedBooking.payment_method, ratio);
+        const paymentMethodRemaining = splitPaymentMethod(selectedBooking.payment_method, 1 - ratio);
+
+        // A. Update original booking to contain only remaining stalls
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update({
+            stall_name: remainingStalls.join(', '),
+            stall_price: allocatedRemainingPrice,
+            elec_unit: allocatedRemainingElecUnit,
+            elec_price: allocatedRemainingElecPrice,
+            storage_fee: allocatedRemainingStorageFee,
+            total_price: finalRemainingTotal,
+            payment_method: paymentMethodRemaining,
+            status: newStatusRemaining
+          })
+          .eq('id', selectedBooking.id);
+
+        if (updateError) throw updateError;
+
+        // B. Insert new booking for the moved stall
+        const newBookingId = `B-move-${Date.now()}`;
+        const { error: insertError } = await supabase
+          .from('bookings')
+          .insert({
+            id: newBookingId,
+            date: targetDate,
+            stall_name: targetStall.name,
+            booker_name: selectedBooking.booker_name,
+            product: selectedBooking.product,
+            type: selectedBooking.type,
+            elec_unit: allocatedSourceElecUnit,
+            elec_price: allocatedSourceElecPrice,
+            stall_price: finalSourcePrice,
+            total_price: finalSourceTotal,
+            payment_method: paymentMethodSource,
+            status: newStatusSource,
+            note: moveNote,
+            storage_fee: allocatedSourceStorageFee
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      showAlert(`ย้ายล็อค ${srcStallName} สำเร็จไปยัง ${targetStall.name} ในวันที่ ${getModalDateFormat(targetDate)}`, "สำเร็จ");
       setShowMoveLockModal(false);
       setShowBookingModal(false);
       fetchBookingsAndStorage();
