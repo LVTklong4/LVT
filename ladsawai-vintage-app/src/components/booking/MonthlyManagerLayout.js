@@ -115,6 +115,7 @@ export default function MonthlyManagerLayout() {
                     >
                       เดือน {renderSortArrow('booking_month')}
                     </th>
+                    <th className="p-2 select-none">ประเภท</th>
                     <th className="p-2 select-none">ลูกค้า</th>
                     <th className="p-2 select-none">ล็อค</th>
                     <th 
@@ -154,6 +155,18 @@ export default function MonthlyManagerLayout() {
                       >
                         <td className="p-2 font-semibold text-gray-700">
                           {formatBookingMonth(item.booking_month)}
+                        </td>
+                        <td className="p-2">
+                          {(() => {
+                            const cType = item.customer_type || 'Standard';
+                            if (cType === 'Regular') {
+                              return <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
+                            } else if (cType === 'VIP') {
+                              return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
+                            } else {
+                              return <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">รายเดือน</span>;
+                            }
+                          })()}
                         </td>
                         <td className="p-2">
                           <div className="font-bold text-gray-800">{item.booker_name}</div>

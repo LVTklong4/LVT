@@ -545,15 +545,12 @@ export function BookingProvider({ children }) {
           return { isVacant: true, label: 'ว่าง (ปล่อยเช่ารายวัน)', price, product: '' };
         } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
           return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'จองแล้ว' };
-        } else if (booking.status === 'ค้างชำระ') {
-          const custType = getBookingCustomerType(booking);
-          if (custType === 'Regular') {
-            return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || 'ประจำ' };
-          } else {
-            return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'ร้านค้าประจำ' };
-          }
+        } else if (booking.status === 'ค้างชำระ' && booking.type === 'ประจำ') {
+          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || 'ประจำ' };
+        } else if (booking.type === 'ประจำ') {
+          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || 'ประจำ' };
         } else {
-          return { isVacant: false, label: 'ไม่ว่าง (ร้านค้าประจำ)', product: 'ร้านค้าประจำ' };
+          return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'ร้านค้าประจำ' };
         }
       } else {
         return { isVacant: false, label: 'ไม่ว่าง (ร้านค้าประจำ)', product: 'ร้านค้าประจำ' };
@@ -567,8 +564,7 @@ export function BookingProvider({ children }) {
           return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'จองแล้ว' };
         } else {
           // Unpaid
-          const custType = getBookingCustomerType(booking);
-          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || (custType === 'Regular' ? 'ประจำ' : 'ค้างชำระ') };
+          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || (booking.type === 'ประจำ' ? 'ประจำ' : 'ค้างชำระ') };
         }
       } else {
         return { isVacant: true, label: 'ว่าง', price, product: '' };
@@ -667,15 +663,12 @@ export function BookingProvider({ children }) {
       return 0;
     })[0];
 
-    // If active monthly booking (not 'ลา') AND customer type is NOT Regular (ประจำ), open our new Monthly Stall Map Modal instead of daily form
+    // If active monthly booking (not 'ลา'), open our new Monthly Stall Map Modal instead of daily form
     if (booking && booking.type === 'รายเดือน' && booking.status !== 'ลา') {
-      const custType = getBookingCustomerType(booking);
-      if (custType !== 'Regular') {
-        setSelectedStall(stall);
-        setSelectedMonthlyStallBooking(booking);
-        setShowMonthlyStallMapModal(true);
-        return;
-      }
+      setSelectedStall(stall);
+      setSelectedMonthlyStallBooking(booking);
+      setShowMonthlyStallMapModal(true);
+      return;
     }
 
     // If booking status is 'ลา', we treat it as vacant for daily rental
@@ -839,7 +832,7 @@ export function BookingProvider({ children }) {
           id: txnId,
           booking_ref: bookingId,
           date: selectedDate,
-          category: (bookingType === 'รายวัน' || getBookingCustomerType(selectedBooking) === 'Regular') ? 'ค่าล็อครายวัน' : 'ค่าล็อครายเดือน',
+          category: (bookingType === 'รายวัน' || bookingType === 'ประจำ') ? 'ค่าล็อครายวัน' : 'ค่าล็อครายเดือน',
           total_amount: totalVal,
           method: finalPaymentMethod,
           note: `ชำระเงินล็อค ${stallNames}`,
@@ -3234,7 +3227,7 @@ export function BookingProvider({ children }) {
               stall_name: stallName,
               booker_name: newMonthlyBookerName,
               product: newMonthlyProduct,
-              type: 'รายเดือน',
+              type: newMonthlyCustomerType === 'Regular' ? 'ประจำ' : 'รายเดือน',
               elec_unit: parseNumber(newMonthlyElecUnit || 0),
               elec_price: parseNumber(newMonthlyElecUnit || 0) * 10,
               stall_price: price,
@@ -3408,7 +3401,7 @@ export function BookingProvider({ children }) {
               stall_name: stallName,
               booker_name: newMonthlyBookerName,
               product: newMonthlyProduct,
-              type: 'รายเดือน',
+              type: newMonthlyCustomerType === 'Regular' ? 'ประจำ' : 'รายเดือน',
               elec_unit: parseNumber(newMonthlyElecUnit || 0),
               elec_price: parseNumber(newMonthlyElecUnit || 0) * 10,
               stall_price: price,
