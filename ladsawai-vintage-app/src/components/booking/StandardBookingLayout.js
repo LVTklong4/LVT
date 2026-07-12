@@ -209,14 +209,6 @@ export default function StandardBookingLayout() {
                       </>
                     )}
                   </div>
-
-                  <button 
-                    onClick={() => fetchBookingsAndStorage()}
-                    className="p-1.5 text-green-700 hover:bg-green-50 rounded-lg transition-colors cursor-pointer" 
-                    title="ดึงข้อมูลใหม่"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                  </button>
                 </div>
               </>
             )}
@@ -918,7 +910,7 @@ export default function StandardBookingLayout() {
                                     const vacantStalls = stalls.filter(s => 
                                       s.type !== 'ทางเดิน' && 
                                       s.type !== 'อื่นๆ' && 
-                                      !bookings.some(b => b.stall_name === s.name || (b.stall_name && b.stall_name.split(',').map(name => name.trim()).includes(s.name))) && 
+                                      !bookings.some(b => b.status !== 'ลา' && (b.stall_name === s.name || (b.stall_name && b.stall_name.split(',').map(name => name.trim()).includes(s.name)))) && 
                                       !selectedStallsList.some(item => item.name === s.name)
                                     );
                                     const filteredVacant = vacantStalls.filter(s => 
