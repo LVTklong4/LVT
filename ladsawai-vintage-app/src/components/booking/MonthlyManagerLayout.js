@@ -202,17 +202,19 @@ export default function MonthlyManagerLayout() {
                               <Edit className="w-3 h-3" /> แก้ไข
                             </button>
                             <button 
-                              onClick={() => handlePrintMonthlyInvoice(item)}
-                              className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
-                            >
-                              <FileText className="w-3 h-3" /> แจ้งหนี้
-                            </button>
-                            <button 
                               onClick={() => handleDeleteMonthlyBooking(item)}
                               className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-[10px] font-bold hover:bg-red-100 flex items-center gap-0.5 cursor-pointer"
                             >
                               <Trash2 className="w-3 h-3" /> ลบ
                             </button>
+                            {item.customer_type !== 'Regular' && (
+                              <button 
+                                onClick={() => handlePrintMonthlyInvoice(item)}
+                                className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <FileText className="w-3 h-3" /> แจ้งหนี้
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -230,36 +232,55 @@ export default function MonthlyManagerLayout() {
                 <div className="border-b pb-2 shrink-0">
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-bold text-xs text-[#3E2723] flex items-center gap-1.5 mt-1"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
-                    <div className="flex flex-col gap-1 items-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
-                          setShowMonthlyPaymentModal(true);
-                        }}
-                        className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
-                      >
-                        <Plus className="w-3 h-3" /> ชำระเงิน
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
-                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
-                      >
-                        <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
-                      </button>
-                    </div>
+                    {activeMonthlyBooking.customer_type !== 'Regular' && (
+                      <div className="flex flex-col gap-1 items-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+                            setShowMonthlyPaymentModal(true);
+                          }}
+                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                        >
+                          <Plus className="w-3 h-3" /> ชำระเงิน
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                        >
+                          <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="text-[11px] text-gray-600 mt-1 font-bold">
                     ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls)}</span>
                   </div>
                   <div className="text-[10px] text-gray-500 mt-0.5">
-                    ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price.toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{(activeMonthlyBooking.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0)).toLocaleString()}.-</span>
+                    {activeMonthlyBooking.customer_type === 'Regular' ? (
+                      <span className="font-extrabold text-amber-800 bg-amber-50 px-2 py-1 rounded border border-amber-200 block text-center mt-1">
+                        📢 ลูกค้าประจำชำระเงินเป็นรายวันผ่านผังตลาด
+                      </span>
+                    ) : (
+                      <>
+                        ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price.toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{(activeMonthlyBooking.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0)).toLocaleString()}.-</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="overflow-auto flex-1 pr-1">
-                  {loadingMonthlyTxns ? (
+                  {activeMonthlyBooking.customer_type === 'Regular' ? (
+                    <div className="text-center text-[#8B4513] py-12 px-4 flex flex-col items-center justify-center gap-2 border border-dashed border-[#8B4513]/25 bg-amber-50/20 rounded-xl">
+                      <Banknote className="w-8 h-8 text-amber-600 animate-pulse" />
+                      <span className="font-extrabold text-xs">ระบบชำระเงินรายวัน</span>
+                      <p className="text-[10px] text-gray-500 font-bold leading-relaxed text-center">
+                        ลูกค้าประเภทประจำนี้ จะชำระค่าเช่ารายวันทีละล็อคเมื่อเริ่มขายจริงในแต่ละวัน 
+                        โดยจะไม่มีการสรุปยอดชำระแบบเหมาและไม่มีประวัติธุรกรรมรายเดือนที่นี่
+                      </p>
+                    </div>
+                  ) : loadingMonthlyTxns ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-5 h-5 text-amber-800 animate-spin" />
                     </div>

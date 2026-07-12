@@ -437,7 +437,15 @@ export default function NewMonthlyModal() {
               </div>
 
               {/* Pricing breakdown summary */}
-              {(() => {
+              {newMonthlyCustomerType === 'Regular' ? (
+                <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg p-3 flex items-start gap-2 shadow-xs">
+                  <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-[11px] font-bold leading-normal">
+                    <h5 className="font-extrabold text-amber-800 text-xs mb-0.5">ชำระเงินในรูปแบบรายวัน</h5>
+                    <p>สัญญาลูกค้าประจำนี้จะทำการล็อกผังไว้ทั้งเดือนโดยขึ้นสถานะ "ค้างชำระ (ประจำ)" และจะชำระเงินเป็นรายวันทีละล็อคเมื่อเริ่มขายจริงในแต่ละวัน โดยอ้างอิงราคาตามปกติของแต่ละล็อค</p>
+                  </div>
+                </div>
+              ) : (() => {
                 const pricing = getNewMonthlyPricing();
                 const totalNads = (newMonthlyDays.wed && newMonthlyStallsWed.length > 0 ? pricing.wedCount : 0) +
                                   (newMonthlyDays.sat && newMonthlyStallsSat.length > 0 ? pricing.satCount : 0) +

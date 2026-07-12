@@ -99,6 +99,7 @@ export default function BulkRenewModal() {
                               className="w-4 h-4 cursor-pointer rounded"
                             />
                           </th>
+                          <th className="p-2">ประเภท</th>
                           <th className="p-2">ชื่อลูกค้า</th>
                           <th className="p-2">ล็อคต้นทาง</th>
                           <th className="p-2">วันลงขาย</th>
@@ -196,6 +197,17 @@ export default function BulkRenewModal() {
                                   }}
                                   className="w-4 h-4 cursor-pointer rounded"
                                 />
+                              </td>
+                              <td className="p-2">
+                                {(() => {
+                                  if (dispType === 'Regular') {
+                                    return <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
+                                  } else if (dispType === 'VIP') {
+                                    return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
+                                  } else {
+                                    return <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">รายเดือน</span>;
+                                  }
+                                })()}
                               </td>
                               <td className="p-2">
                                 <div className="font-bold text-gray-800">{dispBookerName}</div>
