@@ -1477,16 +1477,16 @@ export default function StandardBookingLayout() {
                       className="w-16 h-16 object-contain mb-1"
                     />
                     <h2 className="font-black text-sm text-center">ตลาดลาดสวายวินเทจ</h2>
-                    <p className="text-[10px] text-gray-600 text-center font-bold">Ladsawai Vintage Market</p>
-                    <p className="text-[9px] text-gray-500 text-center font-bold">เลขที่ 52/34 หมู่ 5</p>
-                    <p className="text-[9px] text-gray-500 text-center font-bold">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</p>
-                    <p className="text-[9px] text-gray-500 text-center font-bold">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน-รายเดือน</p>
-                    <p className="text-[9px] text-gray-500 text-center font-bold">โทร: 0-92-869-7774 , 0-92-869-7775</p>
+                    <p className="text-[10px] text-black text-center font-black">Ladsawai Vintage Market</p>
+                    <p className="text-[9px] text-black text-center font-black">เลขที่ 52/34 หมู่ 5</p>
+                    <p className="text-[9px] text-black text-center font-black">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</p>
+                    <p className="text-[9px] text-black text-center font-black">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน-รายเดือน</p>
+                    <p className="text-[9px] text-black text-center font-black">โทร: 0-92-869-7774 , 0-92-869-7775</p>
                   </div>
 
-                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+                  <div className="border-t border-dashed border-black my-2"></div>
 
-                  <div className="space-y-1 text-[10px] font-bold text-gray-700">
+                  <div className="space-y-1 text-[10px] font-black text-black">
                     <div className="flex justify-between">
                       <span>เลขที่เอกสาร:</span>
                       <span className="font-mono">{bookingObj.id}</span>
@@ -1501,37 +1501,37 @@ export default function StandardBookingLayout() {
                     </div>
                   </div>
 
-                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+                  <div className="border-t border-dashed border-black my-2"></div>
 
-                  <div className="space-y-1.5 py-1 text-xs">
+                  <div className="space-y-1.5 py-1 text-xs font-black text-black">
                     <div className="flex justify-between">
-                      <span className="font-bold text-gray-600">วันที่ทำการค้า:</span>
-                      <span className="font-black text-gray-900">{tradingDateFormatted}</span>
+                      <span>วันที่ทำการค้า:</span>
+                      <span>{tradingDateFormatted}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-bold text-gray-600">ล็อกที่เช่า:</span>
-                      <span className="font-black text-red-800">{formattedStallName}</span>
+                      <span>ล็อกที่เช่า:</span>
+                      <span className="text-red-700">{formattedStallName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-bold text-gray-600">ผู้ค้า:</span>
-                      <span className="font-black text-gray-900">{bookingObj.booker_name || '-'}</span>
+                      <span>ผู้ค้า:</span>
+                      <span>{bookingObj.booker_name || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-bold text-gray-600">สินค้าที่ขาย:</span>
-                      <span className="font-black text-gray-900">{bookingObj.product || '-'}</span>
+                      <span>สินค้าที่ขาย:</span>
+                      <span>{bookingObj.product || '-'}</span>
                     </div>
                   </div>
 
-                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+                  <div className="border-t border-dashed border-black my-2"></div>
 
                   <table className="w-full text-left text-[11px] border-collapse">
                     <thead>
-                      <tr className="border-b border-dashed border-gray-400 text-gray-600 font-bold">
+                      <tr className="border-b border-dashed border-black text-black font-black">
                         <th className="py-1">รายการ</th>
                         <th className="py-1 text-right">จำนวนเงิน</th>
                       </tr>
                     </thead>
-                    <tbody className="font-bold text-gray-700">
+                    <tbody className="font-black text-black">
                       <tr>
                         <td className="py-1">ค่าล็อกสะสม</td>
                         <td className="py-1 text-right font-mono">{stallPriceVal.toFixed(2)} บ.</td>
@@ -1551,15 +1551,15 @@ export default function StandardBookingLayout() {
                     </tbody>
                   </table>
 
-                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+                  <div className="border-t border-dashed border-black my-2"></div>
 
-                  <div className="space-y-1 text-xs">
+                  <div className="space-y-1 text-xs font-black text-black">
                     <div className="flex justify-between font-black text-black text-sm">
                       <span>รวมเงินทั้งสิ้น:</span>
                       <span className="font-mono">{totalAmountVal.toFixed(2)} บ.</span>
                     </div>
                     
-                    <div className="pt-1.5 space-y-0.5 text-[10px] font-bold text-gray-600">
+                    <div className="pt-1.5 space-y-0.5 text-[10px] font-black text-black">
                       {paymentLines.map((p, idx) => (
                         <div key={idx} className="flex justify-between">
                           <span>ชำระด้วย [{p.method}]:</span>
@@ -1567,7 +1567,7 @@ export default function StandardBookingLayout() {
                         </div>
                       ))}
                       {changeVal > 0 && (
-                        <div className="flex justify-between text-red-700 font-bold">
+                        <div className="flex justify-between text-red-700 font-black">
                           <span>เงินทอน:</span>
                           <span className="font-mono">{changeVal.toFixed(2)} บ.</span>
                         </div>
@@ -1575,12 +1575,12 @@ export default function StandardBookingLayout() {
                     </div>
                   </div>
 
-                  <div className="border-t border-dashed border-gray-400 my-2"></div>
+                  <div className="border-t border-dashed border-black my-2"></div>
 
-                  <div className="text-center text-[10px] text-gray-500 font-bold space-y-0.5 mt-2">
+                  <div className="text-center text-[10px] text-black font-black space-y-0.5 mt-2">
                     <p>Line Official: @ladsawaivintage</p>
-                    <p className="text-black">ขอบคุณที่ใช้บริการครับ/ค่ะ</p>
-                    <p className="text-[8px] text-gray-400">Powered by PJMJK</p>
+                    <p className="text-black font-black">ขอบคุณที่ใช้บริการครับ/ค่ะ</p>
+                    <p className="text-[8px] text-black font-black">Powered by PJMJK</p>
                   </div>
 
                 </div>
