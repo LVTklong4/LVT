@@ -569,41 +569,24 @@ export default function StandardBookingLayout() {
                 </div>
               </div>
 
-              {/* Khlong Thom Parking Zone (Green border) */}
+              {/* Khlong Thom Parking Zone */}
               <div 
                 style={{ 
                   gridRow: "1 / span 25", 
                   gridColumn: "21 / span 4",
-                  border: "3px solid #84CC16",
                   backgroundColor: "#E5DDD9"
                 }}
-                className="rounded-md p-2.5 flex flex-col items-center justify-start gap-3 z-10 pointer-events-none"
+                className="rounded-md p-3.5 flex flex-col items-center justify-around z-10 pointer-events-none"
               >
-                {/* Title */}
-                <div className="text-[#5D4037] font-extrabold text-[11px] border-b-2 border-lime-500 pb-1 w-full text-center tracking-wider bg-white/60 rounded py-1 px-1.5 shadow-sm">
-                  ที่จอดรถคลองถม
-                </div>
-
-                {/* Parking Slots */}
-                <div className="flex flex-col gap-2.5 w-full items-center py-0.5">
-                  {[
-                    'text-slate-600',  // Gray
-                    'text-blue-700',   // Blue
-                    'text-emerald-700',// Green
-                    'text-red-700',    // Red
-                    'text-amber-700',  // Bronze
-                    'text-zinc-500'    // Silver
-                  ].map((colorClass, i) => (
-                    <div key={i} className="border-2 border-dashed border-[#8B4513]/20 rounded-lg p-2 flex items-center justify-center bg-white/70 shadow-sm w-full max-w-[110px] h-[64px] relative">
-                      <div className="absolute top-0.5 left-1 text-[7px] font-bold text-gray-400">
-                        P{i+1}
-                      </div>
-                      <svg className={`w-9 h-9 ${colorClass} drop-shadow-sm`} viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 10l1.5-4.5h11L19 10H5z"/>
-                      </svg>
-                    </div>
-                  ))}
-                </div>
+                {/* 6 Top-down blue cars parked vertically */}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <img 
+                    key={i}
+                    src="/car-top-down.png" 
+                    alt="Car" 
+                    className="h-[52px] w-auto object-contain drop-shadow-sm my-0.5"
+                  />
+                ))}
               </div>
             </div>
           )}
