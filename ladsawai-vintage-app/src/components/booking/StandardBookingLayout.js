@@ -219,7 +219,7 @@ export default function StandardBookingLayout() {
                 <button 
                   onClick={() => setShowProfileDropdown(!showProfileDropdown)} 
                   className="flex items-center justify-center focus:outline-none cursor-pointer"
-                  title={`ผู้ใช้งาน: ${adminUser.name}`}
+                  title={`ผู้ใช้งาน: ${adminUser?.name || 'Admin'}`}
                 >
                   <img 
                     src="https://img2.pic.in.th/pic/Profile-Alpha_0.png"
@@ -238,9 +238,9 @@ export default function StandardBookingLayout() {
                       <div className="p-4 flex flex-col items-center gap-1.5 bg-[#FAEBD7] border-b border-[#8B4513]/20">
                         <h3 className="font-extrabold text-xs text-gray-800 text-center leading-tight">ตลาดนัดลาดสวายวินเทจ</h3>
                         <span className="px-2.5 py-0.5 rounded-full bg-green-100 border border-green-200 text-green-800 text-[9px] font-black tracking-wider uppercase">
-                          {adminUser.role === 'SuperAdmin' ? 'SUPER ADMIN' : adminUser.role.toUpperCase()}
+                          {adminUser?.role === 'SuperAdmin' ? 'SUPER ADMIN' : (adminUser?.role || 'ADMIN').toUpperCase()}
                         </span>
-                        <p className="text-[10px] text-gray-500 font-bold mt-1">ผู้ใช้: {adminUser.name}</p>
+                        <p className="text-[10px] text-gray-500 font-bold mt-1">ผู้ใช้: {adminUser?.name || 'Admin'}</p>
                       </div>
 
                       {/* Menu Items */}
