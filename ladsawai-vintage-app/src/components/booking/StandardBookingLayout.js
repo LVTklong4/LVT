@@ -646,32 +646,32 @@ export default function StandardBookingLayout() {
 
             {/* Top Icon */}
             <div className="flex justify-center mt-2 mb-3">
-              <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center border border-purple-100">
-                <Store className="w-7 h-7 text-purple-600" />
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center border border-amber-200/60 shadow-inner">
+                <Store className="w-7 h-7 text-amber-800" />
               </div>
             </div>
 
             {/* Title / Stall Name */}
             <div className="text-center flex flex-col items-center gap-1.5 mb-5">
-              <h2 className="text-5xl font-black text-slate-800 tracking-tight">
+              <h2 className="text-5xl font-black text-amber-950 tracking-tight">
                 {cleanStallName(selectedStall.name)}
               </h2>
-              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-0.5 rounded-full">
+              <span className="bg-amber-100 text-[#8B4513] border border-[#8B4513]/20 text-[10px] font-black px-3.5 py-0.5 rounded-full tracking-wider uppercase">
                 ลูกค้ารายเดือน
               </span>
             </div>
 
             {/* Customer & Product Card */}
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-col gap-3">
+            <div className="bg-[#FAEBD7]/30 border border-amber-900/10 rounded-xl p-4 flex flex-col gap-3 shadow-inner">
               {adminUser && (
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">ผู้เช่า</span>
-                  <span className="text-sm font-bold text-gray-850">{selectedMonthlyStallBooking.booker_name}</span>
+                  <span className="text-[10px] font-extrabold text-amber-800/70 uppercase tracking-wider block mb-0.5">ผู้เช่า</span>
+                  <span className="text-sm font-bold text-[#4A3B32]">{selectedMonthlyStallBooking.booker_name}</span>
                 </div>
               )}
               <div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">สินค้า</span>
-                <span className="text-sm font-bold text-gray-700">{selectedMonthlyStallBooking.product || 'ไม่มีชื่อสินค้า'}</span>
+                <span className="text-[10px] font-extrabold text-amber-800/70 uppercase tracking-wider block mb-0.5">สินค้า</span>
+                <span className="text-sm font-bold text-[#4A3B32]">{selectedMonthlyStallBooking.product || 'ไม่มีชื่อสินค้า'}</span>
               </div>
             </div>
 
@@ -679,8 +679,8 @@ export default function StandardBookingLayout() {
             {adminUser && (
               <>
                 {relatedBookings.length > 1 && (
-                  <div className="mt-4 border border-[#8B4513]/10 bg-amber-50/20 rounded-xl p-3 text-left">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                  <div className="mt-4 border-2 border-[#8B4513]/15 bg-[#FAF0E6]/50 rounded-xl p-3.5 text-left shadow-inner">
+                    <span className="text-[10px] font-black text-[#8B4513] uppercase tracking-wider block mb-2.5">
                       พบข้อมูล {relatedBookings.length} แผง เลือกแผงที่ต้องการลาหยุดในวันนี้:
                     </span>
                     <div className="flex flex-col gap-2">
@@ -689,7 +689,7 @@ export default function StandardBookingLayout() {
                         return (
                           <label 
                             key={b.id} 
-                            className="flex items-center gap-2.5 text-xs font-bold text-gray-700 cursor-pointer select-none py-1 hover:text-purple-700 transition-colors"
+                            className="flex items-center gap-2.5 text-xs font-bold text-gray-700 cursor-pointer select-none py-1 hover:text-amber-800 transition-colors"
                           >
                             <input 
                               type="checkbox"
@@ -701,9 +701,9 @@ export default function StandardBookingLayout() {
                                   setSelectedVacateStallIds(selectedVacateStallIds.filter(id => id !== b.id));
                                 }
                               }}
-                              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-gray-300 cursor-pointer"
+                              className="w-4.5 h-4.5 rounded border-amber-300 text-amber-800 focus:ring-amber-600 focus:ring-offset-1 accent-amber-800 cursor-pointer"
                             />
-                            <span>แผงค้า {cleanStallName(b.stall_name)}</span>
+                            <span className="font-bold text-gray-800">แผงค้า {cleanStallName(b.stall_name)}</span>
                           </label>
                         );
                       })}
@@ -714,7 +714,7 @@ export default function StandardBookingLayout() {
                 <button
                   onClick={() => handleVacateMonthlyStallToday(selectedVacateStallIds)}
                   disabled={selectedVacateStallIds.length === 0}
-                  className={`w-full mt-6 py-3 text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`w-full mt-6 py-3 text-white rounded-xl font-black text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
                     selectedVacateStallIds.length === 0 
                       ? 'bg-gray-300 cursor-not-allowed shadow-none text-gray-500' 
                       : 'bg-[#E53935] hover:bg-[#D32F2F]'
