@@ -176,7 +176,7 @@ export default function StandardBookingLayout() {
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
-                            <span>📝</span> จองนอกผัง
+                            <FileText className="w-4 h-4 text-amber-700 shrink-0" /> จองนอกผัง
                           </button>
                           <button 
                             onClick={() => {
@@ -185,7 +185,7 @@ export default function StandardBookingLayout() {
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
-                            <span>🚗</span> คลองถม
+                            <Store className="w-4 h-4 text-red-600 shrink-0" /> คลองถม
                           </button>
                           <button 
                             onClick={() => {
@@ -194,7 +194,7 @@ export default function StandardBookingLayout() {
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
-                            <span>🗓️</span> จัดการรายเดือน
+                            <CalendarDays className="w-4 h-4 text-blue-700 shrink-0" /> จัดการรายเดือน
                           </button>
                           <button 
                             onClick={() => {
@@ -203,7 +203,7 @@ export default function StandardBookingLayout() {
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
-                            <span>📦</span> จัดการฝากของ
+                            <Package className="w-4 h-4 text-amber-800 shrink-0" /> จัดการฝากของ
                           </button>
                         </div>
                       </>
@@ -252,7 +252,7 @@ export default function StandardBookingLayout() {
                           onClick={() => setShowProfileDropdown(false)}
                           className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors"
                         >
-                          <span className="text-blue-600">🌎</span> สรุปยอด (Dashboard)
+                          <LayoutDashboard className="w-4 h-4 text-blue-600 shrink-0" /> สรุปยอด (Dashboard)
                         </a>
                         <button 
                           onClick={() => {
@@ -261,7 +261,7 @@ export default function StandardBookingLayout() {
                           }} 
                           className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
-                          <span className="text-gray-600">🖨️</span> พิมพ์ผังตลาด (A4)
+                          <Printer className="w-4 h-4 text-gray-500 shrink-0" /> พิมพ์ผังตลาด (A4)
                         </button>
                         <button 
                           onClick={() => {
@@ -270,7 +270,7 @@ export default function StandardBookingLayout() {
                           }} 
                           className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
-                          <span className="text-emerald-600">🔄</span> อัปเดตผังล่าสุด
+                          <RefreshCw className="w-4 h-4 text-emerald-600 shrink-0" /> อัปเดตผังล่าสุด
                         </button>
                         <button 
                           onClick={() => {
@@ -279,7 +279,7 @@ export default function StandardBookingLayout() {
                           }} 
                           className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
-                          <span className="text-amber-600">⚙️</span> ตั้งค่าระบบ
+                          <Settings className="w-4 h-4 text-amber-600 shrink-0" /> ตั้งค่าระบบ
                         </button>
                         <button 
                           onClick={() => {
@@ -288,7 +288,7 @@ export default function StandardBookingLayout() {
                           }} 
                           className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
-                          <span className="text-yellow-700">🗄️</span> จัดเก็บข้อมูลเก่า
+                          <Archive className="w-4 h-4 text-amber-800 shrink-0" /> จัดเก็บข้อมูลเก่า
                         </button>
                         <button 
                           onClick={() => {
@@ -297,7 +297,7 @@ export default function StandardBookingLayout() {
                           }} 
                           className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
-                          <span className="text-red-600">↪️</span> ออกจากระบบ
+                          <LogOut className="w-4 h-4 text-red-600 shrink-0" /> ออกจากระบบ
                         </button>
                       </div>
                     </div>
@@ -1035,7 +1035,7 @@ export default function StandardBookingLayout() {
                                 <div className="flex-1 relative">
                                   <input
                                     type="number"
-                                    disabled={isAlreadyPaid}
+                                    disabled={isAlreadyPaid || entry.isSaved}
                                     value={entry.amount}
                                     onChange={(e) => {
                                       const updated = [...paymentList];
@@ -1044,7 +1044,7 @@ export default function StandardBookingLayout() {
                                     }}
                                     placeholder="กรอกยอดเงินชำระ"
                                     className={`w-full p-2 border border-[#8B4513]/30 rounded-lg text-xs text-right text-gray-800 bg-white font-mono font-extrabold focus:outline-none focus:ring-1 focus:ring-[#8B4513] ${
-                                      isAlreadyPaid ? 'opacity-65 bg-gray-100 cursor-not-allowed' : ''
+                                      (isAlreadyPaid || entry.isSaved) ? 'opacity-65 bg-gray-100 cursor-not-allowed' : ''
                                     }`}
                                   />
                                 </div>
@@ -1053,14 +1053,14 @@ export default function StandardBookingLayout() {
                                 <div className="flex gap-1 shrink-0">
                                   <button
                                     type="button"
-                                    disabled={!isAmountEntered || isAlreadyPaid}
+                                    disabled={!isAmountEntered || isAlreadyPaid || entry.isSaved}
                                     onClick={() => {
                                       const updated = [...paymentList];
                                       updated[index].method = 'เงินสด';
                                       setPaymentList(updated);
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      isAlreadyPaid
+                                      (isAlreadyPaid || entry.isSaved)
                                         ? entry.method === 'เงินสด'
                                           ? 'bg-[#5D4037] text-white border-[#5D4037] opacity-80 pointer-events-none shadow-xs'
                                           : 'bg-gray-100/70 text-gray-400 border-gray-200 opacity-40 pointer-events-none'
@@ -1075,14 +1075,14 @@ export default function StandardBookingLayout() {
                                   </button>
                                   <button
                                     type="button"
-                                    disabled={!isAmountEntered || isAlreadyPaid}
+                                    disabled={!isAmountEntered || isAlreadyPaid || entry.isSaved}
                                     onClick={() => {
                                       const updated = [...paymentList];
                                       updated[index].method = 'โอนเงิน';
                                       setPaymentList(updated);
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      isAlreadyPaid
+                                      (isAlreadyPaid || entry.isSaved)
                                         ? entry.method === 'โอนเงิน'
                                           ? 'bg-[#5D4037] text-white border-[#5D4037] opacity-80 pointer-events-none shadow-xs'
                                           : 'bg-gray-100/70 text-gray-400 border-gray-200 opacity-40 pointer-events-none'
@@ -1098,7 +1098,7 @@ export default function StandardBookingLayout() {
                                 </div>
 
                               {/* Delete Split button */}
-                              {paymentList.length > 1 && !isAlreadyPaid && (
+                              {paymentList.length > 1 && !isAlreadyPaid && !entry.isSaved && (
                                 <button
                                   type="button"
                                   onClick={() => {

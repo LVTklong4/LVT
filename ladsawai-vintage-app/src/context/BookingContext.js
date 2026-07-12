@@ -690,22 +690,30 @@ export function BookingProvider({ children }) {
         setSelectedStallsList([stall]);
       }
 
-      // Parse payment splits
       const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
       if (booking.payment_method) {
         if (booking.payment_method.includes(':') || booking.payment_method.includes('+')) {
           const splits = booking.payment_method.split('+').map(item => {
             const parts = item.split(':');
+            const method = parts[0]?.trim() || '';
+            const amount = parts[1]?.trim() || '';
+            const isSaved = !!(method && amount && parseNumber(amount) > 0);
             return { 
-              method: isPaidStatus ? (parts[0]?.trim() || '') : '', 
-              amount: parts[1]?.trim() || '' 
+              method: method, 
+              amount: amount,
+              isSaved: isSaved
             };
           });
           setPaymentList(splits);
         } else {
+          const method = booking.payment_method.trim();
+          const isPaidBooking = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
+          const amount = isPaidBooking ? (booking.total_price || '') : '';
+          const isSaved = !!(method && amount && parseNumber(amount) > 0);
           setPaymentList([{ 
-            method: isPaidStatus ? booking.payment_method : '', 
-            amount: isPaidStatus ? (booking.total_price || '') : '' 
+            method: method, 
+            amount: amount,
+            isSaved: isSaved
           }]);
         }
       } else {
