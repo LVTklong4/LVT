@@ -106,6 +106,7 @@ export function BookingProvider({ children }) {
   const [editMonthlyStatus, setEditMonthlyStatus] = useState('ค้างชำระ');
   const [editMonthlyRenewalStatus, setEditMonthlyRenewalStatus] = useState('');
   const [slipPreviewUrl, setSlipPreviewUrl] = useState(null);
+  const [fullScreenSlipUrl, setFullScreenSlipUrl] = useState(null);
   const [invoicePreviewItem, setInvoicePreviewItem] = useState(null);
 
   const [showBulkRenewModal, setShowBulkRenewModal] = useState(false);
@@ -4636,6 +4637,7 @@ export function BookingProvider({ children }) {
     setShowStorageMgmtModal,
     setShowStoragePrintModal,
     setSlipPreviewUrl,
+    setFullScreenSlipUrl,
     setStallFilter,
     setStallFilterSat,
     setStallFilterSun,
@@ -4676,6 +4678,7 @@ export function BookingProvider({ children }) {
     showStorageMgmtModal,
     showStoragePrintModal,
     slipPreviewUrl,
+    fullScreenSlipUrl,
     sortThaiMonthsDescending,
     stallFilter,
     stallFilterSat,

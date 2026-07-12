@@ -6,7 +6,7 @@ import { CreditCard, Banknote, Tag } from 'lucide-react';
 
 export default function MonthlyPaymentModal() {
   const {
-    activeMonthlyBooking,    handleMonthlyPaymentSubmit,    handleSlipChange,    monthlyPaymentForm,    note,    parseNumber,    setMonthlyPaymentForm,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyPaymentModal,    slipPreviewUrl
+    activeMonthlyBooking,    handleMonthlyPaymentSubmit,    handleSlipChange,    monthlyPaymentForm,    note,    parseNumber,    setMonthlyPaymentForm,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyPaymentModal,    slipPreviewUrl
   } = useBooking();
 
   if (!showMonthlyPaymentModal) return null;
@@ -122,16 +122,25 @@ export default function MonthlyPaymentModal() {
                     <label className="text-xs font-bold text-blue-900 flex justify-between">
                       <span>แนบภาพสลิปโอนเงิน (สแกนอัตโนมัติ)</span>
                       {slipPreviewUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSlipPreviewUrl(null);
-                            setMonthlyPaymentForm(prev => ({ ...prev, slip_base64: null }));
-                          }}
-                          className="text-red-500 hover:text-red-700 font-bold"
-                        >
-                          ลบรูป
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFullScreenSlipUrl(slipPreviewUrl)}
+                            className="text-blue-600 hover:text-blue-800 font-bold"
+                          >
+                            ดูรูปใหญ่
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSlipPreviewUrl(null);
+                              setMonthlyPaymentForm(prev => ({ ...prev, slip_base64: null }));
+                            }}
+                            className="text-red-500 hover:text-red-700 font-bold"
+                          >
+                            ลบรูป
+                          </button>
+                        </div>
                       )}
                     </label>
                     <div className="relative border-2 border-dashed border-blue-200 hover:border-blue-400 bg-white rounded-lg p-2 transition-colors">
@@ -143,8 +152,16 @@ export default function MonthlyPaymentModal() {
                       />
                       {slipPreviewUrl ? (
                         <div className="flex flex-col items-center gap-1.5 py-1">
-                          <img src={slipPreviewUrl} alt="Slip Preview" className="h-28 w-auto object-contain rounded-md shadow border border-gray-200" />
-                          <span className="text-[10px] text-gray-500 font-semibold">อัปโหลดสลิปเรียบร้อย</span>
+                          <img 
+                            src={slipPreviewUrl} 
+                            alt="Slip Preview" 
+                            className="h-28 w-auto object-contain rounded-md shadow border border-gray-200 relative z-20 cursor-pointer hover:opacity-80 transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFullScreenSlipUrl(slipPreviewUrl);
+                            }}
+                          />
+                          <span className="text-[10px] text-gray-500 font-semibold">อัปโหลดสลิปเรียบร้อย (คลิกเพื่อดูรูปใหญ่)</span>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center gap-1.5 py-3 text-blue-500/80">
