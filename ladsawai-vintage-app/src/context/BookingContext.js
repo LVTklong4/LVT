@@ -169,6 +169,7 @@ export function BookingProvider({ children }) {
   const addStallDropdownRefWed = useRef(null);
   const addStallDropdownRefSat = useRef(null);
   const addStallDropdownRefSun = useRef(null);
+  const alertTimeoutRef = useRef(null);
 
   const getOccupiedStallsInRound = (dayOfWeek) => {
     if (!newMonthlyStartDate) return [];
@@ -419,8 +420,15 @@ export function BookingProvider({ children }) {
   }, [dateOffset]);
 
   const showAlert = (message, title = 'แจ้งเตือน', isError = false) => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+    }
     setAlertInfo({ message, title, isError });
-    setTimeout(() => setAlertInfo(null), 4000);
+    const duration = isError ? 15000 : 4000;
+    alertTimeoutRef.current = setTimeout(() => {
+      setAlertInfo(null);
+      alertTimeoutRef.current = null;
+    }, duration);
   };
 
   const fetchAdminRoles = async () => {
@@ -2753,6 +2761,56 @@ export function BookingProvider({ children }) {
   };
 
   // --- MONTHLY BOOKING CRUD HANDLERS ---
+  const checkConflictingBookings = async (dailyBookings, allStallNames, excludeMasterId = null) => {
+    if (dailyBookings.length === 0) return { conflictMsg: null, conflictCount: 0 };
+    
+    const datesToCheck = Array.from(new Set(dailyBookings.map(b => b.date)));
+    const cleanStallNamesToCheck = allStallNames.map(s => s.replace(/[\[\]]/g, '').trim());
+    
+    let query = supabase
+      .from('bookings')
+      .select('date, stall_name, booker_name, status, master_id')
+      .in('date', datesToCheck)
+      .neq('status', 'ลา');
+      
+    if (excludeMasterId) {
+      query = query.neq('master_id', excludeMasterId);
+    }
+    
+    const { data: conflicts, error } = await query;
+    if (error) throw error;
+    
+    const actualConflicts = [];
+    if (conflicts && conflicts.length > 0) {
+      conflicts.forEach(c => {
+        const dbStalls = (c.stall_name || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim());
+        dbStalls.forEach(dbStall => {
+          if (cleanStallNamesToCheck.includes(dbStall)) {
+            const isConflict = dailyBookings.some(db => {
+              const reqStall = db.stall_name.replace(/[\[\]]/g, '').trim();
+              return db.date === c.date && reqStall === dbStall;
+            });
+            
+            if (isConflict) {
+              const formattedDate = getModalDateFormat(c.date);
+              actualConflicts.push(`- วันที่ ${formattedDate}: ล็อค ${dbStall} (จองโดย คุณ ${c.booker_name})`);
+            }
+          }
+        });
+      });
+    }
+    
+    if (actualConflicts.length > 0) {
+      return {
+        conflictMsg: `ไม่สามารถบันทึกการจองรายเดือนได้ เนื่องจากแผงค้าไม่ว่างในวันต่อไปนี้:\n\n` + 
+                     actualConflicts.join('\n') + 
+                     `\n\nกรุณาเลือกแผงค้าอื่นหรือเปลี่ยนวัน/รอบการจอง`,
+        conflictCount: actualConflicts.length
+      };
+    }
+    return { conflictMsg: null, conflictCount: 0 };
+  };
+
   const fetchMonthlyTransactions = async (bookingId) => {
     setLoadingMonthlyTxns(true);
     try {
@@ -3172,6 +3230,14 @@ export function BookingProvider({ children }) {
         });
       }
 
+      // Check conflicts (excluding this contract's bookings)
+      const { conflictMsg } = await checkConflictingBookings(dailyBookings, allSelectedStallNames, editingMonthlyId);
+      if (conflictMsg) {
+        showAlert(conflictMsg, "แผงค้าไม่ว่าง", true);
+        setLoadingMonthly(false);
+        return;
+      }
+
       // 1. Delete old bookings
       const { error: delError } = await supabase
         .from('bookings')
@@ -3339,48 +3405,12 @@ export function BookingProvider({ children }) {
         });
       }
 
-      // Check for conflicting bookings in the database bookings table
-      if (dailyBookings.length > 0) {
-        const datesToCheck = Array.from(new Set(dailyBookings.map(b => b.date)));
-        const stallNamesToCheck = allSelectedStallNames;
-        
-        const { data: conflicts, error: conflictError } = await supabase
-          .from('bookings')
-          .select('date, stall_name, booker_name')
-          .in('date', datesToCheck)
-          .in('stall_name', stallNamesToCheck);
-          
-        if (conflictError) throw conflictError;
-        
-        if (conflicts && conflicts.length > 0) {
-          const actualConflicts = [];
-          conflicts.forEach(c => {
-            const cStalls = c.stall_name.split(',').map(s => s.trim());
-            cStalls.forEach(cs => {
-              if (stallNamesToCheck.includes(cs)) {
-                const isRequested = dailyBookings.some(db => db.date === c.date && db.stall_name === cs);
-                if (isRequested) {
-                  const dateParts = c.date.split('-');
-                  const dObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-                  const formattedDate = dObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-                  actualConflicts.push(`- วันที่ ${formattedDate}: ล็อค ${cs} (จองโดย คุณ ${c.booker_name})`);
-                }
-              }
-            });
-          });
-          
-          if (actualConflicts.length > 0) {
-            showAlert(
-              `ไม่สามารถบันทึกการจองรายเดือนได้ เนื่องจากแผงค้าไม่ว่างในวันต่อไปนี้:\n\n` + 
-              actualConflicts.join('\n') + 
-              `\n\nกรุณาเลือกแผงค้าอื่นหรือเปลี่ยนวัน/รอบการจอง`,
-              "แผงค้าไม่ว่าง",
-              true
-            );
-            setLoadingMonthly(false);
-            return;
-          }
-        }
+      // Check conflicts
+      const { conflictMsg } = await checkConflictingBookings(dailyBookings, allSelectedStallNames);
+      if (conflictMsg) {
+        showAlert(conflictMsg, "แผงค้าไม่ว่าง", true);
+        setLoadingMonthly(false);
+        return;
       }
 
       if (dailyBookings.length > 0) {
@@ -3971,6 +4001,14 @@ export function BookingProvider({ children }) {
 
     setLoadingMonthly(true);
     try {
+      // 1. Delete associated daily bookings from bookings table
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('master_id', item.id);
+      if (bookingsError) throw bookingsError;
+
+      // 2. Delete monthly booking contract
       const { error } = await supabase
         .from('monthly_bookings')
         .delete()

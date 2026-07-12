@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Search, Settings, CalendarDays, RotateCcw, User, Loader2, Plus, Trash2, CheckCircle, AlertCircle, X, CreditCard, FileText, Phone, Info, Sun, PlusCircle, Printer, Banknote, Check, Tag, CalendarX } from 'lucide-react';
+import { Search, Settings, CalendarDays, RotateCcw, User, Loader2, Plus, Trash2, CheckCircle, AlertCircle, X, CreditCard, FileText, Phone, Info, Sun, PlusCircle, Printer, Banknote, Check, Tag, CalendarX, Edit } from 'lucide-react';
 
 import NewMonthlyModal from './modals/NewMonthlyModal';
 import EditMonthlyModal from './modals/EditMonthlyModal';
@@ -16,7 +16,7 @@ import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function MonthlyManagerLayout() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    adminUser,    alertInfo,    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewEditingItem,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    getDayOccurrences,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleBulkRenewSubmit,    handleCreateNewMonthlyBooking,    handleDeleteMonthlyBooking,    handleMonthlyPaymentSubmit,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handleSaveEditedMonthlyBooking,    handleSlipChange,    handleSortToggle,    handleToggleNonRenewal,    handleUpdateMonthlyItem,    invoicePreviewItem,    isEditingMonthlyMode,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintWedCount,    monthlySearchQuery,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    product,    renderSortArrow,    selectedMonthlyItem,    setActiveMonthlyBooking,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setInvoicePreviewItem,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setSelectedMonthlyItem,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowBulkRenewModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowNewMonthlyModal,    setSlipPreviewUrl,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showBulkRenewModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showNewMonthlyModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stalls
+    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    adminUser,    alertInfo,    setAlertInfo,    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewEditingItem,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    getDayOccurrences,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleBulkRenewSubmit,    handleCreateNewMonthlyBooking,    handleDeleteMonthlyBooking,    handleMonthlyPaymentSubmit,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handleSaveEditedMonthlyBooking,    handleSlipChange,    handleSortToggle,    handleToggleNonRenewal,    handleUpdateMonthlyItem,    invoicePreviewItem,    isEditingMonthlyMode,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintWedCount,    monthlySearchQuery,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    product,    renderSortArrow,    selectedMonthlyItem,    setActiveMonthlyBooking,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setInvoicePreviewItem,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setSelectedMonthlyItem,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowBulkRenewModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowNewMonthlyModal,    setSlipPreviewUrl,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showBulkRenewModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showNewMonthlyModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stalls
   } = useBooking();
 
   return (
@@ -176,7 +176,7 @@ export default function MonthlyManagerLayout() {
                               className={`p-1.5 rounded border transition-all cursor-pointer ${
                                 item.renewal_status === 'ไม่ต่อสัญญา'
                                   ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-sm'
-                                  : 'bg-red-50/40 text-red-500 border-red-200 hover:bg-red-100/60'
+                                  : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 opacity-60 hover:opacity-100 shadow-xs'
                               }`}
                               title={item.renewal_status === 'ไม่ต่อสัญญา' ? "คลิกเพื่อยกเลิกแจ้งไม่ต่อสัญญา" : "คลิกเพื่อแจ้งไม่ต่อสัญญา"}
                             >
@@ -184,9 +184,9 @@ export default function MonthlyManagerLayout() {
                             </button>
                             <button 
                               onClick={() => handleOpenEditMonthlyModal(item)}
-                              className="px-2 py-1 bg-[#F5E6D3] text-[#8B4513] border border-[#D7CCC8] rounded text-[10px] font-bold hover:bg-[#EFEBE9] cursor-pointer"
+                              className="px-2 py-1 bg-[#F5E6D3] text-[#8B4513] border border-[#D7CCC8] rounded text-[10px] font-bold hover:bg-[#EFEBE9] flex items-center gap-1 cursor-pointer transition-colors"
                             >
-                              แก้ไข
+                              <Edit className="w-3 h-3" /> แก้ไข
                             </button>
                             <button 
                               onClick={() => handlePrintMonthlyInvoice(item)}
@@ -300,6 +300,74 @@ export default function MonthlyManagerLayout() {
           </div>
         </div>
 
+        {/* Bottom Taskbar / Status Bar */}
+        <div className="bg-[#3E2723] text-white border-t border-[#2d1b18] px-5 py-2.5 flex flex-wrap items-center justify-between gap-4 shrink-0 text-xs shadow-lg">
+          {/* Left: Summary Stats */}
+          <div className="flex items-center gap-5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-amber-200 font-medium">📋 สัญญาทั้งหมด:</span>
+              <span className="font-bold bg-[#4e342e] px-2 py-0.5 rounded border border-[#5d4037] text-white">
+                {filteredMonthlyList.length} ราย
+              </span>
+            </div>
+            
+            <div className="h-4 w-[1px] bg-amber-900/40 hidden sm:block" />
+            
+            <div className="flex items-center gap-1.5">
+              <span className="text-amber-200 font-medium">💰 ยอดคาดการณ์:</span>
+              <span className="font-bold text-amber-100">
+                {filteredMonthlyList.reduce((sum, item) => sum + parseNumber(item.total_price), 0).toLocaleString()}.-
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-green-300 font-medium">✓ ชำระแล้ว:</span>
+              <span className="font-bold text-green-400">
+                {filteredMonthlyList.reduce((sum, item) => sum + parseNumber(item.paid_amount), 0).toLocaleString()}.-
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-red-300 font-medium">❌ ค้างชำระ:</span>
+              <span className="font-bold text-red-400">
+                {filteredMonthlyList.reduce((sum, item) => {
+                  const unpaid = parseNumber(item.total_price) - parseNumber(item.paid_amount || 0);
+                  return sum + (unpaid > 0 ? unpaid : 0);
+                }, 0).toLocaleString()}.-
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Specific details like non-renewal, customer types, status */}
+          <div className="flex items-center gap-5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-amber-200 font-medium">🚫 ไม่ต่อสัญญา:</span>
+              <span className={`font-bold px-2 py-0.5 rounded text-xs ${
+                filteredMonthlyList.filter(item => item.renewal_status === 'ไม่ต่อสัญญา').length > 0
+                  ? 'bg-red-900/50 text-red-300 border border-red-700/50'
+                  : 'bg-transparent text-gray-400'
+              }`}>
+                {filteredMonthlyList.filter(item => item.renewal_status === 'ไม่ต่อสัญญา').length} ราย
+              </span>
+            </div>
+
+            <div className="h-4 w-[1px] bg-amber-900/40 hidden sm:block" />
+
+            <div className="flex items-center gap-1 text-[11px] text-amber-100/70">
+              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">Standard: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
+              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">Regular: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
+              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">VIP: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
+            </div>
+
+            <div className="h-4 w-[1px] bg-amber-900/40 hidden md:block" />
+
+            <div className="flex items-center gap-1 text-green-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span>ฐานข้อมูลออนไลน์</span>
+            </div>
+          </div>
+        </div>
+
         {/* 🗓️ 2.2 Edit Monthly Item Modal */}
         
 
@@ -326,13 +394,20 @@ export default function MonthlyManagerLayout() {
 
         {/* Toast Alert */}
         {alertInfo && (
-          <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in ${
+          <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in max-w-md ${
             alertInfo.isError 
               ? 'bg-red-50 border-red-200 text-red-800' 
               : 'bg-green-50 border-green-200 text-green-800'
           }`}>
             {alertInfo.isError ? <AlertCircle className="w-5 h-5 shrink-0 text-red-600" /> : <CheckCircle className="w-5 h-5 shrink-0 text-green-600" />}
-            <span className="font-bold">{alertInfo.message}</span>
+            <span className="font-bold whitespace-pre-line flex-1">{alertInfo.message}</span>
+            <button 
+              onClick={() => setAlertInfo(null)}
+              className="p-0.5 rounded-full hover:bg-black/5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer shrink-0"
+              title="ปิด"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
       
