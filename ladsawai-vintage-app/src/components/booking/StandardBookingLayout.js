@@ -1478,8 +1478,10 @@ export default function StandardBookingLayout() {
                     />
                     <h2 className="font-black text-sm text-center">ตลาดลาดสวายวินเทจ</h2>
                     <p className="text-[10px] text-gray-600 text-center font-bold">Ladsawai Vintage Market</p>
+                    <p className="text-[9px] text-gray-500 text-center font-bold">เลขที่ 52/34 หมู่ 5</p>
+                    <p className="text-[9px] text-gray-500 text-center font-bold">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</p>
                     <p className="text-[9px] text-gray-500 text-center font-bold">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน-รายเดือน</p>
-                    <p className="text-[9px] text-gray-500 text-center font-bold">โทร. 096-841-8411</p>
+                    <p className="text-[9px] text-gray-500 text-center font-bold">โทร: 0-92-869-7774 , 0-92-869-7775</p>
                   </div>
 
                   <div className="border-t border-dashed border-gray-400 my-2"></div>
