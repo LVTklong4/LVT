@@ -694,19 +694,39 @@ export function BookingProvider({ children }) {
       setProduct(booking.product);
       setBookingType(booking.type);
       setPaymentMethod(booking.payment_method || 'เงินสด');
-      setStallPrice(booking.stall_price);
-      setStorageFee(booking.storage_fee || 0);
-      setElecUnit(booking.elec_unit || 0);
-      setElecPrice(booking.elec_price || 0);
       setNote(booking.note || '');
       
-      // Parse multi-stall list
-      if (booking.stall_name) {
-        const names = booking.stall_name.split(',').map(s => s.trim());
+      let groupBookings = [];
+      if (booking.type === 'ประจำ' && booking.master_id) {
+        groupBookings = bookings.filter(b => b.date === booking.date && b.master_id === booking.master_id);
+      }
+
+      if (groupBookings.length > 1) {
+        // Group multiple stalls
+        const allStallNames = groupBookings.map(b => b.stall_name);
+        const names = allStallNames.flatMap(nameStr => nameStr.split(',').map(s => s.trim()));
         const matched = stalls.filter(s => names.includes(s.name));
         setSelectedStallsList(matched.length > 0 ? matched : [stall]);
+
+        const totalStallPrice = groupBookings.reduce((sum, b) => sum + parseNumber(b.stall_price), 0);
+        setStallPrice(totalStallPrice);
+        setStorageFee(groupBookings[0].storage_fee || 0);
+        setElecUnit(groupBookings[0].elec_unit || 0);
+        setElecPrice(groupBookings[0].elec_price || 0);
       } else {
-        setSelectedStallsList([stall]);
+        setStallPrice(booking.stall_price);
+        setStorageFee(booking.storage_fee || 0);
+        setElecUnit(booking.elec_unit || 0);
+        setElecPrice(booking.elec_price || 0);
+
+        // Parse multi-stall list
+        if (booking.stall_name) {
+          const names = booking.stall_name.split(',').map(s => s.trim());
+          const matched = stalls.filter(s => names.includes(s.name));
+          setSelectedStallsList(matched.length > 0 ? matched : [stall]);
+        } else {
+          setSelectedStallsList([stall]);
+        }
       }
 
       const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
@@ -819,6 +839,19 @@ export function BookingProvider({ children }) {
         bookingData.master_id = selectedBooking.master_id;
       }
 
+      // Delete other related bookings if grouping Regular customer bookings
+      if (selectedBooking && selectedBooking.type === 'ประจำ' && selectedBooking.master_id) {
+        const otherBookings = bookings.filter(b => b.date === selectedBooking.date && b.master_id === selectedBooking.master_id && b.id !== selectedBooking.id);
+        const otherIds = otherBookings.map(b => b.id);
+        if (otherIds.length > 0) {
+          const { error: delErr } = await supabase
+            .from('bookings')
+            .delete()
+            .in('id', otherIds);
+          if (delErr) throw delErr;
+        }
+      }
+
       // 1. Save Booking (Upsert)
       const { error: saveError } = await supabase
         .from('bookings')
@@ -878,10 +911,16 @@ export function BookingProvider({ children }) {
 
     setLoading(true);
     try {
+      const idsToDelete = [selectedBooking.id];
+      if (selectedBooking.type === 'ประจำ' && selectedBooking.master_id) {
+        const otherBookings = bookings.filter(b => b.date === selectedBooking.date && b.master_id === selectedBooking.master_id && b.id !== selectedBooking.id);
+        otherBookings.forEach(b => idsToDelete.push(b.id));
+      }
+
       const { error } = await supabase
         .from('bookings')
         .delete()
-        .eq('id', selectedBooking.id);
+        .in('id', idsToDelete);
       if (error) throw error;
 
       showAlert("ลบข้อมูลการจองเรียบร้อย", "สำเร็จ");

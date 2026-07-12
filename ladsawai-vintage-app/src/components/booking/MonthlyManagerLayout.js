@@ -156,7 +156,7 @@ export default function MonthlyManagerLayout() {
                         <td className="p-2 font-semibold text-gray-700">
                           {formatBookingMonth(item.booking_month)}
                         </td>
-                        <td className="p-2">
+                         <td className="p-2">
                           {(() => {
                             const cType = item.customer_type || 'Standard';
                             if (cType === 'Regular') {
@@ -164,7 +164,7 @@ export default function MonthlyManagerLayout() {
                             } else if (cType === 'VIP') {
                               return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
                             } else {
-                              return <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">รายเดือน</span>;
+                              return <span className="px-2 py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
                             }
                           })()}
                         </td>
@@ -244,13 +244,15 @@ export default function MonthlyManagerLayout() {
                         >
                           <Plus className="w-3 h-3" /> ชำระเงิน
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
-                        >
-                          <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
-                        </button>
+                        {activeMonthlyBooking.paid_amount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                          >
+                            <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

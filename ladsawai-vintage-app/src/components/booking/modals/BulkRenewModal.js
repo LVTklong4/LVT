@@ -205,7 +205,7 @@ export default function BulkRenewModal() {
                                   } else if (dispType === 'VIP') {
                                     return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
                                   } else {
-                                    return <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">รายเดือน</span>;
+                                    return <span className="px-2 py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
                                   }
                                 })()}
                               </td>
