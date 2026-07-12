@@ -4,19 +4,19 @@ import React from 'react';
 import { useDashboard } from '@/context/DashboardContext';
 import { Lightbulb, Clock } from 'lucide-react';
 
-export default function InsightsForecast() {
+export default function FinanceInsights() {
   const { data } = useDashboard();
   const { analytics } = data;
-  const { insights, forecast } = analytics;
+  const { financeInsights, forecast } = analytics;
 
   return (
     <div className="bg-white border-2 border-[#8B4513]/30 rounded-xl p-4 shadow-sm flex-1">
       <h3 className="font-extrabold text-sm md:text-base text-gray-800 mb-3 flex items-center gap-1.5">
-        <Lightbulb className="w-5 h-5 text-yellow-600" /> คำแนะนำ & ข้อมูลวิเคราะห์ (Insights)
+        <Lightbulb className="w-5 h-5 text-yellow-600" /> วิเคราะห์การเงิน (Financial Insights)
       </h3>
       
       <ul className="flex flex-col gap-3 text-xs">
-        {insights.map((insight, idx) => (
+        {financeInsights.map((insight, idx) => (
           <li key={idx} className="flex gap-2 items-start bg-yellow-50/40 p-2.5 rounded-lg border border-yellow-100/60 font-semibold text-gray-700">
             <span className="text-yellow-700 mt-0.5">•</span>
             <span>{insight}</span>

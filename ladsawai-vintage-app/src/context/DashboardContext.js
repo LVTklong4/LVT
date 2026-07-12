@@ -11,7 +11,7 @@ export function DashboardProvider({ children }) {
   const [data, setData] = useState({
     summary: { totalIncome: 0, totalExpense: 0, netProfit: 0, cashIn: 0, transferIn: 0, cashOut: 0, transferOut: 0 },
     stats: { totalStalls: 0, occupied: 0, foodCount: 0, clothesCount: 0, dailyCount: 0, monthlyCount: 0, dailyFoodCount: 0, dailyClothesCount: 0, monthlyFoodCount: 0, monthlyClothesCount: 0 },
-    analytics: { debtRisks: [], primeCustomers: [], insights: [], forecast: 0 }
+    analytics: { debtRisks: [], primeCustomers: [], bookingInsights: [], financeInsights: [], forecast: 0 }
   });
 
   useEffect(() => {
@@ -245,25 +245,26 @@ export function DashboardProvider({ children }) {
       // Forecast
       const forecast = totalIncome * daysInMonth;
 
-      // Insights list
-      const insights = [];
-      if (totalIncome === 0) {
-        insights.push("ไม่มีข้อมูลรายได้ในวันนี้");
-      } else {
-        insights.push(`รายได้รวมวันนี้ ${totalIncome.toLocaleString()} บาท`);
-      }
-      
+      // Booking Insights
+      const bookingInsights = [];
       const occRate = totalStallsCount > 0 ? (occupiedCount / totalStallsCount * 100) : 0;
       if (occRate > 80) {
-        insights.push(`อัตราการจองล็อคสูงมาก (${occRate.toFixed(1)}%) เป็นสัญญาณบวกสำหรับตลาด!`);
+        bookingInsights.push(`อัตราการจองล็อคสูงมาก (${occRate.toFixed(1)}%) เป็นสัญญาณบวกสำหรับตลาด!`);
       } else if (occRate < 40) {
-        insights.push(`อัตราการจองต่ำผิดปกติ (${occRate.toFixed(1)}%) กรุณาติดตามสาเหตุ`);
+        bookingInsights.push(`อัตราการจองต่ำผิดปกติ (${occRate.toFixed(1)}%) กรุณาติดตามสาเหตุ`);
       } else {
-        insights.push(`อัตราการจองปัจจุบันอยู่ที่ ${occRate.toFixed(1)}%`);
+        bookingInsights.push(`อัตราการจองปัจจุบันอยู่ที่ ${occRate.toFixed(1)}%`);
       }
 
+      // Finance Insights
+      const financeInsights = [];
+      if (totalIncome === 0) {
+        financeInsights.push("ไม่มีข้อมูลรายได้ในวันนี้");
+      } else {
+        financeInsights.push(`รายได้รวมวันนี้ ${totalIncome.toLocaleString()} บาท`);
+      }
       if (debtRisks.length > 0) {
-        insights.push(`มีลูกค้ารายเดือนค้างชำระทั้งหมด ${debtRisks.length} รายการที่ต้องเร่งรัดติดตาม`);
+        financeInsights.push(`มีลูกค้ารายเดือนค้างชำระทั้งหมด ${debtRisks.length} รายการที่ต้องเร่งรัดติดตาม`);
       }
 
       setData({
@@ -291,7 +292,8 @@ export function DashboardProvider({ children }) {
         analytics: {
           debtRisks: debtRisks.slice(0, 5),
           primeCustomers: primeCustomers.slice(0, 5),
-          insights,
+          bookingInsights,
+          financeInsights,
           forecast
         }
       });

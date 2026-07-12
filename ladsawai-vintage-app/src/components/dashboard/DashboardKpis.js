@@ -2,68 +2,22 @@
 
 import React from 'react';
 import { useDashboard } from '@/context/DashboardContext';
-import { TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
+import { Percent, Layers, Sun, Calendar } from 'lucide-react';
 
 export default function DashboardKpis() {
   const { data } = useDashboard();
-  const { summary, stats } = data;
+  const { stats } = data;
 
   const occupancyRate = stats.totalStalls > 0 ? ((stats.occupied / stats.totalStalls) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
       
-      {/* Income KPI */}
-      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between">
-        <div>
-          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">รายรับวันนี้</p>
-          <h3 className="text-lg md:text-xl font-extrabold text-green-700 mt-1">
-            {summary.totalIncome.toLocaleString()} ฿
-          </h3>
-          <span className="text-[9px] text-gray-400 font-semibold">
-            โอน: {summary.transferIn.toLocaleString()} ฿ | เงินสด: {summary.cashIn.toLocaleString()} ฿
-          </span>
-        </div>
-        <div className="p-3 bg-green-50 rounded-lg">
-          <TrendingUp className="w-6 h-6 text-green-600" />
-        </div>
-      </div>
-
-      {/* Expense KPI */}
-      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between">
-        <div>
-          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">รายจ่ายวันนี้</p>
-          <h3 className="text-lg md:text-xl font-extrabold text-red-700 mt-1">
-            {summary.totalExpense.toLocaleString()} ฿
-          </h3>
-          <span className="text-[9px] text-gray-400 font-semibold">
-            โอน: {summary.transferOut.toLocaleString()} ฿ | เงินสด: {summary.cashOut.toLocaleString()} ฿
-          </span>
-        </div>
-        <div className="p-3 bg-red-50 rounded-lg">
-          <TrendingDown className="w-6 h-6 text-red-600" />
-        </div>
-      </div>
-
-      {/* Profit KPI */}
-      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between">
-        <div>
-          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">กำไรสุทธิวันนี้</p>
-          <h3 className={`text-lg md:text-xl font-extrabold mt-1 ${summary.netProfit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
-            {summary.netProfit.toLocaleString()} ฿
-          </h3>
-          <span className="text-[9px] text-gray-400 font-semibold">รายรับหักรายจ่ายในวัน</span>
-        </div>
-        <div className="p-3 bg-blue-50 rounded-lg">
-          <DollarSign className="w-6 h-6 text-blue-600" />
-        </div>
-      </div>
-
       {/* Occupancy KPI */}
-      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between">
+      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between hover:border-amber-800/40 transition-all">
         <div>
-          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">อัตราการจองล็อค</p>
-          <h3 className="text-lg md:text-xl font-extrabold text-[#8B4513] mt-1">
+          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">อัตราการครองแผงค้า</p>
+          <h3 className="text-lg md:text-xl font-extrabold text-amber-800 mt-1">
             {occupancyRate.toFixed(1)}%
           </h3>
           <span className="text-[9px] text-gray-400 font-semibold">
@@ -72,6 +26,54 @@ export default function DashboardKpis() {
         </div>
         <div className="p-3 bg-amber-50 rounded-lg">
           <Percent className="w-6 h-6 text-amber-700" />
+        </div>
+      </div>
+
+      {/* Total Booked KPI */}
+      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between hover:border-amber-800/40 transition-all">
+        <div>
+          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">แผงค้าที่จองทั้งหมด</p>
+          <h3 className="text-lg md:text-xl font-extrabold text-blue-700 mt-1">
+            {stats.occupied} ล็อค
+          </h3>
+          <span className="text-[9px] text-gray-400 font-semibold">
+            ล็อคที่ขายในวันที่เลือก
+          </span>
+        </div>
+        <div className="p-3 bg-blue-50 rounded-lg">
+          <Layers className="w-6 h-6 text-blue-600" />
+        </div>
+      </div>
+
+      {/* Daily Booked KPI */}
+      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between hover:border-amber-800/40 transition-all">
+        <div>
+          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">จองรายวันวันนี้</p>
+          <h3 className="text-lg md:text-xl font-extrabold text-green-700 mt-1">
+            {stats.dailyCount} ล็อค
+          </h3>
+          <span className="text-[9px] text-gray-400 font-semibold">
+            สัดส่วนรายวัน: อาหาร {stats.dailyFoodCount} | เสื้อผ้า {stats.dailyClothesCount}
+          </span>
+        </div>
+        <div className="p-3 bg-green-50 rounded-lg">
+          <Sun className="w-6 h-6 text-green-600" />
+        </div>
+      </div>
+
+      {/* Monthly Booked KPI */}
+      <div className="bg-white border-2 border-amber-800/20 rounded-xl p-4 shadow-sm flex items-center justify-between hover:border-amber-800/40 transition-all">
+        <div>
+          <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">จองรายเดือนวันนี้</p>
+          <h3 className="text-lg md:text-xl font-extrabold text-purple-700 mt-1">
+            {stats.monthlyCount} ล็อค
+          </h3>
+          <span className="text-[9px] text-gray-400 font-semibold">
+            สัดส่วนรายเดือน: อาหาร {stats.monthlyFoodCount} | เสื้อผ้า {stats.monthlyClothesCount}
+          </span>
+        </div>
+        <div className="p-3 bg-purple-50 rounded-lg">
+          <Calendar className="w-6 h-6 text-purple-600" />
         </div>
       </div>
 
