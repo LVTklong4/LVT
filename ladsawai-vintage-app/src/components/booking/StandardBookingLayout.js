@@ -453,21 +453,27 @@ export default function StandardBookingLayout() {
                       if (booking.status === 'ลา') {
                         statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                         statusText = priceText;
-                      } else if (booking.type === 'รายเดือน') {
+                      } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
+                        statusClass = "bg-occupied text-red-900";
+                        statusText = booking.product || "จองแล้ว";
+                      } else if (booking.status === 'ค้างชำระ') {
                         const custType = getBookingCustomerType(booking);
-                        if (custType === 'Regular' && !isFood) {
+                        if (custType === 'Regular') {
                           statusClass = "bg-unpaid text-amber-900";
                           statusText = booking.product || "ประจำ";
                         } else {
                           statusClass = "bg-monthly-stall";
                           statusText = booking.product || "รายเดือน";
                         }
-                      } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-                        statusClass = "bg-occupied text-red-900";
-                        statusText = booking.product || "จองแล้ว";
-                      } else if (booking.status === 'ค้างชำระ') {
-                        statusClass = "bg-unpaid text-amber-900";
-                        statusText = booking.product || "จองแล้ว";
+                      } else if (booking.type === 'รายเดือน') {
+                        const custType = getBookingCustomerType(booking);
+                        if (custType === 'Regular') {
+                          statusClass = "bg-unpaid text-amber-900";
+                          statusText = booking.product || "ประจำ";
+                        } else {
+                          statusClass = "bg-monthly-stall";
+                          statusText = booking.product || "รายเดือน";
+                        }
                       } else {
                         statusClass = "bg-monthly-stall";
                         statusText = "รายเดือน";
@@ -481,21 +487,27 @@ export default function StandardBookingLayout() {
                       if (booking.status === 'ลา') {
                         statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                         statusText = priceText;
-                      } else if (booking.type === 'รายเดือน') {
-                        const custType = getBookingCustomerType(booking);
-                        if (custType === 'Regular' && !isFood) {
-                          statusClass = "bg-unpaid text-amber-900";
-                          statusText = booking.product || "ประจำ";
-                        } else {
-                          statusClass = "bg-monthly-stall";
-                          statusText = booking.product || "รายเดือน";
-                        }
-                      } else if (booking.status === 'ชำrateแล้ว' || booking.status === 'ไม่ว่าง' || booking.status === 'ชำระแล้ว') {
+                      } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
                         statusClass = "bg-occupied text-red-900";
                         statusText = booking.product || "จองแล้ว";
+                      } else if (booking.status === 'ค้างชำระ') {
+                        const custType = getBookingCustomerType(booking);
+                        if (booking.type === 'รายเดือน' && custType !== 'Regular') {
+                          statusClass = "bg-monthly-stall";
+                          statusText = booking.product || "รายเดือน";
+                        } else {
+                          statusClass = "bg-unpaid text-amber-900";
+                          statusText = booking.product || (custType === 'Regular' ? "ประจำ" : "จองแล้ว");
+                        }
                       } else {
-                        statusClass = "bg-unpaid text-amber-900";
-                        statusText = booking.product || "จองแล้ว";
+                        const custType = getBookingCustomerType(booking);
+                        if (booking.type === 'รายเดือน' && custType !== 'Regular') {
+                          statusClass = "bg-monthly-stall";
+                          statusText = booking.product || "รายเดือน";
+                        } else {
+                          statusClass = "bg-unpaid text-amber-900";
+                          statusText = booking.product || (custType === 'Regular' ? "ประจำ" : "จองแล้ว");
+                        }
                       }
                     } else {
                       statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
@@ -844,7 +856,7 @@ export default function StandardBookingLayout() {
                   .reduce((sum, p) => sum + parseNumber(p.amount), 0);
 
                 const isFullyPaid = totalPaid >= totalVal && totalVal > 0;
-                const isAlreadyPaid = selectedBooking && (selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง') && selectedBooking.type === 'รายวัน';
+                const isAlreadyPaid = selectedBooking && (selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง') && (selectedBooking.type === 'รายวัน' || getBookingCustomerType(selectedBooking) === 'Regular');
                 const isPaidInDb = selectedBooking && (selectedBooking.status === 'ชำระแล้ว' || selectedBooking.status === 'ไม่ว่าง');
 
                 const cashNeeded = totalVal - transferTotal;
@@ -1204,7 +1216,7 @@ export default function StandardBookingLayout() {
                       </div>
 
                       {/* Extra Admin tools */}
-                      {selectedBooking && selectedBooking.type === 'รายวัน' && isAlreadyPaid && (
+                      {selectedBooking && (selectedBooking.type === 'รายวัน' || getBookingCustomerType(selectedBooking) === 'Regular') && isAlreadyPaid && (
                         <div className="mt-2.5 border-t border-[#8B4513]/10 pt-3.5 flex flex-col gap-2">
                           <span className="text-[10px] font-black text-[#8B4513]/60 uppercase tracking-widest block mb-0.5">เครื่องมือบริการลูกค้า:</span>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1261,7 +1273,7 @@ export default function StandardBookingLayout() {
                         </div>
                       )}
 
-                      {selectedBooking && selectedBooking.type !== 'รายวัน' && isPaidInDb && (
+                      {selectedBooking && selectedBooking.type !== 'รายวัน' && getBookingCustomerType(selectedBooking) !== 'Regular' && isPaidInDb && (
                         <div className="mt-1.5 border-t pt-3 flex flex-col gap-2">
                           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">เครื่องมือบริการลูกค้า:</span>
                           <div className="flex flex-wrap gap-2">
@@ -1293,7 +1305,7 @@ export default function StandardBookingLayout() {
                     {/* Modal Footer Controls (Dynamic based on Paid status) */}
                     <div className="bg-gray-50 border-t px-4 py-3 flex flex-wrap justify-between items-center gap-2">
                       {selectedBooking ? (
-                        selectedBooking.type === 'รายวัน' ? (
+                        (selectedBooking.type === 'รายวัน' || getBookingCustomerType(selectedBooking) === 'Regular') ? (
                           // Daily Booking: Reorganized footer
                           <div className="flex justify-between items-center w-full">
                             {!isAlreadyPaid ? (
