@@ -574,19 +574,84 @@ export default function StandardBookingLayout() {
                 style={{ 
                   gridRow: "1 / span 25", 
                   gridColumn: "21 / span 4",
-                  backgroundColor: "#E5DDD9"
+                  position: "relative"
                 }}
-                className="rounded-md p-3.5 flex flex-col items-center justify-around z-10 pointer-events-none"
+                className="z-10 pointer-events-none"
               >
-                {/* 6 Top-down blue cars parked vertically */}
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <img 
-                    key={i}
-                    src="/car-top-down.png" 
-                    alt="Car" 
-                    className="h-[52px] w-auto object-contain drop-shadow-sm my-0.5"
-                  />
-                ))}
+                {/* Vertical Lane (Left Column) */}
+                <div 
+                  style={{
+                    position: "absolute",
+                    left: "2px",
+                    top: "10px",
+                    width: "56px",
+                    height: "95%",
+                    backgroundColor: "#E5DDD9",
+                    borderRadius: "6px"
+                  }}
+                />
+
+                {/* Stall 5 Gray Patch */}
+                <div 
+                  style={{
+                    position: "absolute",
+                    left: "64px",
+                    top: "84px",
+                    width: "56px",
+                    height: "48px",
+                    backgroundColor: "#E5DDD9",
+                    borderRadius: "6px"
+                  }}
+                />
+
+                {/* Stall 6 Gray Patch */}
+                <div 
+                  style={{
+                    position: "absolute",
+                    left: "126px",
+                    top: "84px",
+                    width: "56px",
+                    height: "48px",
+                    backgroundColor: "#E5DDD9",
+                    borderRadius: "6px"
+                  }}
+                />
+
+                {/* Stall 1 (Box on left, Car on right) */}
+                <div style={{ position: "absolute", left: "10px", top: "90px" }} className="flex items-center gap-1">
+                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
+                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
+                </div>
+
+                {/* Stall 2 (Box on left, Car on right) */}
+                <div style={{ position: "absolute", left: "10px", top: "160px" }} className="flex items-center gap-1">
+                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
+                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
+                </div>
+
+                {/* Stall 3 (Box on left, Car on right) */}
+                <div style={{ position: "absolute", left: "10px", top: "230px" }} className="flex items-center gap-1">
+                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
+                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
+                </div>
+
+                {/* Stall 4 (Box on left, Car on right) */}
+                <div style={{ position: "absolute", left: "10px", top: "300px" }} className="flex items-center gap-1">
+                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
+                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
+                </div>
+
+                {/* Stall 5 (Car on left, Box on right) */}
+                <div style={{ position: "absolute", left: "72px", top: "90px" }} className="flex items-center gap-1">
+                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
+                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
+                </div>
+
+                {/* Stall 6 (Box on left, Car on right) */}
+                <div style={{ position: "absolute", left: "132px", top: "90px" }} className="flex items-center gap-1">
+                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
+                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
+                </div>
               </div>
             </div>
           )}
