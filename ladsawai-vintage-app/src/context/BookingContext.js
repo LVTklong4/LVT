@@ -613,14 +613,19 @@ export function BookingProvider({ children }) {
     }, 0);
   };
 
-  const handleVacateMonthlyStallToday = async () => {
+  const handleVacateMonthlyStallToday = async (customIds) => {
     if (!selectedMonthlyStallBooking) return;
+    const idsToVacate = Array.isArray(customIds) && customIds.length > 0 
+      ? customIds 
+      : [selectedMonthlyStallBooking.id];
+      
+    if (idsToVacate.length === 0) return;
     setLoading(true);
     try {
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'ลา', note: 'ลูกค้ารายเดือนลา คืนล็อคขายรายวัน' })
-        .eq('id', selectedMonthlyStallBooking.id);
+        .in('id', idsToVacate);
       if (error) throw error;
       
       showAlert("คืนล็อคเฉพาะวันนี้สำเร็จ! แผงค้าจะเปลี่ยนเป็นสีว่างเพื่อให้จองรายวันได้แล้วครับ", "สำเร็จ");

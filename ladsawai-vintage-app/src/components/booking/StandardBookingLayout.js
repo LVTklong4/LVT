@@ -25,6 +25,26 @@ export default function StandardBookingLayout() {
   const [showGearDropdown, setShowGearDropdown] = React.useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = React.useState(false);
 
+  // States & memo for vacating multiple monthly stalls
+  const [selectedVacateStallIds, setSelectedVacateStallIds] = React.useState([]);
+  
+  const relatedBookings = React.useMemo(() => {
+    if (!selectedMonthlyStallBooking) return [];
+    return bookings.filter(b => 
+      b.master_id === selectedMonthlyStallBooking.master_id && 
+      b.date === selectedMonthlyStallBooking.date &&
+      b.status !== 'ลา'
+    );
+  }, [selectedMonthlyStallBooking, bookings]);
+
+  React.useEffect(() => {
+    if (relatedBookings.length > 0) {
+      setSelectedVacateStallIds(relatedBookings.map(b => b.id));
+    } else {
+      setSelectedVacateStallIds([]);
+    }
+  }, [relatedBookings]);
+
   // Dynamic grid column setup
   let maxCol = 24;
   let maxRow = 26;
@@ -655,12 +675,50 @@ export default function StandardBookingLayout() {
               </div>
             </div>
 
-            {/* Vacate Button */}
+            {/* Vacate Button & Multi-stall Selection */}
             {adminUser && (
               <>
+                {relatedBookings.length > 1 && (
+                  <div className="mt-4 border border-[#8B4513]/10 bg-amber-50/20 rounded-xl p-3 text-left">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                      พบข้อมูล {relatedBookings.length} แผง เลือกแผงที่ต้องการลาหยุดในวันนี้:
+                    </span>
+                    <div className="flex flex-col gap-2">
+                      {relatedBookings.map((b) => {
+                        const isChecked = selectedVacateStallIds.includes(b.id);
+                        return (
+                          <label 
+                            key={b.id} 
+                            className="flex items-center gap-2.5 text-xs font-bold text-gray-700 cursor-pointer select-none py-1 hover:text-purple-700 transition-colors"
+                          >
+                            <input 
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedVacateStallIds([...selectedVacateStallIds, b.id]);
+                                } else {
+                                  setSelectedVacateStallIds(selectedVacateStallIds.filter(id => id !== b.id));
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-gray-300 cursor-pointer"
+                            />
+                            <span>แผงค้า {cleanStallName(b.stall_name)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <button
-                  onClick={handleVacateMonthlyStallToday}
-                  className="w-full mt-6 py-3 bg-[#E53935] hover:bg-[#D32F2F] text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => handleVacateMonthlyStallToday(selectedVacateStallIds)}
+                  disabled={selectedVacateStallIds.length === 0}
+                  className={`w-full mt-6 py-3 text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                    selectedVacateStallIds.length === 0 
+                      ? 'bg-gray-300 cursor-not-allowed shadow-none text-gray-500' 
+                      : 'bg-[#E53935] hover:bg-[#D32F2F]'
+                  }`}
                 >
                   <CalendarX className="w-4 h-4" /> คืนล็อคเฉพาะวันนี้
                 </button>
