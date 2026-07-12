@@ -589,36 +589,7 @@ export default function StandardBookingLayout() {
                 </div>
               </div>
 
-              {/* Khlong Thom Parking Zone */}
-              <div 
-                style={{ 
-                  gridRow: "1 / span 25", 
-                  gridColumn: "21 / span 4",
-                  backgroundColor: "#E5DDD9",
-                  borderRadius: "8px"
-                }}
-                className="p-3.5 grid grid-cols-3 gap-y-7 gap-x-2 z-10 pointer-events-none shadow-inner"
-              >
-                {/* Row 1 */}
-                <TopDownCar color="#1E88E5" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#78909C" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#E53935" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                
-                {/* Row 2 */}
-                <TopDownCar color="#43A047" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#FB8C00" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#1E88E5" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                
-                {/* Row 3 */}
-                <TopDownCar color="#78909C" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#E53935" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#43A047" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                
-                {/* Row 4 */}
-                <TopDownCar color="#FB8C00" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#1E88E5" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-                <TopDownCar color="#78909C" className="h-[46px] w-auto drop-shadow-md mx-auto" />
-              </div>
+
             </div>
           )}
 
