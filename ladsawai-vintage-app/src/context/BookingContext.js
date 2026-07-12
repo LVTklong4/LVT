@@ -54,7 +54,7 @@ export function BookingProvider({ children }) {
   const [showAddUtilityModal, setShowAddUtilityModal] = useState(false);
   const [addUtilityUnit, setAddUtilityUnit] = useState(1);
   const [addUtilityPrice, setAddUtilityPrice] = useState(20);
-  const [addUtilityMethod, setAddUtilityMethod] = useState('โอนเงิน');
+  const [addUtilityMethod, setAddUtilityMethod] = useState('');
   
   // Lock Transfer States
   const [showMoveLockModal, setShowMoveLockModal] = useState(false);
@@ -691,17 +691,20 @@ export function BookingProvider({ children }) {
       }
 
       // Parse payment splits
+      const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
       if (booking.payment_method) {
         if (booking.payment_method.includes(':') || booking.payment_method.includes('+')) {
           const splits = booking.payment_method.split('+').map(item => {
             const parts = item.split(':');
-            return { method: parts[0]?.trim() || '', amount: parts[1]?.trim() || '' };
+            return { 
+              method: isPaidStatus ? (parts[0]?.trim() || '') : '', 
+              amount: parts[1]?.trim() || '' 
+            };
           });
           setPaymentList(splits);
         } else {
-          const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
           setPaymentList([{ 
-            method: booking.payment_method, 
+            method: isPaidStatus ? booking.payment_method : '', 
             amount: isPaidStatus ? (booking.total_price || '') : '' 
           }]);
         }
@@ -2408,6 +2411,11 @@ export function BookingProvider({ children }) {
     }
     if (!selectedBooking) return;
 
+    if (!addUtilityMethod) {
+      showAlert("กรุณาเลือกวิธีการรับชำระเงินก่อนบันทึก", "แจ้งเตือน", true);
+      return;
+    }
+
     setLoading(true);
     try {
       const currentUnit = parseNumber(selectedBooking.elec_unit);
@@ -4107,6 +4115,7 @@ export function BookingProvider({ children }) {
     adminRolesList,
     adminUser,
     alertInfo,
+    showAlert,
     bookerName,
     bookingType,
     bookings,

@@ -34,25 +34,42 @@ export default function AddUtilityModal() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-gray-700">ค่าไฟ (บาท)</label>
+                  <label className="text-xs font-bold text-gray-500">ค่าไฟ (บาท)</label>
                   <input
                     type="number"
+                    readOnly
+                    disabled
                     value={addUtilityPrice}
-                    onChange={(e) => setAddUtilityPrice(parseNumber(e.target.value))}
-                    className="p-2 border border-gray-300 rounded text-xs text-center focus:ring-2 focus:ring-yellow-500"
+                    className="p-2 border border-gray-200 rounded text-xs text-center bg-gray-100 text-gray-500 font-bold cursor-not-allowed"
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-700">วิธีการรับชำระ</label>
-                <select
-                  value={addUtilityMethod}
-                  onChange={(e) => setAddUtilityMethod(e.target.value)}
-                  className="p-2 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-yellow-500"
-                >
-                  <option value="โอนเงิน">โอนเงิน</option>
-                  <option value="เงินสด">เงินสด</option>
-                </select>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-700">วิธีการรับชำระ *</label>
+                <div className="flex gap-4 p-2 border border-gray-200 rounded bg-gray-50/50">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="addUtilityMethod"
+                      value="เงินสด"
+                      checked={addUtilityMethod === 'เงินสด'}
+                      onChange={() => setAddUtilityMethod('เงินสด')}
+                      className="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300"
+                    />
+                    เงินสด
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="addUtilityMethod"
+                      value="โอนเงิน"
+                      checked={addUtilityMethod === 'โอนเงิน'}
+                      onChange={() => setAddUtilityMethod('โอนเงิน')}
+                      className="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300"
+                    />
+                    โอนเงิน
+                  </label>
+                </div>
               </div>
               <button
                 onClick={handleAddUtility}
