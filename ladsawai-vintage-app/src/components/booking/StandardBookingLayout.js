@@ -79,7 +79,7 @@ export default function StandardBookingLayout() {
             <img src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" className="h-10 w-10 object-contain drop-shadow-sm" />
             <div>
               <h1 className="text-lg font-bold text-gray-800 leading-none">ตลาดนัดลาดสวายวินเทจ</h1>
-              <p className="text-[10px] text-gray-500 font-medium">ระบบบริหารจัดการจองล็อคออนไลน์ (Supabase Pro)</p>
+              <p className="text-[10px] text-gray-500 font-medium">Ladsawai Vintage Market System (LVMS)</p>
             </div>
           </div>
 
