@@ -17,6 +17,26 @@ import MonthlyPrintModal from './modals/MonthlyPrintModal';
 import NewMonthlyModal from './modals/NewMonthlyModal';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
 
+const TopDownCar = ({ color = "#1E88E5", className = "h-[45px] w-auto drop-shadow-sm" }) => (
+  <svg viewBox="0 0 40 80" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="12" width="3" height="10" rx="1" fill="#263238" />
+    <rect x="36" y="12" width="3" height="10" rx="1" fill="#263238" />
+    <rect x="1" y="58" width="3" height="10" rx="1" fill="#263238" />
+    <rect x="36" y="58" width="3" height="10" rx="1" fill="#263238" />
+    <rect x="4" y="6" width="32" height="68" rx="8" fill="rgba(0,0,0,0.12)" />
+    <rect x="4" y="4" width="32" height="68" rx="7" fill={color} />
+    <rect x="0" y="20" width="4" height="4" rx="1" fill={color} />
+    <rect x="36" y="20" width="4" height="4" rx="1" fill={color} />
+    <path d="M 8,22 Q 20,18 32,22 L 30,30 Q 20,29 10,30 Z" fill="#111" opacity="0.8" />
+    <path d="M 8,58 Q 20,60 32,58 L 30,64 Q 20,65 10,64 Z" fill="#111" opacity="0.8" />
+    <rect x="8" y="28" width="24" height="30" rx="3" fill={color} style={{ filter: "brightness(1.15)" }} />
+    <rect x="7" y="3" width="5" height="2" rx="1" fill="#FFEE58" />
+    <rect x="28" y="3" width="5" height="2" rx="1" fill="#FFEE58" />
+    <rect x="7" y="71" width="5" height="2" rx="1" fill="#EF5350" />
+    <rect x="28" y="71" width="5" height="2" rx="1" fill="#EF5350" />
+  </svg>
+);
+
 export default function StandardBookingLayout() {
   const {
     activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRef,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    addUtilityMethod,    addUtilityPrice,    addUtilityUnit,    adminForm,    adminList,    adminRolesList,    adminUser,    alertInfo,    showAlert,    bookerName,    bookings,    calculateDefaultStallPrice,    cleanStallName,    dateOffset,    elecPrice,    elecUnit,    expenseForm,    expenseList,    fetchBookingsAndStorage,    fetchMonthlyTransactions,    fetchVacantStallsForDate,    financeTab,    formatBookingMonth,    getBookingCustomerType,    getNewMonthlyPricing,    getOccupiedStallsInRound,    getStallPriceForDate,    getStallStatus,    handleAddExpense,    handleAddIncome,    handleAddUtility,    handleConfirmMoveLock,    handleCreateNewMonthlyBooking,    handleDeleteBooking,    handleDeleteMonthlyBooking,    handleGoogleLogin,    handleLogin,    handleLogout,    handleMarkAbsent,    handleMonthlyPaymentSubmit,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handleOpenStoragePrintModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handlePrintReceipt,    handlePrintStorageReceipt,    handleSaveAdminRole,    handleSaveBooking,    handleSaveEditedMonthlyBooking,    handleSaveStorage,    handleSearch,    handleSlipChange,    handleSortToggle,    handleStallClick,    handleToggleNonRenewal,    handleToggleStorageStatus,    handleUpdateMonthlyItem,    handleVacateMonthlyStallToday,    highlightedStall,    incomeForm,    incomeList,    isEditingMonthlyMode,    loading,    loadingFinance,    loadingMonthly,    loadingMonthlyTxns,    loadingSettings,    loadingStorage,    loadingVacantStalls,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    monthlySearchQuery,    moveStallFilter,    moveTargetDate,    moveTargetStall,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    paymentList,    product,    quickDates,    receiptPreviewData,    renderSortArrow,    searchQuery,    searchResults,    selectSearchResult,    selectedAdminEmail,    selectedBooking,    selectedDate,    selectedMonthlyItem,    selectedMonthlyStallBooking,    selectedStall,    selectedStallsList,    setActiveMonthlyBooking,    setAddUtilityMethod,    setAddUtilityPrice,    setAddUtilityUnit,    setAdminForm,    setBookerName,    setDateOffset,    setElecPrice,    setElecUnit,    setExpenseForm,    setFinanceTab,    setIncomeForm,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setMoveStallFilter,    setMoveTargetDate,    setMoveTargetStall,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setNote,    setPaymentList,    setProduct,    setReceiptPreviewData,    setSelectedAdminEmail,    setSelectedDate,    setSelectedMonthlyItem,    setSelectedStallsList,    setShowAddStallSelect,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowAddUtilityModal,    setShowBookingModal,    setShowFinanceMgmtModal,    setShowLoginModal,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowMonthlyStallMapModal,    setShowMoveLockModal,    setShowNewMonthlyModal,    setShowReceiptPreviewModal,    setShowSettingsMgmtModal,    setShowStorageMgmtModal,    setShowStoragePrintModal,    setSlipPreviewUrl,    setStallFilter,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    setStallPrice,    setStorageForm,    setStoragePrintEndDate,    setStoragePrintFee,    setStoragePrintNote,    setStoragePrintOwner,    setStoragePrintPayment,    setStoragePrintStall,    setStoragePrintStartDate,    showAddStallSelect,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showAddUtilityModal,    showBookingModal,    showFinanceMgmtModal,    showLoginModal,    showMonthlyMgmtModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showMonthlyStallMapModal,    showMoveLockModal,    showNewMonthlyModal,    showReceiptPreviewModal,    showSettingsMgmtModal,    showStorageMgmtModal,    showStoragePrintModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilter,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stallPrice,    stalls,    storageFee,    storageForm,    storageList,    storageMap,    storagePrintEndDate,    storagePrintFee,    storagePrintItem,    storagePrintNote,    storagePrintOwner,    storagePrintPayment,    storagePrintStall,    storagePrintStartDate,    vacantStallsOnTargetDate
@@ -574,84 +594,30 @@ export default function StandardBookingLayout() {
                 style={{ 
                   gridRow: "1 / span 25", 
                   gridColumn: "21 / span 4",
-                  position: "relative"
+                  backgroundColor: "#E5DDD9",
+                  borderRadius: "8px"
                 }}
-                className="z-10 pointer-events-none"
+                className="p-3.5 grid grid-cols-3 gap-y-7 gap-x-2 z-10 pointer-events-none shadow-inner"
               >
-                {/* Vertical Lane (Left Column) */}
-                <div 
-                  style={{
-                    position: "absolute",
-                    left: "2px",
-                    top: "10px",
-                    width: "56px",
-                    height: "95%",
-                    backgroundColor: "#E5DDD9",
-                    borderRadius: "6px"
-                  }}
-                />
-
-                {/* Stall 5 Gray Patch */}
-                <div 
-                  style={{
-                    position: "absolute",
-                    left: "64px",
-                    top: "84px",
-                    width: "56px",
-                    height: "48px",
-                    backgroundColor: "#E5DDD9",
-                    borderRadius: "6px"
-                  }}
-                />
-
-                {/* Stall 6 Gray Patch */}
-                <div 
-                  style={{
-                    position: "absolute",
-                    left: "126px",
-                    top: "84px",
-                    width: "56px",
-                    height: "48px",
-                    backgroundColor: "#E5DDD9",
-                    borderRadius: "6px"
-                  }}
-                />
-
-                {/* Stall 1 (Box on left, Car on right) */}
-                <div style={{ position: "absolute", left: "10px", top: "90px" }} className="flex items-center gap-1">
-                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
-                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
-                </div>
-
-                {/* Stall 2 (Box on left, Car on right) */}
-                <div style={{ position: "absolute", left: "10px", top: "160px" }} className="flex items-center gap-1">
-                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
-                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
-                </div>
-
-                {/* Stall 3 (Box on left, Car on right) */}
-                <div style={{ position: "absolute", left: "10px", top: "230px" }} className="flex items-center gap-1">
-                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
-                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
-                </div>
-
-                {/* Stall 4 (Box on left, Car on right) */}
-                <div style={{ position: "absolute", left: "10px", top: "300px" }} className="flex items-center gap-1">
-                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
-                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
-                </div>
-
-                {/* Stall 5 (Car on left, Box on right) */}
-                <div style={{ position: "absolute", left: "72px", top: "90px" }} className="flex items-center gap-1">
-                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
-                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
-                </div>
-
-                {/* Stall 6 (Box on left, Car on right) */}
-                <div style={{ position: "absolute", left: "132px", top: "90px" }} className="flex items-center gap-1">
-                  <div className="border-2 border-black w-[13px] h-[34px] bg-transparent rounded-xs" />
-                  <img src="/car-top-down.png" className="h-[34px] w-auto object-contain" alt="Car" />
-                </div>
+                {/* Row 1 */}
+                <TopDownCar color="#1E88E5" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#78909C" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#E53935" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                
+                {/* Row 2 */}
+                <TopDownCar color="#43A047" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#FB8C00" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#1E88E5" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                
+                {/* Row 3 */}
+                <TopDownCar color="#78909C" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#E53935" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#43A047" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                
+                {/* Row 4 */}
+                <TopDownCar color="#FB8C00" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#1E88E5" className="h-[46px] w-auto drop-shadow-md mx-auto" />
+                <TopDownCar color="#78909C" className="h-[46px] w-auto drop-shadow-md mx-auto" />
               </div>
             </div>
           )}
