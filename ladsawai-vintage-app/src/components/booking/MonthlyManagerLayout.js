@@ -386,10 +386,10 @@ export default function MonthlyManagerLayout() {
 
             <div className="h-4 w-[1px] bg-amber-900/40 hidden sm:block" />
 
-            <div className="flex items-center gap-1 text-[11px] text-amber-100/70 font-semibold">
-              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">รายเดือน: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
-              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">ประจำ: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
-              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">VIP: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span className="bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] px-1.5 py-0.5 rounded font-bold">รายเดือน: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
+              <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold">ประจำ: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
+              <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-bold">VIP: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
             </div>
 
             <div className="h-4 w-[1px] bg-amber-900/40 hidden md:block" />
