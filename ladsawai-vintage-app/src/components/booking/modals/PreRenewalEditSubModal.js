@@ -123,13 +123,17 @@ export default function PreRenewalEditSubModal() {
                                 if (newArr.includes('sun')) ordered.push('Sun');
                                 const selStr = ordered.join(', ');
                                 
+                                const orderedNums = [];
+                                if (ordered.includes('Wed')) orderedNums.push(3);
+                                if (ordered.includes('Sat')) orderedNums.push(6);
+                                if (ordered.includes('Sun')) orderedNums.push(0);
+
                                 const rawStalls = bulkRenewEditingItem.raw_stall_details.map(st => {
-                                  const newDays = [];
-                                  if (ordered.includes('Wed')) newDays.push(3);
-                                  if (ordered.includes('Sat')) newDays.push(6);
-                                  if (ordered.includes('Sun')) newDays.push(0);
-                                  return { ...st, days: newDays };
-                                });
+                                  return {
+                                    ...st,
+                                    days: st.days.filter(d => orderedNums.includes(d))
+                                  };
+                                }).filter(st => st.days && st.days.length > 0);
 
                                 setBulkRenewEditingItem({
                                   ...bulkRenewEditingItem,
@@ -157,7 +161,9 @@ export default function PreRenewalEditSubModal() {
                       const isActive = daysArr.includes(dayName.toLowerCase());
                       if (!isActive) return null;
 
-                      const dayStalls = bulkRenewEditingItem.raw_stall_details.map(st => st.name);
+                      const dayStalls = bulkRenewEditingItem.raw_stall_details
+                        .filter(st => st.days && st.days.includes(dayNum))
+                        .map(st => st.name);
 
                       return (
                         <div key={dayName} className="flex flex-wrap gap-2 items-center bg-white p-2 rounded border border-purple-100">
@@ -169,7 +175,15 @@ export default function PreRenewalEditSubModal() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const updatedStalls = bulkRenewEditingItem.raw_stall_details.filter(x => x.name !== stName);
+                                    const updatedStalls = bulkRenewEditingItem.raw_stall_details.map(st => {
+                                      if (st.name === stName) {
+                                        return {
+                                          ...st,
+                                          days: st.days.filter(d => d !== dayNum)
+                                        };
+                                      }
+                                      return st;
+                                    }).filter(st => st.days && st.days.length > 0);
                                     setBulkRenewEditingItem({
                                       ...bulkRenewEditingItem,
                                       raw_stall_details: updatedStalls
@@ -244,13 +258,20 @@ export default function PreRenewalEditSubModal() {
                                           key={s.name}
                                           type="button"
                                           onClick={() => {
-                                            const newDays = [];
-                                            const ordered = bulkRenewEditingItem.selected_days.split(',').map(x => x.trim().toLowerCase());
-                                            if (ordered.includes('wed')) newDays.push(3);
-                                            if (ordered.includes('sat')) newDays.push(6);
-                                            if (ordered.includes('sun')) newDays.push(0);
+                                            let updatedStalls = [...bulkRenewEditingItem.raw_stall_details];
+                                            const existingIndex = updatedStalls.findIndex(x => x.name === s.name);
+                                            if (existingIndex > -1) {
+                                              const existingSt = updatedStalls[existingIndex];
+                                              if (!existingSt.days.includes(dayNum)) {
+                                                updatedStalls[existingIndex] = {
+                                                  ...existingSt,
+                                                  days: [...existingSt.days, dayNum]
+                                                };
+                                              }
+                                            } else {
+                                              updatedStalls.push({ name: s.name, days: [dayNum] });
+                                            }
                                             
-                                            const updatedStalls = [...bulkRenewEditingItem.raw_stall_details, { name: s.name, days: newDays }];
                                             setBulkRenewEditingItem({
                                               ...bulkRenewEditingItem,
                                               raw_stall_details: updatedStalls
