@@ -145,7 +145,9 @@ export default function NewMonthlyModal() {
               <div className="bg-[#FFF] p-3 rounded-lg border border-gray-200 flex flex-col gap-2.5">
                 <div className="font-bold text-gray-700 border-b pb-1.5 flex justify-between items-center">
                   <span>รายการล็อค :</span>
-                  <span className="text-[10px] text-gray-400 font-bold">ระบุเลขแผงตามวันที่ลงขาย</span>
+                  {newMonthlyCustomerType !== 'Room' && (
+                    <span className="text-[10px] text-gray-400 font-bold">ระบุเลขแผงตามวันที่ลงขาย</span>
+                  )}
                 </div>
 
                 {newMonthlyCustomerType === 'Room' && (
@@ -162,7 +164,7 @@ export default function NewMonthlyModal() {
                   </div>
                 )}
 
-                {newMonthlyDays.wed && (
+                {newMonthlyCustomerType !== 'Room' && newMonthlyDays.wed && (
                   <div className="flex flex-wrap gap-2 items-center bg-green-50/40 p-2 rounded border border-green-100">
                     <span className="w-12 font-bold text-green-700 shrink-0">วันพุธ</span>
                     <div className="flex-1 flex flex-wrap gap-1.5 items-center">
@@ -247,7 +249,7 @@ export default function NewMonthlyModal() {
                   </div>
                 )}
 
-                {newMonthlyDays.sat && (
+                {newMonthlyCustomerType !== 'Room' && newMonthlyDays.sat && (
                   <div className="flex flex-wrap gap-2 items-center bg-purple-50/40 p-2 rounded border border-purple-100">
                     <span className="w-12 font-bold text-purple-700 shrink-0">วันเสาร์</span>
                     <div className="flex-1 flex flex-wrap gap-1.5 items-center">
@@ -332,7 +334,7 @@ export default function NewMonthlyModal() {
                   </div>
                 )}
 
-                {newMonthlyDays.sun && (
+                {newMonthlyCustomerType !== 'Room' && newMonthlyDays.sun && (
                   <div className="flex flex-wrap gap-2 items-center bg-red-50/40 p-2 rounded border border-red-100">
                     <span className="w-12 font-bold text-red-700 shrink-0">วันอาทิตย์</span>
                     <div className="flex-1 flex flex-wrap gap-1.5 items-center">
