@@ -6,7 +6,7 @@ import { Loader2, X, Phone, Check } from 'lucide-react';
 
 export default function BulkRenewModal() {
   const {
-    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    formatBookingMonth,    handleBulkRenewSubmit,    loadingMonthly,    monthlyList,    note,    parseNumber,    product,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setShowBulkRenewModal,    showBulkRenewModal,    sortThaiMonthsDescending,    stalls
+    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    formatBookingMonth,    handleBulkRenewSubmit,    loadingMonthly,    monthlyList,    note,    parseNumber,    product,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setBulkRenewToMonth,    setShowBulkRenewModal,    showBulkRenewModal,    sortThaiMonthsDescending,    stalls
   } = useBooking();
 
   if (!showBulkRenewModal) return null;
@@ -15,7 +15,7 @@ export default function BulkRenewModal() {
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-5xl border-2 border-purple-800 overflow-hidden flex flex-col max-h-[90vh] animate-pop-in text-left text-xs font-sans text-gray-800">
               {/* Header */}
-              <div className="bg-purple-900 text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-purple-950">
+              <div className="bg-purple-900 text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-purple-955">
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-1.5 text-white">🔄 จัดการต่อสัญญาลูกค้ารายเดือนแบบกลุ่ม</h3>
                   <p className="text-[10px] text-purple-200 font-bold mt-0.5">คัดลอกและอัปเดตข้อมูลสัญญาสำหรับรอบเดือนถัดไป</p>
@@ -35,7 +35,9 @@ export default function BulkRenewModal() {
                   <select
                     value={bulkRenewFromMonth}
                     onChange={(e) => {
-                      setBulkRenewFromMonth(e.target.value);
+                      const selectedVal = e.target.value;
+                      setBulkRenewFromMonth(selectedVal);
+                      setBulkRenewToMonth(computeNextMonthThai(selectedVal));
                       setBulkRenewCheckedIds([]);
                       setBulkRenewEditData({});
                     }}

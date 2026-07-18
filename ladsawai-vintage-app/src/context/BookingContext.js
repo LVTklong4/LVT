@@ -3573,7 +3573,9 @@ export function BookingProvider({ children }) {
 
   const handleOpenBulkRenewModal = () => {
     setShowBulkRenewModal(true);
-    setBulkRenewFromMonth(monthlyMonthFilter === 'ทั้งหมด' ? (sortThaiMonthsDescending(Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))))[0] || '') : monthlyMonthFilter);
+    const fromMonth = monthlyMonthFilter === 'ทั้งหมด' ? (sortThaiMonthsDescending(Array.from(new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'))))[0] || '') : monthlyMonthFilter;
+    setBulkRenewFromMonth(fromMonth);
+    setBulkRenewToMonth(computeNextMonthThai(fromMonth));
     setBulkRenewCheckedIds([]);
     setBulkRenewEditData({});
   };
