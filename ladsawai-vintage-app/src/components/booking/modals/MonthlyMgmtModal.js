@@ -7,7 +7,7 @@ import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function MonthlyMgmtModal() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
+    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
   } = useBooking();
 
   if (!showMonthlyMgmtModal) return null;
@@ -245,7 +245,17 @@ export default function MonthlyMgmtModal() {
                             <div key={txn.id || idx} className="bg-gray-50 border border-gray-200 rounded p-2.5 text-xs flex flex-col gap-1 shadow-sm">
                               <div className="flex justify-between items-center font-bold text-gray-800">
                                 <span>{txn.category || 'ค่าเช่า'}</span>
-                                <span className="text-green-700 text-sm">{txn.total_amount || 0}.-</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-green-700 text-sm">{txn.total_amount?.toLocaleString() || 0}.-</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteMonthlyTransaction(txn)}
+                                    className="text-red-500 hover:text-red-750 transition-colors p-0.5 cursor-pointer"
+                                    title="ยกเลิก/ลบรายการชำระเงิน"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                               <div className="flex justify-between text-[10px] text-gray-500">
                                 <span>วันที่: {new Date(txn.timestamp || txn.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>

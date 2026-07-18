@@ -4045,6 +4045,65 @@ export function BookingProvider({ children }) {
     }
   };
 
+  const handleDeleteMonthlyTransaction = async (txn) => {
+    if (!txn || !txn.id) return;
+    if (!activeMonthlyBooking) return;
+
+    const msg = `⚠️ ยืนยันการยกเลิก/ลบรายการชำระเงินนี้ใช่หรือไม่?\n\n` +
+      `รายการ: ${txn.category || 'ค่าเช่า'}\n` +
+      `จำนวนเงิน: ${txn.total_amount?.toLocaleString() || 0} บาท\n` +
+      `วิธีการชำระ: ${txn.method || '-'}\n\n` +
+      `* ระบบจะหักลดยอดชำระสะสมของสัญญาหลักลงโดยอัตโนมัติ`;
+
+    if (!confirm(msg)) return;
+
+    setLoadingMonthly(true);
+    try {
+      // 1. Delete transaction
+      const { error: delError } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', txn.id);
+      if (delError) throw delError;
+
+      // 2. Calculate new paid amount
+      const currentPaid = parseNumber(activeMonthlyBooking.paid_amount || 0);
+      const newPaid = Math.max(0, currentPaid - parseNumber(txn.total_amount));
+      const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
+      const newStatus = newPaid >= (totalPrice - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
+
+      // 3. Update monthly_bookings
+      const { error: mbError } = await supabase
+        .from('monthly_bookings')
+        .update({
+          paid_amount: newPaid,
+          status: newStatus
+        })
+        .eq('id', activeMonthlyBooking.id);
+      if (mbError) throw mbError;
+
+      showAlert("ลบรายการชำระเงินสำเร็จ", "สำเร็จ");
+
+      // 4. Refresh details
+      fetchAllMonthly();
+      fetchBookingsAndStorage();
+
+      // 5. Update active state
+      const updatedBooking = {
+        ...activeMonthlyBooking,
+        paid_amount: newPaid,
+        status: newStatus
+      };
+      setActiveMonthlyBooking(updatedBooking);
+      fetchMonthlyTransactions(updatedBooking.id);
+    } catch (err) {
+      console.error(err);
+      showAlert("เกิดข้อผิดพลาดในการลบรายการชำระเงิน: " + err.message, "ข้อผิดพลาด", true);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
   const handleOpenMonthlyPaymentModal = () => {
     if (!activeMonthlyBooking) return;
     
@@ -4541,6 +4600,7 @@ export function BookingProvider({ children }) {
     handleMarkAbsent,
     handleMonthlyPaymentSubmit,
     handleOpenMonthlyPaymentModal,
+    handleDeleteMonthlyTransaction,
     handleOpenBulkRenewModal,
     handleOpenEditMonthlyModal,
     handleOpenMonthlyPrintModal,
