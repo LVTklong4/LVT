@@ -3216,6 +3216,17 @@ export function BookingProvider({ children }) {
       }
     }
 
+    const cleanPhone = newMonthlyPhone.replace(/\s|-/g, '').trim();
+    if (!cleanPhone) {
+      showAlert("โปรดระบุเบอร์โทรศัพท์ผู้เช่า", "แจ้งเตือน", true);
+      return;
+    }
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      showAlert("กรุณากรอกเบอร์โทรศัพท์ประเทศไทย 10 หลักให้ถูกต้อง (เช่น 0812345678 หรือ 021234567)", "แจ้งเตือน", true);
+      return;
+    }
+
     const hasWed = newMonthlyDays.wed && newMonthlyStallsWed.length > 0;
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
@@ -3358,7 +3369,7 @@ export function BookingProvider({ children }) {
           note: newMonthlyNote.trim(),
           selected_days: Object.keys(newMonthlyDays).filter(day => newMonthlyDays[day]).map(day => day === 'wed' ? 'Wed' : day === 'sat' ? 'Sat' : 'Sun').join(', '),
           booking_month: bookingMonthStr,
-          phone: newMonthlyPhone,
+          phone: cleanPhone,
           stall_details: JSON.stringify(stallDetails),
           customer_type: newMonthlyCustomerType,
           storage_fee: storageFeeVal,
@@ -3394,6 +3405,17 @@ export function BookingProvider({ children }) {
     }
     if (!newMonthlyBookerName.trim()) {
       showAlert("โปรดกรอกชื่อผู้เช่า", "แจ้งเตือน", true);
+      return;
+    }
+
+    const cleanPhone = newMonthlyPhone.replace(/\s|-/g, '').trim();
+    if (!cleanPhone) {
+      showAlert("โปรดระบุเบอร์โทรศัพท์ผู้เช่า", "แจ้งเตือน", true);
+      return;
+    }
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      showAlert("กรุณากรอกเบอร์โทรศัพท์ประเทศไทย 10 หลักให้ถูกต้อง (เช่น 0812345678 หรือ 021234567)", "แจ้งเตือน", true);
       return;
     }
     
@@ -3532,7 +3554,7 @@ export function BookingProvider({ children }) {
         payment_method: 'Cash',
         selected_days: Object.keys(newMonthlyDays).filter(day => newMonthlyDays[day]).map(day => day === 'wed' ? 'Wed' : day === 'sat' ? 'Sat' : 'Sun').join(', '),
         booking_month: bookingMonthStr,
-        phone: newMonthlyPhone,
+        phone: cleanPhone,
         stall_details: JSON.stringify(stallDetails),
         customer_type: newMonthlyCustomerType,
         storage_fee: storageFeeVal,
@@ -3902,7 +3924,7 @@ export function BookingProvider({ children }) {
           payment_method: 'Cash',
           selected_days: selectedDays,
           booking_month: nextBookingMonthStr,
-          phone: phone,
+          phone: String(phone || '').replace(/\s|-/g, ''),
           stall_details: stallDetailsStr,
           customer_type: customerType,
           storage_fee: storageFeeVal,
@@ -4026,12 +4048,19 @@ export function BookingProvider({ children }) {
   const handleOpenMonthlyPaymentModal = () => {
     if (!activeMonthlyBooking) return;
     
-    // Find unpaid bookings from previous months
-    const previousUnpaid = monthlyList.filter(item => 
-      item.booker_name === activeMonthlyBooking.booker_name &&
-      item.booking_month < activeMonthlyBooking.booking_month &&
-      (item.status === 'ค้างชำระ' || parseNumber(item.total_price) > parseNumber(item.paid_amount))
-    );
+    // Clean target phone
+    const targetPhone = String(activeMonthlyBooking.phone || '').replace(/\s|-/g, '').trim();
+
+    // Find unpaid bookings from previous months matching phone
+    const previousUnpaid = monthlyList.filter(item => {
+      const itemPhone = String(item.phone || '').replace(/\s|-/g, '').trim();
+      return (
+        targetPhone &&
+        itemPhone === targetPhone &&
+        item.booking_month < activeMonthlyBooking.booking_month &&
+        (item.status === 'ค้างชำระ' || parseNumber(item.total_price) > parseNumber(item.paid_amount))
+      );
+    });
 
     if (previousUnpaid.length > 0) {
       const unpaidDetails = previousUnpaid.map(item => {
@@ -4040,7 +4069,7 @@ export function BookingProvider({ children }) {
         return `- รอบเดือน ${monthThai}: ค้างชำระ ${remaining.toLocaleString()} บาท`;
       }).join('\n');
 
-      const msg = `⚠️ ผู้ค้า "${activeMonthlyBooking.booker_name}" ยังมียอดค้างชำระของเดือนก่อนหน้าดังนี้:\n\n${unpaidDetails}\n\nต้องการดำเนินการทำรายการชำระเงินของรอบเดือนปัจจุบัน (${formatBookingMonth(activeMonthlyBooking.booking_month)}) ต่อไปใช่หรือไม่?`;
+      const msg = `⚠️ ผู้ค้า "${activeMonthlyBooking.booker_name}" (เบอร์โทร: ${activeMonthlyBooking.phone || '-'}) ยังมียอดค้างชำระของเดือนก่อนหน้าดังนี้:\n\n${unpaidDetails}\n\nต้องการดำเนินการทำรายการชำระเงินของรอบเดือนปัจจุบัน (${formatBookingMonth(activeMonthlyBooking.booking_month)}) ต่อไปใช่หรือไม่?`;
       if (!confirm(msg)) {
         return;
       }
