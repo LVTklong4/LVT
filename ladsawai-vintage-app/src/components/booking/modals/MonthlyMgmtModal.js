@@ -127,7 +127,7 @@ export default function MonthlyMgmtModal() {
                         >
                           คงเหลือ {renderSortArrow('remaining')}
                         </th>
-                        <th className="p-2 text-left pl-3 select-none">จัดการ</th>
+                        <th className="p-2 text-center select-none">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">

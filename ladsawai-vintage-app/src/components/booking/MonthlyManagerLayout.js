@@ -133,7 +133,7 @@ export default function MonthlyManagerLayout() {
                     >
                       คงเหลือ {renderSortArrow('remaining')}
                     </th>
-                    <th className="p-2 text-left pl-3 select-none">จัดการ</th>
+                    <th className="p-2 text-center select-none">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white">
@@ -386,9 +386,9 @@ export default function MonthlyManagerLayout() {
 
             <div className="h-4 w-[1px] bg-amber-900/40 hidden sm:block" />
 
-            <div className="flex items-center gap-1 text-[11px] text-amber-100/70">
-              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">Standard: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
-              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">Regular: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
+            <div className="flex items-center gap-1 text-[11px] text-amber-100/70 font-semibold">
+              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">รายเดือน: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
+              <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">ประจำ: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
               <span className="bg-[#4e342e] px-1.5 py-0.5 rounded">VIP: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
             </div>
 
