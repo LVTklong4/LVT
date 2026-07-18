@@ -7,7 +7,7 @@ import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function NewMonthlyModal() {
   const {
-    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    cleanStallName,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleCreateNewMonthlyBooking,    handleSaveEditedMonthlyBooking,    isEditingMonthlyMode,    loadingMonthly,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    newMonthlyVipPrice,    parseNumber,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setNewMonthlyVipPrice,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowNewMonthlyModal,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showNewMonthlyModal,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stalls
+    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    cleanStallName,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleCreateNewMonthlyBooking,    handleSaveEditedMonthlyBooking,    isEditingMonthlyMode,    loadingMonthly,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    newMonthlyCustomPrice,    parseNumber,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setNewMonthlyCustomPrice,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowNewMonthlyModal,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showNewMonthlyModal,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stalls
   } = useBooking();
 
   if (!showNewMonthlyModal) return null;
@@ -122,7 +122,8 @@ export default function NewMonthlyModal() {
                   {[
                     { label: 'รายเดือน', val: 'Standard' },
                     { label: 'ประจำ', val: 'Regular' },
-                    { label: 'VIP', val: 'VIP' }
+                    { label: 'VIP', val: 'VIP' },
+                    { label: 'ห้องเช่า', val: 'Room' }
                   ].map(opt => (
                     <label key={opt.val} className="flex items-center gap-1 cursor-pointer font-bold text-gray-700">
                       <input 
@@ -145,10 +146,10 @@ export default function NewMonthlyModal() {
                   <span className="text-[10px] text-gray-400 font-bold">ระบุเลขแผงตามวันที่ลงขาย</span>
                 </div>
 
-                {newMonthlyCustomerType === 'VIP' && (
-                  <div className="bg-purple-50 border border-purple-200 text-purple-900 rounded-lg p-2.5 text-[11px] font-bold flex items-start gap-1.5 mb-1.5">
-                    <Info className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
-                    <span>ล็อควีไอพีจะไม่ได้คิดเงินจากราคากลางค่าล็อค แต่คิดเป็นราคาที่ตกลงกันไว้</span>
+                {newMonthlyCustomerType === 'Room' && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-950 rounded-lg p-2.5 text-[11px] font-bold flex items-start gap-1.5 mb-1.5 animate-fade-in">
+                    <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                    <span>ห้องเช่าจะไม่ได้คิดเงินจากราคากลางค่าล็อค แต่คิดเป็นราคาที่ตกลงกันไว้</span>
                   </div>
                 )}
 
@@ -161,12 +162,12 @@ export default function NewMonthlyModal() {
                           {cleanStallName(stName)}
                           <button
                             type="button"
-                            disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'}
+                            disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                             onClick={() => setNewMonthlyStallsWed(newMonthlyStallsWed.filter(s => s !== stName))}
                             className={`font-black ml-1 text-[10px] transition-colors ${
-                              isEditingMonthlyMode || newMonthlyCustomerType === 'VIP' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                              isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
                             }`}
-                            title={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP' ? "" : "ลบออก"}
+                            title={isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? "" : "ลบออก"}
                           >
                             ✕
                           </button>
@@ -176,7 +177,7 @@ export default function NewMonthlyModal() {
                       <div className="relative" ref={addStallDropdownRefWed}>
                         <button
                           type="button"
-                          disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'}
+                          disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                           onClick={() => {
                             setShowAddStallSelectWed(!showAddStallSelectWed);
                             setShowAddStallSelectSat(false);
@@ -184,7 +185,7 @@ export default function NewMonthlyModal() {
                             setStallFilterWed('');
                           }}
                           className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
-                            isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'
+                            isEditingMonthlyMode || newMonthlyCustomerType === 'Room'
                               ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                               : 'bg-[#8B4513] hover:bg-[#5D4037] text-white cursor-pointer'
                           }`}
@@ -246,12 +247,12 @@ export default function NewMonthlyModal() {
                           {cleanStallName(stName)}
                           <button
                             type="button"
-                            disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'}
+                            disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                             onClick={() => setNewMonthlyStallsSat(newMonthlyStallsSat.filter(s => s !== stName))}
                             className={`font-black ml-1 text-[10px] transition-colors ${
-                              isEditingMonthlyMode || newMonthlyCustomerType === 'VIP' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                              isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
                             }`}
-                            title={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP' ? "" : "ลบออก"}
+                            title={isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? "" : "ลบออก"}
                           >
                             ✕
                           </button>
@@ -261,7 +262,7 @@ export default function NewMonthlyModal() {
                       <div className="relative" ref={addStallDropdownRefSat}>
                         <button
                           type="button"
-                          disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'}
+                          disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                           onClick={() => {
                             setShowAddStallSelectSat(!showAddStallSelectSat);
                             setShowAddStallSelectWed(false);
@@ -269,7 +270,7 @@ export default function NewMonthlyModal() {
                             setStallFilterSat('');
                           }}
                           className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
-                            isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'
+                            isEditingMonthlyMode || newMonthlyCustomerType === 'Room'
                               ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                               : 'bg-[#8B4513] hover:bg-[#5D4037] text-white cursor-pointer'
                           }`}
@@ -331,12 +332,12 @@ export default function NewMonthlyModal() {
                           {cleanStallName(stName)}
                           <button
                             type="button"
-                            disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'}
+                            disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                             onClick={() => setNewMonthlyStallsSun(newMonthlyStallsSun.filter(s => s !== stName))}
                             className={`font-black ml-1 text-[10px] transition-colors ${
-                              isEditingMonthlyMode || newMonthlyCustomerType === 'VIP' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                              isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
                             }`}
-                            title={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP' ? "" : "ลบออก"}
+                            title={isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? "" : "ลบออก"}
                           >
                             ✕
                           </button>
@@ -346,7 +347,7 @@ export default function NewMonthlyModal() {
                       <div className="relative" ref={addStallDropdownRefSun}>
                         <button
                           type="button"
-                          disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'}
+                          disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                           onClick={() => {
                             setShowAddStallSelectSun(!showAddStallSelectSun);
                             setShowAddStallSelectWed(false);
@@ -354,7 +355,7 @@ export default function NewMonthlyModal() {
                             setStallFilterSun('');
                           }}
                           className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
-                            isEditingMonthlyMode || newMonthlyCustomerType === 'VIP'
+                            isEditingMonthlyMode || newMonthlyCustomerType === 'Room'
                               ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                               : 'bg-[#8B4513] hover:bg-[#5D4037] text-white cursor-pointer'
                           }`}
@@ -411,19 +412,19 @@ export default function NewMonthlyModal() {
               )}
 
               {/* Extra fees row */}
-              {newMonthlyCustomerType === 'VIP' ? (
-                <div className="bg-[#FAF5FF] p-3 rounded-lg border border-purple-200">
-                  <label className="font-bold text-purple-950 block mb-1">💰 ยอดค่าใช้จ่ายรวมที่ตกลงกัน (ยอดที่ต้องชำระ)</label>
+              {newMonthlyCustomerType === 'Room' ? (
+                <div className="bg-blue-50/40 p-3 rounded-lg border border-blue-200">
+                  <label className="font-bold text-blue-950 block mb-1">💰 ยอดค่าใช้จ่ายรวมที่ตกลงกัน (ยอดที่ต้องชำระ)</label>
                   <div className="relative flex items-center">
                     <input 
                       type="number"
-                      value={newMonthlyVipPrice}
-                      onChange={(e) => setNewMonthlyVipPrice(e.target.value)}
-                      className="p-2.5 pr-10 border border-purple-300 rounded bg-white text-right font-bold w-full focus:outline-none focus:ring-1 focus:ring-purple-500 text-purple-950 text-xs font-mono"
-                      placeholder="ระบุราคาที่ตกลงกันไว้ (บาท)..."
+                      value={newMonthlyCustomPrice}
+                      onChange={(e) => setNewMonthlyCustomPrice(e.target.value)}
+                      className="p-2.5 pr-10 border border-blue-300 rounded bg-white text-right font-bold w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-blue-950 text-xs font-mono"
+                      placeholder="ระบุราคาค่าห้องเช่าที่ตกลงกันไว้ (บาท)..."
                       required
                     />
-                    <span className="absolute right-3 text-xs font-bold text-purple-400">บาท</span>
+                    <span className="absolute right-3 text-xs font-bold text-blue-400">บาท</span>
                   </div>
                 </div>
               ) : (
@@ -469,15 +470,15 @@ export default function NewMonthlyModal() {
                     <p>สัญญาลูกค้าประจำนี้จะทำการล็อกผังไว้ทั้งเดือนโดยขึ้นสถานะ "ค้างชำระ (ประจำ)" และจะชำระเงินเป็นรายวันทีละล็อคเมื่อเริ่มขายจริงในแต่ละวัน โดยอ้างอิงราคาตามปกติของแต่ละล็อค</p>
                   </div>
                 </div>
-              ) : newMonthlyCustomerType === 'VIP' ? (
-                <div className="bg-purple-50 border border-purple-300 text-purple-900 rounded-lg p-3.5 flex flex-col gap-2 shadow-xs">
-                  <div className="font-bold text-purple-850 border-b border-dashed pb-1.5 mb-1 text-xs">สรุปรายละเอียดราคา</div>
-                  <div className="flex justify-between font-bold text-xs text-purple-950">
+              ) : newMonthlyCustomerType === 'Room' ? (
+                <div className="bg-blue-50 border border-blue-300 text-blue-900 rounded-lg p-3.5 flex flex-col gap-2 shadow-xs">
+                  <div className="font-bold text-blue-900 border-b border-dashed pb-1.5 mb-1 text-xs">สรุปรายละเอียดราคา</div>
+                  <div className="flex justify-between font-bold text-xs text-blue-950">
                     <span>ยอดที่ต้องชำระทั้งสิ้น:</span>
-                    <span className="text-sm font-extrabold">{parseNumber(newMonthlyVipPrice).toLocaleString()}.- บ.</span>
+                    <span className="text-sm font-extrabold">{parseNumber(newMonthlyCustomPrice).toLocaleString()}.- บ.</span>
                   </div>
-                  <div className="text-[10px] text-purple-700 font-bold mt-1.5 leading-relaxed">
-                    * สัญญาลูกค้า VIP คิดค่าใช้จ่ายเป็นยอดรวมสุทธิที่ตกลงกันไว้โดยตรง
+                  <div className="text-[10px] text-blue-700 font-bold mt-1.5 leading-relaxed">
+                    * สัญญาห้องเช่าคิดค่าใช้จ่ายเป็นยอดรวมสุทธิที่ตกลงกันไว้โดยตรง
                   </div>
                 </div>
               ) : (() => {

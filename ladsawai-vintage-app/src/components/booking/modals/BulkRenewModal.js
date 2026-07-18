@@ -204,6 +204,8 @@ export default function BulkRenewModal() {
                                     return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
                                   } else if (dispType === 'VIP') {
                                     return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
+                                  } else if (dispType === 'Room') {
+                                    return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">ห้องเช่า</span>;
                                   } else {
                                     return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
                                   }

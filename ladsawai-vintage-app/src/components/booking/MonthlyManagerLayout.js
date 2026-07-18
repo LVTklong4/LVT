@@ -160,6 +160,8 @@ export default function MonthlyManagerLayout() {
                               return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
                             } else if (cType === 'VIP') {
                               return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
+                            } else if (cType === 'Room') {
+                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">ห้องเช่า</span>;
                             } else {
                               return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
                             }
@@ -254,7 +256,12 @@ export default function MonthlyManagerLayout() {
                     )}
                   </div>
                   <div className="text-[11px] text-gray-600 mt-1 font-bold">
-                    ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls)}</span>
+                    ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span>
+                    {activeMonthlyBooking.customer_type === 'Room' ? (
+                      <span> | <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">ห้องเช่า</span></span>
+                    ) : (
+                      <span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls) || '-'}</span></span>
+                    )}
                   </div>
                   <div className="text-[10px] text-gray-500 mt-0.5">
                     {activeMonthlyBooking.customer_type === 'Regular' ? (
@@ -390,6 +397,7 @@ export default function MonthlyManagerLayout() {
               <span className="bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] px-1.5 py-0.5 rounded font-bold">รายเดือน: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
               <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold">ประจำ: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
               <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-bold">VIP: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
+              <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-bold">ห้องเช่า: {filteredMonthlyList.filter(item => item.customer_type === 'Room').length}</span>
             </div>
 
             <div className="h-4 w-[1px] bg-amber-900/40 hidden md:block" />

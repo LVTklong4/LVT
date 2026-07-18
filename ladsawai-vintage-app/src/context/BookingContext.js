@@ -138,7 +138,7 @@ export function BookingProvider({ children }) {
   const [newMonthlyStallsSun, setNewMonthlyStallsSun] = useState([]);
   const [newMonthlyStorageFee, setNewMonthlyStorageFee] = useState(0);
   const [newMonthlyElecUnit, setNewMonthlyElecUnit] = useState(0);
-  const [newMonthlyVipPrice, setNewMonthlyVipPrice] = useState('');
+  const [newMonthlyCustomPrice, setNewMonthlyCustomPrice] = useState('');
   const [newMonthlyBookerName, setNewMonthlyBookerName] = useState('');
   const [newMonthlyProduct, setNewMonthlyProduct] = useState('');
   const [newMonthlyPhone, setNewMonthlyPhone] = useState('');
@@ -3062,7 +3062,7 @@ export function BookingProvider({ children }) {
           if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster.price_month > 0) {
             price = sMaster.price_month;
           }
-          if (newMonthlyCustomerType === 'VIP') price = 0;
+          if (newMonthlyCustomerType === 'VIP' || newMonthlyCustomerType === 'Room') price = 0;
           sum += price;
         }
       });
@@ -3104,7 +3104,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyStallsSun([]);
     setNewMonthlyStorageFee('');
     setNewMonthlyElecUnit('');
-    setNewMonthlyVipPrice('');
+    setNewMonthlyCustomPrice('');
     setNewMonthlyBookerName('');
     setNewMonthlyProduct('');
     setNewMonthlyPhone('');
@@ -3131,7 +3131,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyNote(item.note || '');
     setNewMonthlyStorageFee(String(item.storage_fee || ''));
     setNewMonthlyElecUnit(String(item.elec_unit || ''));
-    setNewMonthlyVipPrice(item.customer_type === 'VIP' ? String(item.total_price || '0') : '');
+    setNewMonthlyCustomPrice(item.customer_type === 'Room' ? String(item.total_price || '0') : '');
     
     // Parse days
     const daysStr = String(item.selected_days || '').toLowerCase();
@@ -3201,8 +3201,8 @@ export function BookingProvider({ children }) {
       if ((original.note || '') !== newMonthlyNote) {
         changes.push(`- โน้ตเพิ่มเติม: "${original.note || '-'}" -> "${newMonthlyNote || '-'}"`);
       }
-      if (original.customer_type === 'VIP' && parseNumber(original.total_price) !== parseNumber(newMonthlyVipPrice)) {
-        changes.push(`- ยอดชำระ VIP ตกลงไว้: ${original.total_price} -> ${newMonthlyVipPrice}`);
+      if (original.customer_type === 'Room' && parseNumber(original.total_price) !== parseNumber(newMonthlyCustomPrice)) {
+        changes.push(`- ยอดชำระห้องเช่าตกลงไว้: ${original.total_price} -> ${newMonthlyCustomPrice}`);
       }
 
       if (changes.length === 0) {
@@ -3220,15 +3220,15 @@ export function BookingProvider({ children }) {
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
     
-    if (!hasWed && !hasSat && !hasSun) {
+    if (newMonthlyCustomerType !== 'Room' && !hasWed && !hasSat && !hasSun) {
       showAlert("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
       return;
     }
 
-    if (newMonthlyCustomerType === 'VIP') {
-      const vipPriceVal = parseNumber(newMonthlyVipPrice);
-      if (vipPriceVal <= 0) {
-        showAlert("กรุณาระบุยอดค่าใช้จ่าย VIP ที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
+    if (newMonthlyCustomerType === 'Room') {
+      const roomPriceVal = parseNumber(newMonthlyCustomPrice);
+      if (roomPriceVal <= 0) {
+        showAlert("กรุณาระบุยอดค่าใช้จ่ายห้องเช่าที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
         return;
       }
     }
@@ -3337,7 +3337,10 @@ export function BookingProvider({ children }) {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
       } else if (newMonthlyCustomerType === 'VIP') {
-        monthlyTotal = parseNumber(newMonthlyVipPrice);
+        monthlyTotal = 0;
+        monthlyStatus = 'ชำระแล้ว';
+      } else if (newMonthlyCustomerType === 'Room') {
+        monthlyTotal = parseNumber(newMonthlyCustomPrice);
         const currentPaid = parseNumber(editMonthlyPaidAmount || 0);
         monthlyStatus = currentPaid >= (monthlyTotal - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
       }
@@ -3401,15 +3404,15 @@ export function BookingProvider({ children }) {
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
     
-    if (!hasWed && !hasSat && !hasSun) {
+    if (newMonthlyCustomerType !== 'Room' && !hasWed && !hasSat && !hasSun) {
       showAlert("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
       return;
     }
 
-    if (newMonthlyCustomerType === 'VIP') {
-      const vipPriceVal = parseNumber(newMonthlyVipPrice);
-      if (vipPriceVal <= 0) {
-        showAlert("กรุณาระบุยอดค่าใช้จ่าย VIP ที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
+    if (newMonthlyCustomerType === 'Room') {
+      const roomPriceVal = parseNumber(newMonthlyCustomPrice);
+      if (roomPriceVal <= 0) {
+        showAlert("กรุณาระบุยอดค่าใช้จ่ายห้องเช่าที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
         return;
       }
     }
@@ -3512,7 +3515,10 @@ export function BookingProvider({ children }) {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
       } else if (newMonthlyCustomerType === 'VIP') {
-        monthlyTotal = parseNumber(newMonthlyVipPrice);
+        monthlyTotal = 0;
+        monthlyStatus = 'ชำระแล้ว';
+      } else if (newMonthlyCustomerType === 'Room') {
+        monthlyTotal = parseNumber(newMonthlyCustomPrice);
         monthlyStatus = 'ค้างชำระ';
       }
 
@@ -3648,7 +3654,7 @@ export function BookingProvider({ children }) {
             if (activeMonthlyBooking.customer_type === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
               price = sMaster.price_month;
             }
-            if (activeMonthlyBooking.customer_type === 'VIP') price = 0;
+            if (activeMonthlyBooking.customer_type === 'VIP' || activeMonthlyBooking.customer_type === 'Room') price = 0;
             
             const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             
@@ -3696,6 +3702,9 @@ export function BookingProvider({ children }) {
       } else if (activeMonthlyBooking.customer_type === 'VIP') {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระแล้ว';
+      } else if (activeMonthlyBooking.customer_type === 'Room') {
+        monthlyTotal = activeMonthlyBooking.total_price;
+        monthlyStatus = 'ค้างชำระ';
       }
 
       // 5. Insert monthly booking record
@@ -3834,7 +3843,7 @@ export function BookingProvider({ children }) {
               if (customerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
                 price = sMaster.price_month;
               }
-              if (customerType === 'VIP') price = 0;
+              if (customerType === 'VIP' || customerType === 'Room') price = 0;
               
               const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
               const uniqueDailyId = `${newBookingId}-${dateStr}-${stallName.replace(/[\[\]]/g, '')}`;
@@ -3881,6 +3890,9 @@ export function BookingProvider({ children }) {
         } else if (customerType === 'VIP') {
           monthlyTotal = 0;
           monthlyStatus = 'ชำระแล้ว';
+        } else if (customerType === 'Room') {
+          monthlyTotal = item.total_price;
+          monthlyStatus = 'ค้างชำระ';
         }
 
         const stallsString = details.map(d => d.name).join(', ');
@@ -4541,7 +4553,7 @@ export function BookingProvider({ children }) {
     newMonthlyStallsWed,
     newMonthlyStartDate,
     newMonthlyStorageFee,
-    newMonthlyVipPrice,
+    newMonthlyCustomPrice,
     note,
     parseBookingMonthToDate,
     parseNumber,
@@ -4633,7 +4645,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyStallsWed,
     setNewMonthlyStartDate,
     setNewMonthlyStorageFee,
-    setNewMonthlyVipPrice,
+    setNewMonthlyCustomPrice,
     setNote,
     setPaymentList,
     setPaymentMethod,
