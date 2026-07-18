@@ -134,7 +134,11 @@ export default function BulkRenewModal() {
 
                           // Compute simulated price if edited
                           let dispPrice = item.total_price;
-                          if (customEdit.stall_details || customEdit.elec_unit !== undefined || customEdit.storage_fee !== undefined || customEdit.selected_days) {
+                          if (dispType === 'Room' || dispType === 'VIP') {
+                            dispPrice = customEdit.total_price !== undefined ? parseNumber(customEdit.total_price) : item.total_price;
+                          } else if (dispType === 'Regular') {
+                            dispPrice = 0;
+                          } else if (customEdit.stall_details || customEdit.elec_unit !== undefined || customEdit.storage_fee !== undefined || customEdit.selected_days) {
                             try {
                               const sDet = JSON.parse(customEdit.stall_details || item.stall_details || '[]');
                               const startD = new Date(item.start_date);
@@ -159,7 +163,6 @@ export default function BulkRenewModal() {
                                     if (dispType === 'Standard' && isFullPkg && sMaster && sMaster.price_month > 0) {
                                       price = sMaster.price_month;
                                     }
-                                    if (dispType === 'VIP') price = 0;
                                     totalRent += price;
                                   }
                                 });
@@ -167,7 +170,6 @@ export default function BulkRenewModal() {
                               const totalElecCharged = datesSet.size;
                               const totalElecPrice = totalElecCharged * (dispElec * 10);
                               dispPrice = totalRent + totalElecPrice + dispStorage;
-                              if (dispType === 'Regular' || dispType === 'VIP') dispPrice = 0;
                             } catch(e){}
                           }
 
@@ -237,6 +239,7 @@ export default function BulkRenewModal() {
                                           note: customEdit.note || item.note || '',
                                           storage_fee: String(dispStorage),
                                           elec_unit: String(dispElec),
+                                          total_price: String(customEdit.total_price !== undefined ? customEdit.total_price : item.total_price || '0'),
                                           selected_days: dispDays,
                                           stall_details: dispStalls,
                                           raw_stall_details: JSON.parse(editStailsJSON || '[]')

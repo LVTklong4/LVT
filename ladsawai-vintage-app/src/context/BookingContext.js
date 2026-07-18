@@ -3693,11 +3693,8 @@ export function BookingProvider({ children }) {
       if (activeMonthlyBooking.customer_type === 'Regular') {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
-      } else if (activeMonthlyBooking.customer_type === 'VIP') {
-        monthlyTotal = 0;
-        monthlyStatus = 'ชำระแล้ว';
-      } else if (activeMonthlyBooking.customer_type === 'Room') {
-        monthlyTotal = activeMonthlyBooking.total_price;
+      } else if (activeMonthlyBooking.customer_type === 'VIP' || activeMonthlyBooking.customer_type === 'Room') {
+        monthlyTotal = parseNumber(activeMonthlyBooking.total_price);
         monthlyStatus = 'ค้างชำระ';
       }
 
@@ -3881,11 +3878,8 @@ export function BookingProvider({ children }) {
         if (customerType === 'Regular') {
           monthlyTotal = 0;
           monthlyStatus = 'ชำระรายวัน';
-        } else if (customerType === 'VIP') {
-          monthlyTotal = 0;
-          monthlyStatus = 'ชำระแล้ว';
-        } else if (customerType === 'Room') {
-          monthlyTotal = item.total_price;
+        } else if (customerType === 'VIP' || customerType === 'Room') {
+          monthlyTotal = customEdit.total_price !== undefined ? parseNumber(customEdit.total_price) : parseNumber(item.total_price || 0);
           monthlyStatus = 'ค้างชำระ';
         }
 

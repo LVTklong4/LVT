@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { X, Info, Sun } from 'lucide-react';
 
@@ -8,6 +8,22 @@ export default function PreRenewalEditSubModal() {
   const {
     bulkRenewEditData,    bulkRenewEditingItem,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    formatBookingMonth,    monthlyList,    note,    product,    setBulkRenewEditData,    setBulkRenewEditingItem,    stalls
   } = useBooking();
+
+  const [openDropdownDay, setOpenDropdownDay] = useState(null);
+  const [stallSearchQuery, setStallSearchQuery] = useState('');
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdownDay(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   if (!bulkRenewEditingItem) return null;
 
@@ -23,182 +39,289 @@ export default function PreRenewalEditSubModal() {
                 {/* Customer Type */}
                 <div className="flex flex-col gap-1">
                   <label className="font-bold text-gray-700">ประเภทลูกค้า</label>
-                  <select
-                    value={bulkRenewEditingItem.customer_type}
-                    onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, customer_type: e.target.value })}
-                    className="p-2 border border-gray-300 rounded bg-white font-bold cursor-pointer"
-                  >
-                    <option value="Standard">Standard (รายเดือนทั่วไป)</option>
-                    <option value="Regular">Regular (ประจำ)</option>
-                    <option value="VIP">VIP (ลูกค้าพิเศษ)</option>
-                  </select>
-                </div>
-
-                {/* Selected Days */}
-                <div className="flex flex-col gap-1">
-                  <label className="font-bold text-gray-700">วันลงขายในเดือนเป้าหมาย</label>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex flex-wrap gap-2.5 mt-1 bg-purple-50/30 p-2 rounded-lg border border-purple-100">
                     {[
-                      { key: 'Wed', num: 3, label: 'พุธ' },
-                      { key: 'Sat', num: 6, label: 'เสาร์' },
-                      { key: 'Sun', num: 0, label: 'อาทิตย์' }
-                    ].map(dayOpt => {
-                      const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
-                      const checked = daysArr.includes(dayOpt.key.toLowerCase());
-                      return (
-                        <label 
-                          key={dayOpt.key}
-                          className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer transition-all ${
-                            checked
-                              ? 'bg-purple-700 text-white border-purple-850 shadow-sm'
-                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              let newArr = [...daysArr];
-                              if (checked) {
-                                newArr = newArr.filter(x => x !== dayOpt.key.toLowerCase());
-                              } else {
-                                newArr.push(dayOpt.key.toLowerCase());
-                              }
-                              const ordered = [];
-                              if (newArr.includes('wed')) ordered.push('Wed');
-                              if (newArr.includes('sat')) ordered.push('Sat');
-                              if (newArr.includes('sun')) ordered.push('Sun');
-                              const selStr = ordered.join(', ');
-                              
-                              const rawStalls = bulkRenewEditingItem.raw_stall_details.map(st => {
-                                const newDays = [];
-                                if (ordered.includes('Wed')) newDays.push(3);
-                                if (ordered.includes('Sat')) newDays.push(6);
-                                if (ordered.includes('Sun')) newDays.push(0);
-                                return { ...st, days: newDays };
-                              });
-
-                              setBulkRenewEditingItem({
-                                ...bulkRenewEditingItem,
-                                selected_days: selStr,
-                                raw_stall_details: rawStalls
-                              });
-                            }}
-                            className="hidden"
-                          />
-                          {dayOpt.label}
-                        </label>
-                      );
-                    })}
+                      { label: 'รายเดือน', val: 'Standard' },
+                      { label: 'ประจำ', val: 'Regular' },
+                      { label: 'VIP', val: 'VIP' },
+                      { label: 'ห้องเช่า', val: 'Room' }
+                    ].map(opt => (
+                      <label key={opt.val} className="flex items-center gap-1.5 cursor-pointer font-bold text-gray-700 select-none text-[11px]">
+                        <input 
+                          type="radio"
+                          name="editCustomerType"
+                          value={opt.val}
+                          checked={bulkRenewEditingItem.customer_type === opt.val}
+                          onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, customer_type: e.target.value })}
+                          className="text-purple-700 focus:ring-purple-500 w-3.5 h-3.5"
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
+                {/* Info Box for Room / VIP */}
+                {bulkRenewEditingItem.customer_type === 'Room' && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-950 rounded-lg p-2.5 text-[11px] font-bold flex items-start gap-1.5 mb-1 animate-fade-in">
+                    <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                    <span>ห้องเช่าจะไม่ได้คิดเงินจากราคากลางค่าล็อค แต่คิดเป็นราคาที่ตกลงกันไว้</span>
+                  </div>
+                )}
+
+                {bulkRenewEditingItem.customer_type === 'VIP' && (
+                  <div className="bg-purple-50 border border-purple-200 text-purple-900 rounded-lg p-2.5 text-[11px] font-bold flex items-start gap-1.5 mb-1 animate-fade-in">
+                    <Info className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
+                    <span>ล็อควีไอพีจะไม่ได้คิดเงินจากราคากลางค่าล็อค แต่คิดเป็นราคาที่ตกลงกันไว้</span>
+                  </div>
+                )}
+
+                {/* Stalls name display for Room (since we hide daily stall selection) */}
+                {bulkRenewEditingItem.customer_type === 'Room' && (
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-gray-700">แผงค้า/ห้องเช่า</span>
+                    <span className="p-2 border border-gray-300 rounded bg-gray-50 font-bold font-mono text-purple-950">
+                      {cleanStallName(bulkRenewEditingItem.stall_details)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Selected Days */}
+                {bulkRenewEditingItem.customer_type !== 'Room' && (
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-gray-700">วันลงขายในเดือนเป้าหมาย</label>
+                    <div className="flex gap-2 mt-1">
+                      {[
+                        { key: 'Wed', num: 3, label: 'พุธ' },
+                        { key: 'Sat', num: 6, label: 'เสาร์' },
+                        { key: 'Sun', num: 0, label: 'อาทิตย์' }
+                      ].map(dayOpt => {
+                        const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
+                        const checked = daysArr.includes(dayOpt.key.toLowerCase());
+                        return (
+                          <label 
+                            key={dayOpt.key}
+                            className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer transition-all ${
+                              checked
+                                ? 'bg-purple-700 text-white border-purple-850 shadow-sm'
+                                : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                let newArr = [...daysArr];
+                                if (checked) {
+                                  newArr = newArr.filter(x => x !== dayOpt.key.toLowerCase());
+                                } else {
+                                  newArr.push(dayOpt.key.toLowerCase());
+                                }
+                                const ordered = [];
+                                if (newArr.includes('wed')) ordered.push('Wed');
+                                if (newArr.includes('sat')) ordered.push('Sat');
+                                if (newArr.includes('sun')) ordered.push('Sun');
+                                const selStr = ordered.join(', ');
+                                
+                                const rawStalls = bulkRenewEditingItem.raw_stall_details.map(st => {
+                                  const newDays = [];
+                                  if (ordered.includes('Wed')) newDays.push(3);
+                                  if (ordered.includes('Sat')) newDays.push(6);
+                                  if (ordered.includes('Sun')) newDays.push(0);
+                                  return { ...st, days: newDays };
+                                });
+
+                                setBulkRenewEditingItem({
+                                  ...bulkRenewEditingItem,
+                                  selected_days: selStr,
+                                  raw_stall_details: rawStalls
+                                });
+                              }}
+                              className="hidden"
+                            />
+                            {dayOpt.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Stalls per Day details */}
-                <div className="flex flex-col gap-2 p-3 bg-purple-50/40 rounded-lg border border-purple-100 text-left">
-                  <span className="font-bold text-purple-950 block mb-0.5">ระบุแผงค้าของแต่ละวัน</span>
-                  {['Wed', 'Sat', 'Sun'].map(dayName => {
-                    const dayNum = dayName === 'Wed' ? 3 : dayName === 'Sat' ? 6 : 0;
-                    const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
-                    const isActive = daysArr.includes(dayName.toLowerCase());
-                    if (!isActive) return null;
+                {bulkRenewEditingItem.customer_type !== 'Room' && (
+                  <div ref={dropdownRef} className="flex flex-col gap-2 p-3 bg-purple-50/40 rounded-lg border border-purple-100 text-left">
+                    <span className="font-bold text-purple-950 block mb-0.5">ระบุแผงค้าของแต่ละวัน</span>
+                    {['Wed', 'Sat', 'Sun'].map(dayName => {
+                      const dayNum = dayName === 'Wed' ? 3 : dayName === 'Sat' ? 6 : 0;
+                      const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
+                      const isActive = daysArr.includes(dayName.toLowerCase());
+                      if (!isActive) return null;
 
-                    const dayStalls = bulkRenewEditingItem.raw_stall_details.map(st => st.name);
+                      const dayStalls = bulkRenewEditingItem.raw_stall_details.map(st => st.name);
 
-                    return (
-                      <div key={dayName} className="flex flex-wrap gap-2 items-center bg-white p-2 rounded border border-purple-100">
-                        <span className="w-12 font-bold text-purple-700 shrink-0">วัน{dayName === 'Wed' ? 'พุธ' : dayName === 'Sat' ? 'เสาร์' : 'อาทิตย์'}</span>
-                        <div className="flex-1 flex flex-wrap gap-1.5 items-center">
-                          {dayStalls.map((stName) => (
-                            <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-[10px] px-1.5 py-0.5 rounded shadow-xs">
-                              {cleanStallName(stName)}
+                      return (
+                        <div key={dayName} className="flex flex-wrap gap-2 items-center bg-white p-2 rounded border border-purple-100">
+                          <span className="w-12 font-bold text-purple-700 shrink-0">วัน{dayName === 'Wed' ? 'พุธ' : dayName === 'Sat' ? 'เสาร์' : 'อาทิตย์'}</span>
+                          <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                            {dayStalls.map((stName) => (
+                              <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-[10px] px-1.5 py-0.5 rounded shadow-xs">
+                                {cleanStallName(stName)}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedStalls = bulkRenewEditingItem.raw_stall_details.filter(x => x.name !== stName);
+                                    setBulkRenewEditingItem({
+                                      ...bulkRenewEditingItem,
+                                      raw_stall_details: updatedStalls
+                                    });
+                                  }}
+                                  className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
+                                >
+                                  ✕
+                                </button>
+                              </span>
+                            ))}
+                            
+                            <div className="relative">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updatedStalls = bulkRenewEditingItem.raw_stall_details.filter(x => x.name !== stName);
-                                  setBulkRenewEditingItem({
-                                    ...bulkRenewEditingItem,
-                                    raw_stall_details: updatedStalls
-                                  });
-                                }}
-                                className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors cursor-pointer"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          ))}
-                          
-                          <div className="relative">
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val && !dayStalls.includes(val)) {
-                                  const newDays = [];
-                                  const ordered = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
-                                  if (ordered.includes('wed')) newDays.push(3);
-                                  if (ordered.includes('sat')) newDays.push(6);
-                                  if (ordered.includes('sun')) newDays.push(0);
-                                  
-                                  const updatedStalls = [...bulkRenewEditingItem.raw_stall_details, { name: val, days: newDays }];
-                                  setBulkRenewEditingItem({
-                                    ...bulkRenewEditingItem,
-                                    raw_stall_details: updatedStalls
-                                  });
-                                }
-                              }}
-                              className="px-1 py-0.5 bg-purple-900 hover:bg-purple-950 text-white rounded text-[10px] font-bold shadow-sm transition-all cursor-pointer border-none outline-none"
-                            >
-                              <option value="">+ เพิ่มล็อค</option>
-                              {(() => {
-                                const targetMonthStr = computeNextMonthThai(bulkRenewFromMonth);
-                                const occupied = [];
-                                monthlyList.forEach(mb => {
-                                  if (formatBookingMonth(mb.booking_month) === targetMonthStr) {
-                                    let det = [];
-                                    try {
-                                      det = JSON.parse(mb.stall_details || '[]');
-                                    } catch(e){}
-                                    det.forEach(st => {
-                                      if (st.days && st.days.includes(dayNum)) occupied.push(st.name);
-                                    });
+                                  if (openDropdownDay === dayName) {
+                                    setOpenDropdownDay(null);
+                                  } else {
+                                    setOpenDropdownDay(dayName);
+                                    setStallSearchQuery('');
                                   }
-                                });
+                                }}
+                                className="px-2 py-0.5 bg-purple-900 hover:bg-purple-950 text-white rounded text-[10px] font-bold shadow-sm transition-all cursor-pointer"
+                              >
+                                + เพิ่มล็อค
+                              </button>
 
-                                return stalls
-                                  .filter(s => s.type !== 'ทางเดิน' && s.type !== 'อื่นๆ' && !dayStalls.includes(s.name) && !occupied.includes(s.name))
-                                  .map(s => (
-                                    <option key={s.name} value={s.name}>{cleanStallName(s.name)}</option>
-                                  ));
-                              })()}
-                            </select>
+                              {openDropdownDay === dayName && (
+                                <div className="absolute left-0 mt-1.5 w-48 bg-white border border-purple-200 rounded-lg shadow-xl z-[90] p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto">
+                                  <input
+                                    type="text"
+                                    value={stallSearchQuery}
+                                    onChange={(e) => setStallSearchQuery(e.target.value)}
+                                    placeholder="ค้นหาชื่อล็อค..."
+                                    className="p-1.5 border border-purple-300 rounded text-[10px] text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 font-bold mb-1 w-full"
+                                    autoFocus
+                                  />
+                                  <div className="flex flex-col divide-y divide-gray-100 overflow-y-auto max-h-[140px]">
+                                    {(() => {
+                                      const targetMonthStr = computeNextMonthThai(bulkRenewFromMonth);
+                                      const occupied = [];
+                                      monthlyList.forEach(mb => {
+                                        if (formatBookingMonth(mb.booking_month) === targetMonthStr) {
+                                          let det = [];
+                                          try {
+                                            det = JSON.parse(mb.stall_details || '[]');
+                                          } catch(e){}
+                                          det.forEach(st => {
+                                            if (st.days && st.days.includes(dayNum)) occupied.push(st.name);
+                                          });
+                                        }
+                                      });
+
+                                      // Filter and naturally sort
+                                      const filtered = stalls
+                                        .filter(s => 
+                                          s.type !== 'ทางเดิน' && 
+                                          s.type !== 'อื่นๆ' && 
+                                          !dayStalls.includes(s.name) && 
+                                          !occupied.includes(s.name) &&
+                                          s.name.toLowerCase().includes(stallSearchQuery.toLowerCase())
+                                        )
+                                        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+                                      if (filtered.length === 0) {
+                                        return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                                      }
+
+                                      return filtered.map((s) => (
+                                        <button
+                                          key={s.name}
+                                          type="button"
+                                          onClick={() => {
+                                            const newDays = [];
+                                            const ordered = bulkRenewEditingItem.selected_days.split(',').map(x => x.trim().toLowerCase());
+                                            if (ordered.includes('wed')) newDays.push(3);
+                                            if (ordered.includes('sat')) newDays.push(6);
+                                            if (ordered.includes('sun')) newDays.push(0);
+                                            
+                                            const updatedStalls = [...bulkRenewEditingItem.raw_stall_details, { name: s.name, days: newDays }];
+                                            setBulkRenewEditingItem({
+                                              ...bulkRenewEditingItem,
+                                              raw_stall_details: updatedStalls
+                                            });
+                                            setOpenDropdownDay(null);
+                                          }}
+                                          className="text-left w-full px-2 py-1.5 text-[10px] hover:bg-purple-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                                        >
+                                          {cleanStallName(s.name)}{s.zone ? ` (${s.zone})` : ''}
+                                        </button>
+                                      ));
+                                    })()}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
 
-                {/* Extra Fees */}
-                <div className="grid grid-cols-2 gap-3 text-left">
-                  <div className="flex flex-col gap-1">
-                    <label className="font-bold text-gray-700">📦 ค่าฝากของ</label>
-                    <input
-                      type="number"
-                      value={bulkRenewEditingItem.storage_fee}
-                      onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, storage_fee: e.target.value })}
-                      className="p-2 border border-gray-300 rounded bg-white font-bold"
-                    />
+                {/* Extra Fees / Agreed Price */}
+                {(bulkRenewEditingItem.customer_type === 'Room' || bulkRenewEditingItem.customer_type === 'VIP') ? (
+                  <div className={`p-3 rounded-lg border ${
+                    bulkRenewEditingItem.customer_type === 'Room'
+                      ? 'bg-blue-50/40 border-blue-200 text-blue-955'
+                      : 'bg-purple-50/40 border-purple-200 text-purple-955'
+                  }`}>
+                    <label className="font-bold block mb-1">💰 ยอดค่าเช่ารวมที่ตกลงกัน (ยอดที่ต้องชำระ)</label>
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        value={bulkRenewEditingItem.total_price || ''}
+                        onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, total_price: e.target.value })}
+                        className={`p-2.5 pr-10 border rounded bg-white text-right font-bold w-full focus:outline-none text-xs font-mono ${
+                          bulkRenewEditingItem.customer_type === 'Room'
+                            ? 'border-blue-300 focus:ring-1 focus:ring-blue-500 text-blue-950'
+                            : 'border-purple-300 focus:ring-1 focus:ring-purple-500 text-purple-955'
+                        }`}
+                        placeholder="ระบุยอดราคาที่ตกลงกันไว้ (บาท)..."
+                        required
+                      />
+                      <span className={`absolute right-3 text-xs font-bold ${
+                        bulkRenewEditingItem.customer_type === 'Room' ? 'text-blue-400' : 'text-purple-400'
+                      }`}>บาท</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="font-bold text-gray-700">⚡ ค่าไฟ (เหมา)</label>
-                    <input
-                      type="number"
-                      value={bulkRenewEditingItem.elec_unit}
-                      onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, elec_unit: e.target.value })}
-                      className="p-2 border border-gray-300 rounded bg-white font-bold"
-                    />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 text-left">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">📦 ค่าฝากของ</label>
+                      <input
+                        type="number"
+                        value={bulkRenewEditingItem.storage_fee}
+                        onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, storage_fee: e.target.value })}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-bold text-gray-700">⚡ ค่าไฟ (เหมา)</label>
+                      <input
+                        type="number"
+                        value={bulkRenewEditingItem.elec_unit}
+                        onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, elec_unit: e.target.value })}
+                        className="p-2 border border-gray-300 rounded bg-white font-bold"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Info and Notes */}
                 <div className="flex flex-col gap-2.5">
@@ -246,6 +369,7 @@ export default function PreRenewalEditSubModal() {
                         note: bulkRenewEditingItem.note,
                         storage_fee: bulkRenewEditingItem.storage_fee,
                         elec_unit: bulkRenewEditingItem.elec_unit,
+                        total_price: bulkRenewEditingItem.total_price,
                         selected_days: bulkRenewEditingItem.selected_days,
                         stall_details: JSON.stringify(bulkRenewEditingItem.raw_stall_details)
                       }
