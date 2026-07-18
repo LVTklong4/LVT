@@ -3944,6 +3944,15 @@ export function BookingProvider({ children }) {
       return;
     }
 
+    const currentPaid = parseNumber(activeMonthlyBooking.paid_amount || 0);
+    const newPaid = currentPaid + amountVal;
+    const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
+    if (newPaid > totalPrice + 0.01) {
+      const remaining = Math.max(0, totalPrice - currentPaid);
+      showAlert(`ยอดเงินชำระ (${amountVal.toLocaleString()} บาท) ร่วมกับยอดที่เคยชำระแล้ว (${currentPaid.toLocaleString()} บาท) เกินกว่ายอดรวมค่าเช่ารายเดือนทั้งหมด (${totalPrice.toLocaleString()} บาท)\n\nกรุณากรอกยอดชำระไม่เกินยอดคงเหลือค้างชำระ: ${remaining.toLocaleString()} บาท`, "แจ้งเตือน", true);
+      return;
+    }
+
     if (!monthlyPaymentForm.method) {
       showAlert("กรุณาเลือกประเภทการบันทึก (เงินสด / โอนจ่าย / ส่วนลด)", "แจ้งเตือน", true);
       return;
