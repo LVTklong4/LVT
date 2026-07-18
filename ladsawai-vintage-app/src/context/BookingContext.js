@@ -3131,7 +3131,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyNote(item.note || '');
     setNewMonthlyStorageFee(String(item.storage_fee || ''));
     setNewMonthlyElecUnit(String(item.elec_unit || ''));
-    setNewMonthlyCustomPrice(item.customer_type === 'Room' ? String(item.total_price || '0') : '');
+    setNewMonthlyCustomPrice((item.customer_type === 'VIP' || item.customer_type === 'Room') ? String(item.total_price || '0') : '');
     
     // Parse days
     const daysStr = String(item.selected_days || '').toLowerCase();
@@ -3201,8 +3201,8 @@ export function BookingProvider({ children }) {
       if ((original.note || '') !== newMonthlyNote) {
         changes.push(`- โน้ตเพิ่มเติม: "${original.note || '-'}" -> "${newMonthlyNote || '-'}"`);
       }
-      if (original.customer_type === 'Room' && parseNumber(original.total_price) !== parseNumber(newMonthlyCustomPrice)) {
-        changes.push(`- ยอดชำระห้องเช่าตกลงไว้: ${original.total_price} -> ${newMonthlyCustomPrice}`);
+      if ((original.customer_type === 'VIP' || original.customer_type === 'Room') && parseNumber(original.total_price) !== parseNumber(newMonthlyCustomPrice)) {
+        changes.push(`- ยอดชำระตกลงไว้: ${original.total_price} -> ${newMonthlyCustomPrice}`);
       }
 
       if (changes.length === 0) {
@@ -3225,10 +3225,10 @@ export function BookingProvider({ children }) {
       return;
     }
 
-    if (newMonthlyCustomerType === 'Room') {
-      const roomPriceVal = parseNumber(newMonthlyCustomPrice);
-      if (roomPriceVal <= 0) {
-        showAlert("กรุณาระบุยอดค่าใช้จ่ายห้องเช่าที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
+    if (newMonthlyCustomerType === 'VIP' || newMonthlyCustomerType === 'Room') {
+      const customPriceVal = parseNumber(newMonthlyCustomPrice);
+      if (customPriceVal <= 0) {
+        showAlert("กรุณาระบุยอดค่าใช้จ่ายที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
         return;
       }
     }
@@ -3336,10 +3336,7 @@ export function BookingProvider({ children }) {
       if (newMonthlyCustomerType === 'Regular') {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
-      } else if (newMonthlyCustomerType === 'VIP') {
-        monthlyTotal = 0;
-        monthlyStatus = 'ชำระแล้ว';
-      } else if (newMonthlyCustomerType === 'Room') {
+      } else if (newMonthlyCustomerType === 'VIP' || newMonthlyCustomerType === 'Room') {
         monthlyTotal = parseNumber(newMonthlyCustomPrice);
         const currentPaid = parseNumber(editMonthlyPaidAmount || 0);
         monthlyStatus = currentPaid >= (monthlyTotal - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
@@ -3409,10 +3406,10 @@ export function BookingProvider({ children }) {
       return;
     }
 
-    if (newMonthlyCustomerType === 'Room') {
-      const roomPriceVal = parseNumber(newMonthlyCustomPrice);
-      if (roomPriceVal <= 0) {
-        showAlert("กรุณาระบุยอดค่าใช้จ่ายห้องเช่าที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
+    if (newMonthlyCustomerType === 'VIP' || newMonthlyCustomerType === 'Room') {
+      const customPriceVal = parseNumber(newMonthlyCustomPrice);
+      if (customPriceVal <= 0) {
+        showAlert("กรุณาระบุยอดค่าใช้จ่ายที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
         return;
       }
     }
@@ -3514,10 +3511,7 @@ export function BookingProvider({ children }) {
       if (newMonthlyCustomerType === 'Regular') {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
-      } else if (newMonthlyCustomerType === 'VIP') {
-        monthlyTotal = 0;
-        monthlyStatus = 'ชำระแล้ว';
-      } else if (newMonthlyCustomerType === 'Room') {
+      } else if (newMonthlyCustomerType === 'VIP' || newMonthlyCustomerType === 'Room') {
         monthlyTotal = parseNumber(newMonthlyCustomPrice);
         monthlyStatus = 'ค้างชำระ';
       }

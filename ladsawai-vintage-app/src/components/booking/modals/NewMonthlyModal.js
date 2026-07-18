@@ -63,7 +63,7 @@ export default function NewMonthlyModal() {
                   {/* Date & Days Row */}
               <div className="grid grid-cols-2 gap-3 bg-[#F5E6D3]/40 p-3 rounded-lg border border-[#D7CCC8]">
                 {/* Start Date */}
-                <div className="flex flex-col gap-1">
+                <div className={`flex flex-col gap-1 ${newMonthlyCustomerType === 'Room' ? 'col-span-2' : ''}`}>
                   <label className="font-bold text-gray-700 flex justify-between">
                     <span>วันที่เริ่ม</span>
                     <span className="text-[10px] text-[#8B4513]">
@@ -85,33 +85,35 @@ export default function NewMonthlyModal() {
                 </div>
 
                 {/* Trading Days */}
-                <div className="flex flex-col gap-1">
-                  <label className="font-bold text-gray-700">วันลงขาย</label>
-                  <div className="flex gap-2 mt-1">
-                    {['wed', 'sat', 'sun'].map(day => {
-                      const label = day === 'wed' ? 'พ' : day === 'sat' ? 'ส' : 'อา';
-                      const checked = newMonthlyDays[day];
-                      return (
-                        <label 
-                          key={day} 
-                          className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer select-none transition-all ${
-                            checked 
-                              ? 'bg-amber-600 text-white border-amber-700 shadow-sm' 
-                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          <input 
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => setNewMonthlyDays({ ...newMonthlyDays, [day]: !checked })}
-                            className="hidden"
-                          />
-                          {label}
-                        </label>
-                      );
-                    })}
+                {newMonthlyCustomerType !== 'Room' && (
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-gray-700">วันลงขาย</label>
+                    <div className="flex gap-2 mt-1">
+                      {['wed', 'sat', 'sun'].map(day => {
+                        const label = day === 'wed' ? 'พ' : day === 'sat' ? 'ส' : 'อา';
+                        const checked = newMonthlyDays[day];
+                        return (
+                          <label 
+                            key={day} 
+                            className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer select-none transition-all ${
+                              checked 
+                                ? 'bg-amber-600 text-white border-amber-700 shadow-sm' 
+                                : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <input 
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => setNewMonthlyDays({ ...newMonthlyDays, [day]: !checked })}
+                              className="hidden"
+                            />
+                            {label}
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Customer Type Selection */}
@@ -150,6 +152,13 @@ export default function NewMonthlyModal() {
                   <div className="bg-blue-50 border border-blue-200 text-blue-950 rounded-lg p-2.5 text-[11px] font-bold flex items-start gap-1.5 mb-1.5 animate-fade-in">
                     <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
                     <span>ห้องเช่าจะไม่ได้คิดเงินจากราคากลางค่าล็อค แต่คิดเป็นราคาที่ตกลงกันไว้</span>
+                  </div>
+                )}
+
+                {newMonthlyCustomerType === 'VIP' && (
+                  <div className="bg-purple-50 border border-purple-200 text-purple-900 rounded-lg p-2.5 text-[11px] font-bold flex items-start gap-1.5 mb-1.5 animate-fade-in">
+                    <Info className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
+                    <span>ล็อควีไอพีจะไม่ได้คิดเงินจากราคากลางค่าล็อค แต่คิดเป็นราคาที่ตกลงกันไว้</span>
                   </div>
                 )}
 
@@ -427,6 +436,21 @@ export default function NewMonthlyModal() {
                     <span className="absolute right-3 text-xs font-bold text-blue-400">บาท</span>
                   </div>
                 </div>
+              ) : newMonthlyCustomerType === 'VIP' ? (
+                <div className="bg-purple-50/40 p-3 rounded-lg border border-purple-200 animate-fade-in">
+                  <label className="font-bold text-purple-950 block mb-1">💰 ยอดค่าเช่ารวม VIP ที่ตกลงกัน (ยอดที่ต้องชำระ)</label>
+                  <div className="relative flex items-center">
+                    <input 
+                      type="number"
+                      value={newMonthlyCustomPrice}
+                      onChange={(e) => setNewMonthlyCustomPrice(e.target.value)}
+                      className="p-2.5 pr-10 border border-purple-300 rounded bg-white text-right font-bold w-full focus:outline-none focus:ring-1 focus:ring-purple-500 text-purple-955 text-xs font-mono"
+                      placeholder="ระบุราคา VIP ที่ตกลงกันไว้ (บาท)..."
+                      required
+                    />
+                    <span className="absolute right-3 text-xs font-bold text-purple-400">บาท</span>
+                  </div>
+                </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {/* Storage Fee */}
@@ -479,6 +503,17 @@ export default function NewMonthlyModal() {
                   </div>
                   <div className="text-[10px] text-blue-700 font-bold mt-1.5 leading-relaxed">
                     * สัญญาห้องเช่าคิดค่าใช้จ่ายเป็นยอดรวมสุทธิที่ตกลงกันไว้โดยตรง
+                  </div>
+                </div>
+              ) : newMonthlyCustomerType === 'VIP' ? (
+                <div className="bg-purple-50 border border-purple-300 text-purple-900 rounded-lg p-3.5 flex flex-col gap-2 shadow-xs">
+                  <div className="font-bold text-purple-850 border-b border-dashed pb-1.5 mb-1 text-xs">สรุปรายละเอียดราคา</div>
+                  <div className="flex justify-between font-bold text-xs text-purple-950">
+                    <span>ยอดที่ต้องชำระทั้งสิ้น:</span>
+                    <span className="text-sm font-extrabold">{parseNumber(newMonthlyCustomPrice).toLocaleString()}.- บ.</span>
+                  </div>
+                  <div className="text-[10px] text-purple-700 font-bold mt-1.5 leading-relaxed">
+                    * สัญญาลูกค้า VIP คิดค่าใช้จ่ายเป็นยอดรวมสุทธิที่ตกลงกันไว้โดยตรง
                   </div>
                 </div>
               ) : (() => {
