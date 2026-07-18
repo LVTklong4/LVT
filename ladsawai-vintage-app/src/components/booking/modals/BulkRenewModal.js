@@ -201,11 +201,11 @@ export default function BulkRenewModal() {
                               <td className="p-2">
                                 {(() => {
                                   if (dispType === 'Regular') {
-                                    return <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
+                                    return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
                                   } else if (dispType === 'VIP') {
-                                    return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
+                                    return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
                                   } else {
-                                    return <span className="px-2 py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
+                                    return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
                                   }
                                 })()}
                               </td>

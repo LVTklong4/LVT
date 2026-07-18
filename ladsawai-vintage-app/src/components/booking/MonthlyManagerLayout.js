@@ -71,15 +71,12 @@ export default function MonthlyManagerLayout() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-600 flex items-center gap-1">
-                <CalendarDays className="w-4 h-4 text-amber-700" />
-                ตัวกรองรายเดือน:
-              </span>
+            <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg p-1.5 shadow-xs">
+              <CalendarDays className="w-4 h-4 text-amber-700" />
               <select
                 value={monthlyMonthFilter}
                 onChange={(e) => setMonthlyMonthFilter(e.target.value)}
-                className="p-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                className="border-0 text-xs bg-white text-gray-700 font-bold focus:outline-none cursor-pointer p-0"
               >
                 <option value="ทั้งหมด">ทั้งหมด</option>
                 {(() => {
@@ -136,7 +133,7 @@ export default function MonthlyManagerLayout() {
                     >
                       คงเหลือ {renderSortArrow('remaining')}
                     </th>
-                    <th className="p-2 text-center select-none">จัดการ</th>
+                    <th className="p-2 text-left pl-3 select-none">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white">
@@ -160,11 +157,11 @@ export default function MonthlyManagerLayout() {
                           {(() => {
                             const cType = item.customer_type || 'Standard';
                             if (cType === 'Regular') {
-                              return <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
+                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
                             } else if (cType === 'VIP') {
-                              return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
+                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
                             } else {
-                              return <span className="px-2 py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
+                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
                             }
                           })()}
                         </td>
@@ -182,8 +179,8 @@ export default function MonthlyManagerLayout() {
                         <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
                           {unpaidBalance.toLocaleString()}.-
                         </td>
-                        <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex gap-1 justify-center">
+                        <td className="p-2 text-left pl-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-1 justify-start">
                             <button
                               onClick={() => handleToggleNonRenewal(item)}
                               className={`p-1.5 rounded border transition-all cursor-pointer ${

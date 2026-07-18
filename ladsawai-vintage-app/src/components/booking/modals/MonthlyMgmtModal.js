@@ -127,7 +127,7 @@ export default function MonthlyMgmtModal() {
                         >
                           คงเหลือ {renderSortArrow('remaining')}
                         </th>
-                        <th className="p-2 text-center select-none">จัดการ</th>
+                        <th className="p-2 text-left pl-3 select-none">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
@@ -161,8 +161,8 @@ export default function MonthlyMgmtModal() {
                             <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
                               {unpaidBalance.toLocaleString()}.-
                             </td>
-                            <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex gap-1 justify-center">
+                            <td className="p-2 text-left pl-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex gap-1 justify-start">
                                 <button
                                   onClick={() => handleToggleNonRenewal(item)}
                                   className={`p-1.5 rounded border transition-all cursor-pointer ${
