@@ -1509,10 +1509,19 @@ export function BookingProvider({ children }) {
     
     setMonthlyPrintProduct('ของชำทั่วไป'); // Default placeholder product
     
-    // Default weekly days count
-    setMonthlyPrintSatCount(4);
-    setMonthlyPrintSunCount(4);
-    setMonthlyPrintWedCount(0);
+    // Determine active days dynamically from the item
+    const activeDays = [];
+    if (item.selected_days?.toLowerCase().includes('wed')) activeDays.push(3);
+    if (item.selected_days?.toLowerCase().includes('sat')) activeDays.push(6);
+    if (item.selected_days?.toLowerCase().includes('sun')) activeDays.push(0);
+
+    const satCount = getDayOccurrences(item.start_date, 6, activeDays);
+    const sunCount = getDayOccurrences(item.start_date, 0, activeDays);
+    const wedCount = getDayOccurrences(item.start_date, 3, activeDays);
+
+    setMonthlyPrintSatCount(satCount || 4);
+    setMonthlyPrintSunCount(sunCount || 4);
+    setMonthlyPrintWedCount(wedCount || 0);
     
     // Default mock transaction ID
     const randomTxn = `TXN-${Math.floor(1000000000000 + Math.random() * 9000000000000)}`;
@@ -1553,9 +1562,26 @@ export function BookingProvider({ children }) {
     if (!item) return;
 
     const stallObj = stalls.find(s => s.name === item.stalls);
-    const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
-    const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
-    const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+    let satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
+    let sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
+    let wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+
+    const isFullPackage = item.selected_days?.toLowerCase().includes('wed') &&
+                          item.selected_days?.toLowerCase().includes('sat') &&
+                          item.selected_days?.toLowerCase().includes('sun');
+
+    if (item.customer_type === 'Standard' && isFullPackage && stallObj && stallObj.price_month > 0) {
+      const normalSum = parseNumber(stallObj.price_wed) + parseNumber(stallObj.price_sat) + parseNumber(stallObj.price_sun);
+      const packageSum = 3 * parseNumber(stallObj.price_month);
+      const weeklyDiscount = Math.max(0, normalSum - packageSum);
+      const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+      const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+      wedPrice = stallObj.price_wed;
+      satPrice = stallObj.price_sat - satDiscount;
+      sunPrice = stallObj.price_sun - sunDiscount;
+    }
+
     const elecRate = item && item.elec_unit !== undefined && item.elec_unit !== null ? parseNumber(item.elec_unit) * 10 : 20;
 
     // Get current date time for transaction date
@@ -1576,10 +1602,15 @@ export function BookingProvider({ children }) {
       invoiceMonth = `${thaiMonth} ${thaiYear}`;
     }
 
-    // Default counts to 4 Saturdays and 4 Sundays, 0 Wednesdays
-    const satCount = 4;
-    const sunCount = 4;
-    const wedCount = 0;
+    // Determine active days dynamically from the item
+    const activeDays = [];
+    if (item.selected_days?.toLowerCase().includes('wed')) activeDays.push(3);
+    if (item.selected_days?.toLowerCase().includes('sat')) activeDays.push(6);
+    if (item.selected_days?.toLowerCase().includes('sun')) activeDays.push(0);
+
+    const satCount = getDayOccurrences(item.start_date, 6, activeDays);
+    const sunCount = getDayOccurrences(item.start_date, 0, activeDays);
+    const wedCount = getDayOccurrences(item.start_date, 3, activeDays);
 
     // Build day detail rows
     let dayDetailsHtml = '';
@@ -1935,9 +1966,26 @@ export function BookingProvider({ children }) {
     if (!monthlyPrintItem) return;
 
     const stallObj = stalls.find(s => s.name === monthlyPrintItem.stalls);
-    const satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
-    const sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
-    const wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+    let satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
+    let sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
+    let wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+
+    const isFullPackage = monthlyPrintItem.selected_days?.toLowerCase().includes('wed') &&
+                          monthlyPrintItem.selected_days?.toLowerCase().includes('sat') &&
+                          monthlyPrintItem.selected_days?.toLowerCase().includes('sun');
+
+    if (monthlyPrintItem.customer_type === 'Standard' && isFullPackage && stallObj && stallObj.price_month > 0) {
+      const normalSum = parseNumber(stallObj.price_wed) + parseNumber(stallObj.price_sat) + parseNumber(stallObj.price_sun);
+      const packageSum = 3 * parseNumber(stallObj.price_month);
+      const weeklyDiscount = Math.max(0, normalSum - packageSum);
+      const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+      const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+      wedPrice = stallObj.price_wed;
+      satPrice = stallObj.price_sat - satDiscount;
+      sunPrice = stallObj.price_sun - sunDiscount;
+    }
+
     const elecRate = monthlyPrintItem && monthlyPrintItem.elec_unit !== undefined && monthlyPrintItem.elec_unit !== null ? parseNumber(monthlyPrintItem.elec_unit) * 10 : 20;
 
     // Get current date time for transaction date
@@ -3060,7 +3108,15 @@ export function BookingProvider({ children }) {
           if (dayOfWeek === 0) price = sMaster.price_sun;
           
           if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster.price_month > 0) {
-            price = sMaster.price_month;
+            const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+            const packageSum = 3 * parseNumber(sMaster.price_month);
+            const weeklyDiscount = Math.max(0, normalSum - packageSum);
+            const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+            const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+            if (dayOfWeek === 3) price = sMaster.price_wed;
+            else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
+            else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
           }
           if (newMonthlyCustomerType === 'VIP' || newMonthlyCustomerType === 'Room') price = 0;
           sum += price;
@@ -3286,7 +3342,15 @@ export function BookingProvider({ children }) {
             if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
             
             if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
-              price = sMaster.price_month;
+              const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+              const packageSum = 3 * parseNumber(sMaster.price_month);
+              const weeklyDiscount = Math.max(0, normalSum - packageSum);
+              const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+              const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+              if (dayOfWeek === 3) price = sMaster.price_wed;
+              else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
+              else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
             }
             if (newMonthlyCustomerType === 'VIP') price = 0;
             
@@ -3480,7 +3544,15 @@ export function BookingProvider({ children }) {
             if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
             
             if (newMonthlyCustomerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
-              price = sMaster.price_month;
+              const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+              const packageSum = 3 * parseNumber(sMaster.price_month);
+              const weeklyDiscount = Math.max(0, normalSum - packageSum);
+              const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+              const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+              if (dayOfWeek === 3) price = sMaster.price_wed;
+              else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
+              else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
             }
             if (newMonthlyCustomerType === 'VIP') price = 0;
             
@@ -3670,7 +3742,15 @@ export function BookingProvider({ children }) {
             if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
             
             if (activeMonthlyBooking.customer_type === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
-              price = sMaster.price_month;
+              const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+              const packageSum = 3 * parseNumber(sMaster.price_month);
+              const weeklyDiscount = Math.max(0, normalSum - packageSum);
+              const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+              const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+              if (dayOfWeek === 3) price = sMaster.price_wed;
+              else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
+              else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
             }
             if (activeMonthlyBooking.customer_type === 'VIP' || activeMonthlyBooking.customer_type === 'Room') price = 0;
             
@@ -3856,7 +3936,15 @@ export function BookingProvider({ children }) {
               if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
               
               if (customerType === 'Standard' && isFullPackage && sMaster && sMaster.price_month > 0) {
-                price = sMaster.price_month;
+                const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+                const packageSum = 3 * parseNumber(sMaster.price_month);
+                const weeklyDiscount = Math.max(0, normalSum - packageSum);
+                const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+                const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+                if (dayOfWeek === 3) price = sMaster.price_wed;
+                else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
+                else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
               }
               if (customerType === 'VIP' || customerType === 'Room') price = 0;
               

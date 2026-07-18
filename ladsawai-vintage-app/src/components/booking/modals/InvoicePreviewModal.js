@@ -101,7 +101,15 @@ export default function InvoicePreviewModal() {
                             if (dNum === 0) price = sMaster.price_sun;
 
                             if (invoicePreviewItem.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
-                              price = sMaster.price_month;
+                              const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+                              const packageSum = 3 * parseNumber(sMaster.price_month);
+                              const weeklyDiscount = Math.max(0, normalSum - packageSum);
+                              const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+                              const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+                              if (dNum === 3) price = sMaster.price_wed;
+                              else if (dNum === 6) price = sMaster.price_sat - satDiscount;
+                              else if (dNum === 0) price = sMaster.price_sun - sunDiscount;
                             }
                             if (invoicePreviewItem.customer_type === 'VIP') price = 0;
 
