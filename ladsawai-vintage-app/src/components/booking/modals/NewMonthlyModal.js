@@ -65,7 +65,7 @@ export default function NewMonthlyModal() {
                 {/* Start Date */}
                 <div className={`flex flex-col gap-1 ${newMonthlyCustomerType === 'Room' ? 'col-span-2' : ''}`}>
                   <label className="font-bold text-gray-700 flex justify-between">
-                    <span>วันที่เริ่ม</span>
+                    <span>วันที่เริ่ม <span className="text-red-500">*</span></span>
                     <span className="text-[10px] text-[#8B4513]">
                       {(() => {
                         if (!newMonthlyStartDate) return '';
@@ -425,7 +425,7 @@ export default function NewMonthlyModal() {
               {/* Extra fees row */}
               {newMonthlyCustomerType === 'Room' ? (
                 <div className="bg-blue-50/40 p-3 rounded-lg border border-blue-200">
-                  <label className="font-bold text-blue-950 block mb-1">💰 ยอดค่าใช้จ่ายรวมที่ตกลงกัน (ยอดที่ต้องชำระ)</label>
+                  <label className="font-bold text-blue-950 block mb-1">💰 ยอดค่าใช้จ่ายรวมที่ตกลงกัน (ยอดที่ต้องชำระ) <span className="text-red-500">*</span></label>
                   <div className="relative flex items-center">
                     <input 
                       type="number"
@@ -440,7 +440,7 @@ export default function NewMonthlyModal() {
                 </div>
               ) : newMonthlyCustomerType === 'VIP' ? (
                 <div className="bg-purple-50/40 p-3 rounded-lg border border-purple-200 animate-fade-in">
-                  <label className="font-bold text-purple-950 block mb-1">💰 ยอดค่าเช่ารวม VIP ที่ตกลงกัน (ยอดที่ต้องชำระ)</label>
+                  <label className="font-bold text-purple-950 block mb-1">💰 ยอดค่าเช่ารวม VIP ที่ตกลงกัน (ยอดที่ต้องชำระ) <span className="text-red-500">*</span></label>
                   <div className="relative flex items-center">
                     <input 
                       type="number"
@@ -577,7 +577,7 @@ export default function NewMonthlyModal() {
               <div className="bg-[#F5E6D3]/15 p-3 rounded-lg border border-[#D7CCC8]/60 flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="font-bold text-gray-700">ชื่อผู้จอง</label>
+                    <label className="font-bold text-gray-700">ชื่อผู้จอง <span className="text-red-500">*</span></label>
                     <input 
                       type="text"
                       placeholder="ระบุชื่อ-สกุล"
@@ -599,7 +599,7 @@ export default function NewMonthlyModal() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-gray-700">เบอร์โทรศัพท์</label>
+                  <label className="font-bold text-gray-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
                   <input 
                     type="text"
                     placeholder="08x-xxxxxxx"

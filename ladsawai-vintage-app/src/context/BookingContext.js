@@ -1558,31 +1558,65 @@ export function BookingProvider({ children }) {
     setShowMonthlyPrintModal(true);
   };
 
+  const getStallsForDayOfWeek = (stallDetailsJson, dayNum) => {
+    try {
+      const details = typeof stallDetailsJson === 'string' ? JSON.parse(stallDetailsJson || '[]') : stallDetailsJson || [];
+      const filtered = details.filter(d => Array.isArray(d.days) && d.days.includes(dayNum));
+      return filtered.map(d => d.name).join(', ');
+    } catch (e) {
+      console.error(e);
+      return '';
+    }
+  };
+
   const handlePrintMonthlyReceiptDirect = (item) => {
     if (!item) return;
 
-    const stallObj = stalls.find(s => s.name === item.stalls);
-    let satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
-    let sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
-    let wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+    let details = [];
+    try {
+      details = JSON.parse(item.stall_details || '[]');
+    } catch (e) {}
 
     const isFullPackage = item.selected_days?.toLowerCase().includes('wed') &&
                           item.selected_days?.toLowerCase().includes('sat') &&
                           item.selected_days?.toLowerCase().includes('sun');
 
-    if (item.customer_type === 'Standard' && isFullPackage && stallObj && stallObj.price_month > 0) {
-      const normalSum = parseNumber(stallObj.price_wed) + parseNumber(stallObj.price_sat) + parseNumber(stallObj.price_sun);
-      const packageSum = 3 * parseNumber(stallObj.price_month);
-      const weeklyDiscount = Math.max(0, normalSum - packageSum);
-      const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
-      const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
-
-      wedPrice = stallObj.price_wed;
-      satPrice = stallObj.price_sat - satDiscount;
-      sunPrice = stallObj.price_sun - sunDiscount;
-    }
-
     const elecRate = item && item.elec_unit !== undefined && item.elec_unit !== null ? parseNumber(item.elec_unit) * 10 : 20;
+
+    const dayGroups = { 3: [], 6: [], 0: [] };
+
+    details.forEach((stallDetail) => {
+      const stallName = stallDetail.name;
+      const sMaster = stalls.find(s => s.name === stallName);
+      if (!sMaster) return;
+
+      const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
+      [3, 6, 0].forEach((dNum) => {
+        if (stallDays.includes(dNum)) {
+          let price = sMaster.price_wed;
+          if (dNum === 6) price = sMaster.price_sat;
+          if (dNum === 0) price = sMaster.price_sun;
+
+          if (item.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
+            const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+            const packageSum = 3 * parseNumber(sMaster.price_month);
+            const weeklyDiscount = Math.max(0, normalSum - packageSum);
+            const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+            const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+            if (dNum === 3) price = sMaster.price_wed;
+            else if (dNum === 6) price = sMaster.price_sat - satDiscount;
+            else if (dNum === 0) price = sMaster.price_sun - sunDiscount;
+          }
+          if (item.customer_type === 'VIP') price = 0;
+
+          dayGroups[dNum].push({
+            name: stallName,
+            price: price
+          });
+        }
+      });
+    });
 
     // Get current date time for transaction date
     const now = new Date();
@@ -1614,41 +1648,48 @@ export function BookingProvider({ children }) {
 
     // Build day detail rows
     let dayDetailsHtml = '';
-    if (satCount > 0) {
-      const satTotal = (satPrice + elecRate) * satCount;
+    
+    if (satCount > 0 && dayGroups[6].length > 0) {
+      const satStalls = dayGroups[6].map(x => cleanStallName(x.name)).join(', ');
+      const satStallPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0);
+      const satTotal = (satStallPrice + elecRate) * satCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(item.stalls)}</td>
+          <td class="bold">วันเสาร์ ล็อค : ${satStalls}</td>
           <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${satPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
+          <td>(${satStallPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
           <td></td>
         </tr>
       `;
     }
-    if (sunCount > 0) {
-      const sunTotal = (sunPrice + elecRate) * sunCount;
+    if (sunCount > 0 && dayGroups[0].length > 0) {
+      const sunStalls = dayGroups[0].map(x => cleanStallName(x.name)).join(', ');
+      const sunStallPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0);
+      const sunTotal = (sunStallPrice + elecRate) * sunCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(item.stalls)}</td>
+          <td class="bold">วันอาทิตย์ ล็อค : ${sunStalls}</td>
           <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${sunPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
+          <td>(${sunStallPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
           <td></td>
         </tr>
       `;
     }
-    if (wedCount > 0) {
-      const wedTotal = (wedPrice + elecRate) * wedCount;
+    if (wedCount > 0 && dayGroups[3].length > 0) {
+      const wedStalls = dayGroups[3].map(x => cleanStallName(x.name)).join(', ');
+      const wedStallPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0);
+      const wedTotal = (wedStallPrice + elecRate) * wedCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันพุธ ล็อค : ${cleanStallName(item.stalls)}</td>
+          <td class="bold">วันพุธ ล็อค : ${wedStalls}</td>
           <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${wedPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
+          <td>(${wedStallPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
           <td></td>
         </tr>
       `;
@@ -1961,32 +2002,54 @@ export function BookingProvider({ children }) {
     printWindow.document.close();
   };
 
-  // Print monthly receipt
   const handlePrintMonthlyReceipt = () => {
     if (!monthlyPrintItem) return;
 
-    const stallObj = stalls.find(s => s.name === monthlyPrintItem.stalls);
-    let satPrice = stallObj ? parseNumber(stallObj.price_sat) : 300;
-    let sunPrice = stallObj ? parseNumber(stallObj.price_sun) : 200;
-    let wedPrice = stallObj ? parseNumber(stallObj.price_wed) : 150;
+    let details = [];
+    try {
+      details = JSON.parse(monthlyPrintItem.stall_details || '[]');
+    } catch (e) {}
 
     const isFullPackage = monthlyPrintItem.selected_days?.toLowerCase().includes('wed') &&
                           monthlyPrintItem.selected_days?.toLowerCase().includes('sat') &&
                           monthlyPrintItem.selected_days?.toLowerCase().includes('sun');
 
-    if (monthlyPrintItem.customer_type === 'Standard' && isFullPackage && stallObj && stallObj.price_month > 0) {
-      const normalSum = parseNumber(stallObj.price_wed) + parseNumber(stallObj.price_sat) + parseNumber(stallObj.price_sun);
-      const packageSum = 3 * parseNumber(stallObj.price_month);
-      const weeklyDiscount = Math.max(0, normalSum - packageSum);
-      const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
-      const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
-
-      wedPrice = stallObj.price_wed;
-      satPrice = stallObj.price_sat - satDiscount;
-      sunPrice = stallObj.price_sun - sunDiscount;
-    }
-
     const elecRate = monthlyPrintItem && monthlyPrintItem.elec_unit !== undefined && monthlyPrintItem.elec_unit !== null ? parseNumber(monthlyPrintItem.elec_unit) * 10 : 20;
+
+    const dayGroups = { 3: [], 6: [], 0: [] };
+
+    details.forEach((stallDetail) => {
+      const stallName = stallDetail.name;
+      const sMaster = stalls.find(s => s.name === stallName);
+      if (!sMaster) return;
+
+      const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
+      [3, 6, 0].forEach((dNum) => {
+        if (stallDays.includes(dNum)) {
+          let price = sMaster.price_wed;
+          if (dNum === 6) price = sMaster.price_sat;
+          if (dNum === 0) price = sMaster.price_sun;
+
+          if (monthlyPrintItem.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
+            const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+            const packageSum = 3 * parseNumber(sMaster.price_month);
+            const weeklyDiscount = Math.max(0, normalSum - packageSum);
+            const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+            const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+            if (dNum === 3) price = sMaster.price_wed;
+            else if (dNum === 6) price = sMaster.price_sat - satDiscount;
+            else if (dNum === 0) price = sMaster.price_sun - sunDiscount;
+          }
+          if (monthlyPrintItem.customer_type === 'VIP') price = 0;
+
+          dayGroups[dNum].push({
+            name: stallName,
+            price: price
+          });
+        }
+      });
+    });
 
     // Get current date time for transaction date
     const now = new Date();
@@ -2001,43 +2064,49 @@ export function BookingProvider({ children }) {
     // Build day detail rows
     let dayDetailsHtml = '';
     
-    if (monthlyPrintSatCount > 0) {
-      const satTotal = (satPrice + elecRate) * monthlyPrintSatCount;
+    if (monthlyPrintSatCount > 0 && dayGroups[6].length > 0) {
+      const satStalls = dayGroups[6].map(x => cleanStallName(x.name)).join(', ');
+      const satStallPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0);
+      const satTotal = (satStallPrice + elecRate) * monthlyPrintSatCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันเสาร์ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
+          <td class="bold">วันเสาร์ ล็อค : ${satStalls}</td>
           <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${satPrice} x ${monthlyPrintSatCount}) + (${elecRate} x ${monthlyPrintSatCount})</td>
+          <td>(${satStallPrice} x ${monthlyPrintSatCount}) + (${elecRate} x ${monthlyPrintSatCount})</td>
           <td></td>
         </tr>
       `;
     }
     
-    if (monthlyPrintSunCount > 0) {
-      const sunTotal = (sunPrice + elecRate) * monthlyPrintSunCount;
+    if (monthlyPrintSunCount > 0 && dayGroups[0].length > 0) {
+      const sunStalls = dayGroups[0].map(x => cleanStallName(x.name)).join(', ');
+      const sunStallPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0);
+      const sunTotal = (sunStallPrice + elecRate) * monthlyPrintSunCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันอาทิตย์ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
+          <td class="bold">วันอาทิตย์ ล็อค : ${sunStalls}</td>
           <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${sunPrice} x ${monthlyPrintSunCount}) + (${elecRate} x ${monthlyPrintSunCount})</td>
+          <td>(${sunStallPrice} x ${monthlyPrintSunCount}) + (${elecRate} x ${monthlyPrintSunCount})</td>
           <td></td>
         </tr>
       `;
     }
 
-    if (monthlyPrintWedCount > 0) {
-      const wedTotal = (wedPrice + elecRate) * monthlyPrintWedCount;
+    if (monthlyPrintWedCount > 0 && dayGroups[3].length > 0) {
+      const wedStalls = dayGroups[3].map(x => cleanStallName(x.name)).join(', ');
+      const wedStallPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0);
+      const wedTotal = (wedStallPrice + elecRate) * monthlyPrintWedCount;
       dayDetailsHtml += `
         <tr>
-          <td class="bold">วันพุธ ล็อค : ${cleanStallName(monthlyPrintItem.stalls)}</td>
+          <td class="bold">วันพุธ ล็อค : ${wedStalls}</td>
           <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${wedPrice} x ${monthlyPrintWedCount}) + (${elecRate} x ${monthlyPrintWedCount})</td>
+          <td>(${wedStallPrice} x ${monthlyPrintWedCount}) + (${elecRate} x ${monthlyPrintWedCount})</td>
           <td></td>
         </tr>
       `;

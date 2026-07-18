@@ -11,6 +11,307 @@ export default function InvoicePreviewModal() {
 
   if (!invoicePreviewItem) return null;
 
+  const handlePrintInvoice = () => {
+    let details = [];
+    try {
+      details = JSON.parse(invoicePreviewItem.stall_details || '[]');
+    } catch (e) {}
+
+    const isFullPackage = invoicePreviewItem.selected_days?.toLowerCase().includes('wed') &&
+                          invoicePreviewItem.selected_days?.toLowerCase().includes('sat') &&
+                          invoicePreviewItem.selected_days?.toLowerCase().includes('sun');
+
+    const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
+    const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
+
+    const dayGroups = { 3: [], 6: [], 0: [] };
+
+    details.forEach((stallDetail) => {
+      const stallName = stallDetail.name;
+      const sMaster = stalls.find(s => s.name === stallName);
+      if (!sMaster) return;
+
+      const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
+      [3, 6, 0].forEach((dNum) => {
+        if (stallDays.includes(dNum)) {
+          let price = sMaster.price_wed;
+          if (dNum === 6) price = sMaster.price_sat;
+          if (dNum === 0) price = sMaster.price_sun;
+
+          if (invoicePreviewItem.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
+            const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+            const packageSum = 3 * parseNumber(sMaster.price_month);
+            const weeklyDiscount = Math.max(0, normalSum - packageSum);
+            const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+            const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+            if (dNum === 3) price = sMaster.price_wed;
+            else if (dNum === 6) price = sMaster.price_sat - satDiscount;
+            else if (dNum === 0) price = sMaster.price_sun - sunDiscount;
+          }
+          if (invoicePreviewItem.customer_type === 'VIP') price = 0;
+
+          dayGroups[dNum].push({
+            name: stallName,
+            price: price,
+            elec: elecRate
+          });
+        }
+      });
+    });
+
+    let itemsHtml = '';
+    let totalNadsCount = 0;
+
+    [3, 6, 0].forEach((dNum) => {
+      const group = dayGroups[dNum];
+      if (group.length > 0) {
+        const count = getDayOccurrences(invoicePreviewItem.start_date, dNum, [dNum]);
+        if (count > 0) {
+          totalNadsCount += count;
+          const totalStallPrice = group.reduce((sum, item) => sum + item.price, 0);
+          const totalElecRate = group.reduce((sum, item) => sum + item.elec, 0);
+          const subTotal = (totalStallPrice + totalElecRate) * count;
+          const stallNamesStr = group.map(item => cleanStallName(item.name)).join(', ');
+
+          itemsHtml += `
+            <tr>
+              <td class="bold">${dayNames[dNum]} ล็อค : ${stallNamesStr}</td>
+              <td class="val">${subTotal.toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+            </tr>
+            <tr class="calc-row">
+              <td>(${totalStallPrice} x ${count}) + (${totalElecRate} x ${count})</td>
+              <td></td>
+            </tr>
+          `;
+        }
+      }
+    });
+
+    if (parseNumber(invoicePreviewItem.storage_fee) > 0) {
+      itemsHtml += `
+        <tr>
+          <td class="bold">📦 ค่าฝากของ</td>
+          <td class="val">${parseNumber(invoicePreviewItem.storage_fee).toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+        </tr>
+      `;
+    }
+
+    const grandTotal = parseNumber(invoicePreviewItem.total_price);
+    const paidAmount = parseNumber(invoicePreviewItem.paid_amount || 0);
+    const remaining = grandTotal - paidAmount;
+    const now = new Date();
+    const formattedTransaction = now.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
+
+    const invoiceMonth = formatBookingMonth(invoicePreviewItem.booking_month);
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) {
+      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ใบแจ้งหนี้');
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>พิมพ์ใบแจ้งหนี้ (รายเดือน)</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Sarabun', sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              background: #fff;
+              color: #000;
+              font-size: 11pt;
+              line-height: 1.4;
+            }
+            .center {
+              text-align: center;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .logo {
+              width: 25mm;
+              height: auto;
+              margin: 0 auto 2mm auto;
+              display: block;
+            }
+            .divider {
+              border-top: 1.5px dashed #000;
+              margin: 3mm 0;
+            }
+            .title {
+              font-size: 13pt;
+              font-weight: 800;
+              margin: 2mm 0 1mm 0;
+            }
+            .subtitle {
+              font-size: 10pt;
+              font-weight: bold;
+              color: #000;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .info-table td {
+              padding: 1.2mm 0;
+              vertical-align: top;
+              font-size: 10.5pt;
+            }
+            .info-table td.label {
+              width: 32%;
+              white-space: nowrap;
+            }
+            .info-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .price-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 2mm 0;
+            }
+            .price-table td {
+              padding: 1.2mm 0;
+              font-size: 10.5pt;
+            }
+            .price-table td.val {
+              text-align: right;
+              font-weight: bold;
+            }
+            .calc-row td {
+              font-size: 9.5pt;
+              color: #333;
+              padding-top: 0 !important;
+              padding-bottom: 2mm !important;
+            }
+            .total-row td {
+              font-size: 11.5pt;
+              font-weight: bold;
+              padding-top: 2mm;
+            }
+            .total-row td.val {
+              font-size: 12.5pt;
+              font-weight: 800;
+            }
+            .bank-box {
+              background: #f0fdf4;
+              border: 1px dashed #166534;
+              padding: 2.5mm;
+              border-radius: 1.5mm;
+              margin-top: 4mm;
+              font-size: 10pt;
+              line-height: 1.5;
+            }
+            .bank-title {
+              font-size: 9.5pt;
+              color: #166534;
+              font-weight: bold;
+              margin-bottom: 1mm;
+            }
+            .bank-detail {
+              font-size: 11pt;
+              font-weight: 800;
+              color: #052e16;
+            }
+            .footer-msg {
+              font-size: 9pt;
+              text-align: center;
+              margin-top: 6mm;
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <img src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" class="logo" />
+            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
+            <div class="subtitle">ใบแจ้งยอดชำระเงิน (Invoice)</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <table class="info-table">
+            <tr>
+              <td class="label">ประจำเดือน:</td>
+              <td class="val">${invoiceMonth}</td>
+            </tr>
+            <tr>
+              <td class="label">ผู้เช่า/สินค้า:</td>
+              <td class="val">${invoicePreviewItem.booker_name} / ${invoicePreviewItem.product || 'ทั่วไป'}</td>
+            </tr>
+            <tr>
+              <td class="label">เบอร์โทรศัพท์:</td>
+              <td class="val">${invoicePreviewItem.phone || '-'}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="price-table">
+            <tr class="calc-row">
+              <td class="bold">จำนวนทั้งหมด ${totalNadsCount} นัด</td>
+              <td></td>
+            </tr>
+            ${itemsHtml}
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="price-table">
+            <tr class="total-row">
+              <td>ยอดรวมทั้งสิ้น:</td>
+              <td class="val">${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+            </tr>
+            <tr>
+              <td>ชำระแล้ว:</td>
+              <td class="val" style="color: #15803d;">${paidAmount.toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+            </tr>
+            <tr class="total-row" style="border-top: 1px dashed #000;">
+              <td>ยอดค้างชำระสุทธิ:</td>
+              <td class="val" style="color: #b91c1c;">${remaining.toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+            </tr>
+          </table>
+          
+          <div class="bank-box">
+            <div class="bank-title">ช่องทางการชำระเงิน</div>
+            <div class="bank-detail">ธนาคารกสิกรไทย (KBANK)</div>
+            <div class="bank-detail">เลขบัญชี : 204-1-25235-1</div>
+            <div class="bold" style="margin-top: 1mm; font-size: 9.5pt;">บจก.เดอะเบสพัฒนาและธุรกิจ</div>
+          </div>
+          
+          <div class="footer-msg">
+            พิมพ์เมื่อ: ${formattedTransaction}
+          </div>
+        </body>
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        <\/script>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-sm border border-[#8B4513]/30 overflow-hidden flex flex-col animate-pop-in text-gray-800 font-sans text-xs">
@@ -19,13 +320,7 @@ export default function InvoicePreviewModal() {
                 <span className="font-bold">พรีวิวใบแจ้งยอดชำระเงิน</span>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      const printContents = document.getElementById('lvt-invoice-print-area').innerHTML;
-                      const originalContents = document.body.innerHTML;
-                      document.body.innerHTML = printContents;
-                      window.print();
-                      window.location.reload(); // Reload to restore React state
-                    }}
+                    onClick={handlePrintInvoice}
                     className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer"
                   >
                     พิมพ์
