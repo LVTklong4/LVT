@@ -739,7 +739,7 @@ export function BookingProvider({ children }) {
             const amount = parts[1]?.trim() || '';
             const isSaved = !!(method && amount && parseNumber(amount) > 0);
             return { 
-              method: method, 
+              method: isSaved ? method : '', 
               amount: amount,
               isSaved: isSaved
             };
@@ -751,7 +751,7 @@ export function BookingProvider({ children }) {
           const amount = isPaidBooking ? (booking.total_price || '') : '';
           const isSaved = !!(method && amount && parseNumber(amount) > 0);
           setPaymentList([{ 
-            method: method, 
+            method: isSaved ? method : '', 
             amount: amount,
             isSaved: isSaved
           }]);
@@ -805,6 +805,13 @@ export function BookingProvider({ children }) {
     if (incomplete) {
       showAlert("กรุณาเลือกวิธีการชำระเงิน (เงินสด/โอนจ่าย) สำหรับยอดเงินที่ระบุไว้", "แจ้งเตือน", true);
       return;
+    }
+
+    if (status === 'ค้างชำระ' && totalPaid < totalVal) {
+      const remaining = totalVal - totalPaid;
+      if (!confirm(`ยอดเงินที่รับชำระ (${totalPaid} บ.) ยังไม่ครบตามยอดรวมทั้งสิ้น (${totalVal} บ.)\nจะมีส่วนต่างค้างจ่าย ${remaining} บ. ต้องการบันทึกรายการนี้เป็นยอดค้างชำระหรือไม่?`)) {
+        return;
+      }
     }
 
     setLoading(true);
