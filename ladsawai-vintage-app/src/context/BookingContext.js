@@ -138,6 +138,7 @@ export function BookingProvider({ children }) {
   const [newMonthlyStallsSun, setNewMonthlyStallsSun] = useState([]);
   const [newMonthlyStorageFee, setNewMonthlyStorageFee] = useState(0);
   const [newMonthlyElecUnit, setNewMonthlyElecUnit] = useState(0);
+  const [newMonthlyVipPrice, setNewMonthlyVipPrice] = useState('');
   const [newMonthlyBookerName, setNewMonthlyBookerName] = useState('');
   const [newMonthlyProduct, setNewMonthlyProduct] = useState('');
   const [newMonthlyPhone, setNewMonthlyPhone] = useState('');
@@ -3103,6 +3104,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyStallsSun([]);
     setNewMonthlyStorageFee('');
     setNewMonthlyElecUnit('');
+    setNewMonthlyVipPrice('');
     setNewMonthlyBookerName('');
     setNewMonthlyProduct('');
     setNewMonthlyPhone('');
@@ -3129,6 +3131,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyNote(item.note || '');
     setNewMonthlyStorageFee(String(item.storage_fee || ''));
     setNewMonthlyElecUnit(String(item.elec_unit || ''));
+    setNewMonthlyVipPrice(item.customer_type === 'VIP' ? String(item.total_price || '0') : '');
     
     // Parse days
     const daysStr = String(item.selected_days || '').toLowerCase();
@@ -3198,6 +3201,9 @@ export function BookingProvider({ children }) {
       if ((original.note || '') !== newMonthlyNote) {
         changes.push(`- โน้ตเพิ่มเติม: "${original.note || '-'}" -> "${newMonthlyNote || '-'}"`);
       }
+      if (original.customer_type === 'VIP' && parseNumber(original.total_price) !== parseNumber(newMonthlyVipPrice)) {
+        changes.push(`- ยอดชำระ VIP ตกลงไว้: ${original.total_price} -> ${newMonthlyVipPrice}`);
+      }
 
       if (changes.length === 0) {
         showAlert("ไม่มีการเปลี่ยนแปลงข้อมูล", "แจ้งเตือน");
@@ -3214,9 +3220,17 @@ export function BookingProvider({ children }) {
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
     
-    if (newMonthlyCustomerType !== 'VIP' && !hasWed && !hasSat && !hasSun) {
+    if (!hasWed && !hasSat && !hasSun) {
       showAlert("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
       return;
+    }
+
+    if (newMonthlyCustomerType === 'VIP') {
+      const vipPriceVal = parseNumber(newMonthlyVipPrice);
+      if (vipPriceVal <= 0) {
+        showAlert("กรุณาระบุยอดค่าใช้จ่าย VIP ที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
+        return;
+      }
     }
 
     setLoadingMonthly(true);
@@ -3323,8 +3337,9 @@ export function BookingProvider({ children }) {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
       } else if (newMonthlyCustomerType === 'VIP') {
-        monthlyTotal = 0;
-        monthlyStatus = 'ชำระแล้ว';
+        monthlyTotal = parseNumber(newMonthlyVipPrice);
+        const currentPaid = parseNumber(editMonthlyPaidAmount || 0);
+        monthlyStatus = currentPaid >= (monthlyTotal - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
       }
 
       const stallsString = allSelectedStallNames.join(', ');
@@ -3386,9 +3401,17 @@ export function BookingProvider({ children }) {
     const hasSat = newMonthlyDays.sat && newMonthlyStallsSat.length > 0;
     const hasSun = newMonthlyDays.sun && newMonthlyStallsSun.length > 0;
     
-    if (newMonthlyCustomerType !== 'VIP' && !hasWed && !hasSat && !hasSun) {
+    if (!hasWed && !hasSat && !hasSun) {
       showAlert("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
       return;
+    }
+
+    if (newMonthlyCustomerType === 'VIP') {
+      const vipPriceVal = parseNumber(newMonthlyVipPrice);
+      if (vipPriceVal <= 0) {
+        showAlert("กรุณาระบุยอดค่าใช้จ่าย VIP ที่ตกลงกันให้ถูกต้อง", "แจ้งเตือน", true);
+        return;
+      }
     }
 
     setLoadingMonthly(true);
@@ -3489,8 +3512,8 @@ export function BookingProvider({ children }) {
         monthlyTotal = 0;
         monthlyStatus = 'ชำระรายวัน';
       } else if (newMonthlyCustomerType === 'VIP') {
-        monthlyTotal = 0;
-        monthlyStatus = 'ชำระแล้ว';
+        monthlyTotal = parseNumber(newMonthlyVipPrice);
+        monthlyStatus = 'ค้างชำระ';
       }
 
       const stallsString = allSelectedStallNames.join(', ');
@@ -4518,6 +4541,7 @@ export function BookingProvider({ children }) {
     newMonthlyStallsWed,
     newMonthlyStartDate,
     newMonthlyStorageFee,
+    newMonthlyVipPrice,
     note,
     parseBookingMonthToDate,
     parseNumber,
@@ -4609,6 +4633,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyStallsWed,
     setNewMonthlyStartDate,
     setNewMonthlyStorageFee,
+    setNewMonthlyVipPrice,
     setNote,
     setPaymentList,
     setPaymentMethod,
