@@ -126,6 +126,7 @@ export function BookingProvider({ children }) {
   const [monthlyPrintWedCount, setMonthlyPrintWedCount] = useState(0);
   const [monthlyPrintTxnNo, setMonthlyPrintTxnNo] = useState('');
   const [monthlyPrintPayments, setMonthlyPrintPayments] = useState([]);
+  const [showCancelled, setShowCancelled] = useState(false);
 
   // New Monthly Booking Modal States
   const [showNewMonthlyModal, setShowNewMonthlyModal] = useState(false);
@@ -4206,6 +4207,16 @@ export function BookingProvider({ children }) {
     if (!txn || !txn.id) return;
     if (!activeMonthlyBooking) return;
 
+    // Check if txn is older than 24 hours
+    const txTime = new Date(txn.timestamp || txn.date).getTime();
+    const nowTime = new Date().getTime();
+    const diffHours = (nowTime - txTime) / (1000 * 60 * 60);
+
+    if (diffHours > 24) {
+      showAlert("⚠️ ไม่สามารถลบรายการชำระเงินที่ทำรายการเกิน 24 ชั่วโมงแล้วได้ เพื่อความถูกต้องทางบัญชี", "ระงับการทำรายการ", true);
+      return;
+    }
+
     const msg = `⚠️ ยืนยันการยกเลิก/ลบรายการชำระเงินนี้ใช่หรือไม่?\n\n` +
       `รายการ: ${txn.category || 'ค่าเช่า'}\n` +
       `จำนวนเงิน: ${txn.total_amount?.toLocaleString() || 0} บาท\n` +
@@ -4359,40 +4370,114 @@ export function BookingProvider({ children }) {
     }
     if (!item) return;
 
-    if (!confirm(`⚠️ ยืนยันการลบข้อมูลการจองรายเดือนของคุณ "${item.booker_name}" (ล็อค ${item.stalls}) หรือไม่?\nการลบนี้จะไม่สามารถย้อนกลับได้`)) {
-      return;
-    }
+    const paidAmt = parseNumber(item.paid_amount || 0);
 
-    setLoadingMonthly(true);
-    try {
-      // 1. Delete associated daily bookings from bookings table
-      const { error: bookingsError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('master_id', item.id);
-      if (bookingsError) throw bookingsError;
-
-      // 2. Delete monthly booking contract
-      const { error } = await supabase
-        .from('monthly_bookings')
-        .delete()
-        .eq('id', item.id);
-      if (error) throw error;
-
-      showAlert(`ลบข้อมูลการจองรายเดือนสำเร็จ`, "สำเร็จ");
-      
-      // If we deleted the currently selected one, clear selection
-      if (activeMonthlyBooking && activeMonthlyBooking.id === item.id) {
-        setActiveMonthlyBooking(null);
-        setActiveMonthlyTransactions([]);
+    if (paidAmt === 0) {
+      // Hard delete if no payments exist
+      if (!confirm(`⚠️ ยืนยันการลบข้อมูลการจองรายเดือนของคุณ "${item.booker_name}" (ล็อค ${item.stalls}) หรือไม่?\nการลบนี้จะไม่สามารถย้อนกลับได้`)) {
+        return;
       }
-      
-      fetchAllMonthly();
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการลบข้อมูล: " + e.message, "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingMonthly(false);
+
+      setLoadingMonthly(true);
+      try {
+        // 1. Delete associated daily bookings from bookings table
+        const { error: bookingsError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('master_id', item.id);
+        if (bookingsError) throw bookingsError;
+
+        // 2. Delete monthly booking contract
+        const { error } = await supabase
+          .from('monthly_bookings')
+          .delete()
+          .eq('id', item.id);
+        if (error) throw error;
+
+        showAlert(`ลบข้อมูลการจองรายเดือนสำเร็จ`, "สำเร็จ");
+        
+        // If we deleted the currently selected one, clear selection
+        if (activeMonthlyBooking && activeMonthlyBooking.id === item.id) {
+          setActiveMonthlyBooking(null);
+          setActiveMonthlyTransactions([]);
+        }
+        
+        fetchAllMonthly();
+        fetchBookingsAndStorage();
+      } catch (e) {
+        console.error(e);
+        showAlert("เกิดข้อผิดพลาดในการลบข้อมูล: " + e.message, "ข้อผิดพลาด", true);
+      } finally {
+        setLoadingMonthly(false);
+      }
+    } else {
+      // Has payments, check 24-hour window
+      setLoadingMonthly(true);
+      try {
+        const { data: txns, error: txnsError } = await supabase
+          .from('transactions')
+          .select('timestamp, date')
+          .eq('monthly_booking_id', item.id);
+        
+        if (txnsError) throw txnsError;
+
+        const nowTime = new Date().getTime();
+        const hasOlderTxn = (txns || []).some(t => {
+          const tTime = new Date(t.timestamp || t.date).getTime();
+          const diffHours = (nowTime - tTime) / (1000 * 60 * 60);
+          return diffHours > 24;
+        });
+
+        if (hasOlderTxn) {
+          // Soft delete!
+          const msg = `⚠️ สัญญานี้มียอดชำระเงินเกิน 24 ชม. แล้ว ไม่สามารถลบข้อมูลแบบถาวรได้\n\n` +
+            `ระบบจะทำการ 'ยกเลิกสัญญา' (Soft Delete) เพื่อ:\n` +
+            `1. คืนตำแหน่งแผงค้าและวันลงขายบนผังตลาดให้ว่างทันที\n` +
+            `2. เก็บประวัติข้อมูลสัญญาและประวัติยอดรับเงินไว้ในรายงานระบบบัญชี\n\n` +
+            `ยืนยันการยกเลิกสัญญาของ "${item.booker_name}" (ล็อค ${item.stalls}) ใช่หรือไม่?`;
+
+          if (!confirm(msg)) {
+            setLoadingMonthly(false);
+            return;
+          }
+
+          // 1. Delete associated daily bookings from bookings table to vacate the stalls
+          const { error: bookingsError } = await supabase
+            .from('bookings')
+            .delete()
+            .eq('master_id', item.id);
+          if (bookingsError) throw bookingsError;
+
+          // 2. Set monthly booking status to 'ยกเลิก'
+          const { error: mbError } = await supabase
+            .from('monthly_bookings')
+            .update({ status: 'ยกเลิก' })
+            .eq('id', item.id);
+          if (mbError) throw mbError;
+
+          showAlert(`ยกเลิกสัญญาจองรายเดือนสำเร็จ (เก็บรักษาประวัติประวัติทางการเงินเรียบร้อย)`, "สำเร็จ");
+          
+          if (activeMonthlyBooking && activeMonthlyBooking.id === item.id) {
+            setActiveMonthlyBooking(null);
+            setActiveMonthlyTransactions([]);
+          }
+          fetchAllMonthly();
+          fetchBookingsAndStorage();
+        } else {
+          // Block deletion!
+          showAlert(
+            `⚠️ สัญญานี้มียอดชำระเงินที่ยังสามารถยกเลิกได้ภายใน 24 ชม.\n\n` +
+            `กรุณาไปลบรายการชำระเงินทั้งหมดใน 'ประวัติการชำระเงิน' ฝั่งขวาออกให้ครบก่อน เพื่อให้ยอดชำระเป็น 0 บาท แล้วจึงจะสามารถทำการลบข้อมูลการจองหลักได้`,
+            "ระงับการลบข้อมูล",
+            true
+          );
+        }
+      } catch (e) {
+        console.error(e);
+        showAlert("เกิดข้อผิดพลาดในการลบข้อมูล: " + e.message, "ข้อผิดพลาด", true);
+      } finally {
+        setLoadingMonthly(false);
+      }
     }
   };
 
@@ -4600,6 +4685,13 @@ export function BookingProvider({ children }) {
   const filteredMonthlyList = React.useMemo(() => {
     let list = monthlyList || [];
     
+    // 0. Filter out or show only cancelled
+    if (!showCancelled) {
+      list = list.filter(item => item.status !== 'ยกเลิก');
+    } else {
+      list = list.filter(item => item.status === 'ยกเลิก');
+    }
+
     // 1. Filter by Month Filter
     if (monthlyMonthFilter && monthlyMonthFilter !== 'ทั้งหมด') {
       list = list.filter(item => {
@@ -4955,6 +5047,8 @@ export function BookingProvider({ children }) {
     setShowStoragePrintModal,
     setSlipPreviewUrl,
     setFullScreenSlipUrl,
+    showCancelled,
+    setShowCancelled,
     setStallFilter,
     setStallFilterSat,
     setStallFilterSun,
@@ -4982,6 +5076,7 @@ export function BookingProvider({ children }) {
     showAlert,
     showBookingModal,
     showBulkRenewModal,
+    showCancelled,
     showFinanceMgmtModal,
     showLoginModal,
     showMonthlyMgmtModal,

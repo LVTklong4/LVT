@@ -16,7 +16,9 @@ import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function MonthlyManagerLayout() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    adminUser,    alertInfo,    setAlertInfo,    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewEditingItem,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    getDayOccurrences,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleBulkRenewSubmit,    handleCreateNewMonthlyBooking,    handleDeleteMonthlyBooking,    handleMonthlyPaymentSubmit,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handleSaveEditedMonthlyBooking,    handleSlipChange,    handleSortToggle,    handleToggleNonRenewal,    handleUpdateMonthlyItem,    invoicePreviewItem,    isEditingMonthlyMode,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintWedCount,    monthlySearchQuery,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    product,    renderSortArrow,    selectedMonthlyItem,    setActiveMonthlyBooking,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setInvoicePreviewItem,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setSelectedMonthlyItem,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowBulkRenewModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowNewMonthlyModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showBulkRenewModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showNewMonthlyModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stalls
+    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    adminUser,    alertInfo,    setAlertInfo,    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewEditingItem,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    getDayOccurrences,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleBulkRenewSubmit,    handleCreateNewMonthlyBooking,    handleDeleteMonthlyBooking,    handleMonthlyPaymentSubmit,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handleSaveEditedMonthlyBooking,    handleSlipChange,    handleSortToggle,    handleToggleNonRenewal,    handleUpdateMonthlyItem,    invoicePreviewItem,    isEditingMonthlyMode,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintWedCount,    monthlySearchQuery,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    product,    renderSortArrow,    selectedMonthlyItem,    setActiveMonthlyBooking,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setInvoicePreviewItem,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setSelectedMonthlyItem,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowBulkRenewModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowNewMonthlyModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showBulkRenewModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showNewMonthlyModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilterSat,    stallFilterSun,    stallFilterWed,    showCancelled,
+    setShowCancelled,
+    stalls
   } = useBooking();
 
   return (
@@ -90,6 +92,16 @@ export default function MonthlyManagerLayout() {
                 })()}
               </select>
             </div>
+
+            <label className="flex items-center gap-1.5 text-xs text-red-700 font-extrabold cursor-pointer border border-red-200 rounded-lg p-1.5 bg-red-50/30 hover:bg-red-50 shadow-xs select-none">
+              <input 
+                type="checkbox" 
+                checked={showCancelled} 
+                onChange={(e) => setShowCancelled(e.target.checked)} 
+                className="rounded border-red-300 text-red-600 focus:ring-red-500 cursor-pointer w-3.5 h-3.5"
+              />
+              <span>แสดงประวัติยกเลิก</span>
+            </label>
           </div>
         </div>
 
@@ -295,14 +307,20 @@ export default function MonthlyManagerLayout() {
                             <span>{txn.category || 'ค่าเช่า'}</span>
                             <div className="flex items-center gap-1.5">
                               <span className="text-green-700 text-sm font-extrabold">{txn.total_amount?.toLocaleString() || 0}.-</span>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteMonthlyTransaction(txn)}
-                                className="text-red-500 hover:text-red-750 transition-colors p-0.5 cursor-pointer"
-                                title="ยกเลิก/ลบรายการชำระเงิน"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {(() => {
+                                const txTime = new Date(txn.timestamp || txn.date).getTime();
+                                const diffHours = (new Date().getTime() - txTime) / (1000 * 60 * 60);
+                                return diffHours <= 24 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteMonthlyTransaction(txn)}
+                                    className="text-red-500 hover:text-red-750 transition-colors p-0.5 cursor-pointer"
+                                    title="ยกเลิก/ลบรายการชำระเงิน"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </div>
                           <div className="flex justify-between text-[10px] text-gray-500">

@@ -247,14 +247,20 @@ export default function MonthlyMgmtModal() {
                                 <span>{txn.category || 'ค่าเช่า'}</span>
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-green-700 text-sm">{txn.total_amount?.toLocaleString() || 0}.-</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteMonthlyTransaction(txn)}
-                                    className="text-red-500 hover:text-red-750 transition-colors p-0.5 cursor-pointer"
-                                    title="ยกเลิก/ลบรายการชำระเงิน"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                  {(() => {
+                                    const txTime = new Date(txn.timestamp || txn.date).getTime();
+                                    const diffHours = (new Date().getTime() - txTime) / (1000 * 60 * 60);
+                                    return diffHours <= 24 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteMonthlyTransaction(txn)}
+                                        className="text-red-500 hover:text-red-750 transition-colors p-0.5 cursor-pointer"
+                                        title="ยกเลิก/ลบรายการชำระเงิน"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               <div className="flex justify-between text-[10px] text-gray-500">
