@@ -7,7 +7,7 @@ import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function MonthlyMgmtModal() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
+    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
   } = useBooking();
 
   if (!showMonthlyMgmtModal) return null;
@@ -212,10 +212,7 @@ export default function MonthlyMgmtModal() {
                         <div className="flex flex-col gap-1 items-end">
                           <button
                             type="button"
-                            onClick={() => {
-                              setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
-                              setShowMonthlyPaymentModal(true);
-                            }}
+                            onClick={handleOpenMonthlyPaymentModal}
                             className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
                           >
                             <Plus className="w-3 h-3" /> ชำระเงิน

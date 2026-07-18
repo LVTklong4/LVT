@@ -4023,6 +4023,33 @@ export function BookingProvider({ children }) {
     }
   };
 
+  const handleOpenMonthlyPaymentModal = () => {
+    if (!activeMonthlyBooking) return;
+    
+    // Find unpaid bookings from previous months
+    const previousUnpaid = monthlyList.filter(item => 
+      item.booker_name === activeMonthlyBooking.booker_name &&
+      item.booking_month < activeMonthlyBooking.booking_month &&
+      (item.status === 'ค้างชำระ' || parseNumber(item.total_price) > parseNumber(item.paid_amount))
+    );
+
+    if (previousUnpaid.length > 0) {
+      const unpaidDetails = previousUnpaid.map(item => {
+        const monthThai = formatBookingMonth(item.booking_month);
+        const remaining = parseNumber(item.total_price) - parseNumber(item.paid_amount);
+        return `- รอบเดือน ${monthThai}: ค้างชำระ ${remaining.toLocaleString()} บาท`;
+      }).join('\n');
+
+      const msg = `⚠️ ผู้ค้า "${activeMonthlyBooking.booker_name}" ยังมียอดค้างชำระของเดือนก่อนหน้าดังนี้:\n\n${unpaidDetails}\n\nต้องการดำเนินการทำรายการชำระเงินของรอบเดือนปัจจุบัน (${formatBookingMonth(activeMonthlyBooking.booking_month)}) ต่อไปใช่หรือไม่?`;
+      if (!confirm(msg)) {
+        return;
+      }
+    }
+
+    setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+    setShowMonthlyPaymentModal(true);
+  };
+
   const fetchAllMonthly = async () => {
     setLoadingMonthly(true);
     try {
@@ -4484,6 +4511,7 @@ export function BookingProvider({ children }) {
     handleLogout,
     handleMarkAbsent,
     handleMonthlyPaymentSubmit,
+    handleOpenMonthlyPaymentModal,
     handleOpenBulkRenewModal,
     handleOpenEditMonthlyModal,
     handleOpenMonthlyPrintModal,
