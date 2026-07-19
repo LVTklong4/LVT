@@ -20,6 +20,8 @@ export default function StorageMgmtModal() {
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [renewItem, setRenewItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('Active');
+  const [checkoutOverdueItem, setCheckoutOverdueItem] = useState(null);
+  const [overdueFeeAmount, setOverdueFeeAmount] = useState(0);
 
   // Open new deposit modal
   const handleOpenNewDeposit = () => {
@@ -33,16 +35,40 @@ export default function StorageMgmtModal() {
     setIsDepositOpen(true);
   };
 
-  // Checkout Handler: directly calls handleCheckoutStorage (soft delete)
+  // Helper to calculate overdue fee
+  const calculateOverdueFee = (item) => {
+    if (!item.end_date) return 0;
+    const endPaid = new Date(item.end_date);
+    const today = new Date();
+    
+    // Reset hours to compare dates only
+    endPaid.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    
+    const overdueTime = today - endPaid;
+    if (overdueTime > 0) {
+      const overdueWeeks = Math.ceil(overdueTime / (1000 * 60 * 60 * 24 * 7)) || 1;
+      return overdueWeeks * 160;
+    }
+    return 0;
+  };
+
+  // Checkout Handler: checks if there are overdue fees and directs checkout (soft delete)
   const handleOpenStorageCheckout = (item) => {
-    if (confirm(`คุณต้องการเช็คออกรายการฝากของของคุณ ${item.owner_name} หรือไม่?`)) {
-      handleCheckoutStorage({
-        id: item.id,
-        endDate: new Date().toISOString().split('T')[0],
-        fee: 0,
-        paymentMethod: 'เงินสด',
-        note: item.note
-      });
+    const overdueFee = calculateOverdueFee(item);
+    if (overdueFee > 0) {
+      setCheckoutOverdueItem(item);
+      setOverdueFeeAmount(overdueFee);
+    } else {
+      if (confirm(`คุณต้องการเช็คออกรายการฝากของของคุณ ${item.owner_name} หรือไม่?`)) {
+        handleCheckoutStorage({
+          id: item.id,
+          endDate: new Date().toISOString().split('T')[0],
+          fee: 0,
+          paymentMethod: 'เงินสด',
+          note: item.note
+        });
+      }
     }
   };
 
@@ -207,6 +233,91 @@ export default function StorageMgmtModal() {
           renewItem={renewItem} 
         />
       </div>
+
+      {/* Overdue Checkout Payment Selection Modal */}
+      {checkoutOverdueItem && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-md border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in">
+            {/* Header */}
+            <div className="bg-[#8B4513] text-white px-4 py-3 flex justify-between items-center shrink-0">
+              <h3 className="font-extrabold text-sm flex items-center gap-1.5">
+                ⚠️ มีค่าบริการค้างชำระ (Overdue Payment)
+              </h3>
+              <button 
+                onClick={() => setCheckoutOverdueItem(null)} 
+                className="text-amber-200 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-5 flex flex-col gap-4 text-xs">
+              <div className="bg-amber-55/40 border border-amber-200 p-3 rounded-lg flex flex-col gap-1 text-gray-700">
+                <span className="font-bold text-[#8B4513]">รายละเอียดผู้ฝาก:</span>
+                <div>ชื่อผู้ฝาก: <strong className="text-gray-900">{checkoutOverdueItem.owner_name}</strong></div>
+                <div>ตำแหน่งล็อค: <strong className="text-gray-900">{cleanStallName(checkoutOverdueItem.stall_name)}</strong></div>
+                <div>วันสิ้นสุดการจ่ายล่าสุด: <strong className="text-red-750">{checkoutOverdueItem.end_date}</strong></div>
+              </div>
+
+              <div className="text-center py-2 border-y border-dashed border-[#8B4513]/25">
+                <div className="text-[#8B4513] font-bold">ค่าฝากค้างชำระทั้งหมด:</div>
+                <div className="text-2xl font-black text-red-700 font-mono mt-1">
+                  {overdueFeeAmount.toLocaleString()} บาท
+                </div>
+                <p className="text-[10px] text-gray-500 font-bold mt-1">
+                  (คำนวณจากวันที่สิ้นสุดสัญญาถึงปัจจุบัน เกินกำหนด {Math.ceil((new Date() - new Date(checkoutOverdueItem.end_date)) / (1000 * 60 * 60 * 24 * 7))} สัปดาห์)
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="font-bold text-gray-700">กรุณาเลือกช่องทางการชำระเงินเพื่อดำเนินการเช็คออก:</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      handleCheckoutStorage({
+                        id: checkoutOverdueItem.id,
+                        endDate: new Date().toISOString().split('T')[0],
+                        fee: overdueFeeAmount,
+                        paymentMethod: 'เงินสด',
+                        note: checkoutOverdueItem.note
+                      });
+                      setCheckoutOverdueItem(null);
+                    }}
+                    className="py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow cursor-pointer text-center text-xs"
+                  >
+                    💵 ชำระเงินสด
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleCheckoutStorage({
+                        id: checkoutOverdueItem.id,
+                        endDate: new Date().toISOString().split('T')[0],
+                        fee: overdueFeeAmount,
+                        paymentMethod: 'โอนเงิน',
+                        note: checkoutOverdueItem.note
+                      });
+                      setCheckoutOverdueItem(null);
+                    }}
+                    className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow cursor-pointer text-center text-xs"
+                  >
+                    📱 ชำระเงินโอน
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#FFF8EE] border-t border-[#8B4513]/10 px-4 py-3 flex justify-end shrink-0">
+              <button
+                onClick={() => setCheckoutOverdueItem(null)}
+                className="px-4 py-2 bg-gray-150 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition-all border border-gray-300 cursor-pointer text-xs"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
