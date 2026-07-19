@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { BookingProvider, useBooking } from '@/context/BookingContext';
+import { StorageProvider } from '@/context/StorageContext';
 import MonthlyManagerLayout from '@/components/booking/MonthlyManagerLayout';
 import StandardBookingLayout from '@/components/booking/StandardBookingLayout';
 
@@ -18,7 +19,9 @@ function BookingPageContent() {
 export default function BookingPage() {
   return (
     <BookingProvider>
-      <BookingPageContent />
+      <StorageProvider>
+        <BookingPageContent />
+      </StorageProvider>
     </BookingProvider>
   );
 }

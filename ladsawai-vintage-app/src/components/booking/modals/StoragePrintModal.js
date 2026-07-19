@@ -1,13 +1,39 @@
 'use client';
 
 import React from 'react';
-import { useBooking } from '@/context/BookingContext';
-import { X, Printer } from 'lucide-react';
+import { useStorage } from '@/context/StorageContext';
+import { X, Printer, Check } from 'lucide-react';
 
 export default function StoragePrintModal() {
   const {
-    handlePrintStorageReceipt,    parseNumber,    setShowStoragePrintModal,    setStoragePrintEndDate,    setStoragePrintFee,    setStoragePrintNote,    setStoragePrintOwner,    setStoragePrintPayment,    setStoragePrintStall,    setStoragePrintStartDate,    showStoragePrintModal,    storagePrintEndDate,    storagePrintFee,    storagePrintItem,    storagePrintNote,    storagePrintOwner,    storagePrintPayment,    storagePrintStall,    storagePrintStartDate
-  } = useBooking();
+    handlePrintStorageReceipt,
+    parseNumber,
+    setShowStoragePrintModal,
+    setStoragePrintEndDate,
+    setStoragePrintFee,
+    setStoragePrintNote,
+    setStoragePrintOwner,
+    setStoragePrintPayment,
+    setStoragePrintStall,
+    setStoragePrintStartDate,
+    showStoragePrintModal,
+    storagePrintEndDate,
+    storagePrintFee,
+    storagePrintItem,
+    storagePrintNote,
+    storagePrintOwner,
+    storagePrintPayment,
+    storagePrintStall,
+    storagePrintStartDate,
+    isStorageCheckout,
+    setIsStorageCheckout,
+    handleCheckoutStorage
+  } = useStorage();
+
+  const handleClose = () => {
+    setIsStorageCheckout(false);
+    setShowStoragePrintModal(false);
+  };
 
   if (!showStoragePrintModal && !storagePrintItem) return null;
 
@@ -15,8 +41,11 @@ export default function StoragePrintModal() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border-2 border-amber-800 overflow-hidden animate-pop-in">
             <div className="bg-amber-800 text-white px-4 py-3 flex justify-between items-center">
-              <h3 className="font-bold text-sm flex items-center gap-1.5"><Printer className="w-5 h-5" /> ตั้งค่าการพิมพ์ตั๋วฝากของ</h3>
-              <button onClick={() => setShowStoragePrintModal(false)} className="text-amber-100 hover:text-white"><X className="w-5 h-5" /></button>
+              <h3 className="font-bold text-sm flex items-center gap-1.5">
+                {isStorageCheckout ? <Check className="w-5 h-5" /> : <Printer className="w-5 h-5" />} 
+                {isStorageCheckout ? 'เช็คเอาท์ฝากของ & พิมพ์ใบเสร็จ' : 'ตั้งค่าการพิมพ์ตั๋วฝากของ'}
+              </h3>
+              <button onClick={handleClose} className="text-amber-100 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             
             <div className="p-4 flex flex-col gap-3 max-h-[75vh] overflow-y-auto custom-scrollbar text-xs">
@@ -108,17 +137,29 @@ export default function StoragePrintModal() {
             <div className="bg-gray-50 px-4 py-3 border-t flex justify-end gap-2 shrink-0">
               <button 
                 type="button"
-                onClick={() => setShowStoragePrintModal(false)}
+                onClick={handleClose}
                 className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded text-xs"
               >
                 ยกเลิก
               </button>
               <button 
                 type="button"
-                onClick={handlePrintStorageReceipt}
+                onClick={async () => {
+                  if (isStorageCheckout) {
+                    await handleCheckoutStorage({
+                      id: storagePrintItem.id,
+                      endDate: storagePrintEndDate,
+                      fee: storagePrintFee,
+                      paymentMethod: storagePrintPayment,
+                      note: storagePrintNote
+                    });
+                  }
+                  handlePrintStorageReceipt();
+                }}
                 className="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded text-xs flex items-center gap-1 shadow"
               >
-                <Printer className="w-4 h-4" /> สั่งพิมพ์ (80mm)
+                {isStorageCheckout ? <Check className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
+                {isStorageCheckout ? 'ชำระเงิน & สิ้นสุดการฝาก' : 'สั่งพิมพ์ (80mm)'}
               </button>
             </div>
           </div>

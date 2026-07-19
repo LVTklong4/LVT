@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
+import { useStorage } from '@/context/StorageContext';
 import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Tag, CalendarX, Package, Archive } from 'lucide-react';
 
 import LoginModal from './modals/LoginModal';
@@ -15,6 +16,7 @@ import SlipPreviewModal from './modals/SlipPreviewModal';
 import StoragePrintModal from './modals/StoragePrintModal';
 import MonthlyPrintModal from './modals/MonthlyPrintModal';
 import NewMonthlyModal from './modals/NewMonthlyModal';
+import OffGridBookingModal from './modals/OffGridBookingModal';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
 
 const TopDownCar = ({ color = "#1E88E5", className = "h-[45px] w-auto drop-shadow-sm" }) => (
@@ -39,8 +41,19 @@ const TopDownCar = ({ color = "#1E88E5", className = "h-[45px] w-auto drop-shado
 
 export default function StandardBookingLayout() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRef,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    addUtilityMethod,    addUtilityPrice,    addUtilityUnit,    adminForm,    adminList,    adminRolesList,    adminUser,    alertInfo,    setAlertInfo,    showAlert,    bookerName,    bookings,    calculateDefaultStallPrice,    cleanStallName,    dateOffset,    elecPrice,    elecUnit,    expenseForm,    expenseList,    fetchBookingsAndStorage,    fetchMonthlyTransactions,    fetchVacantStallsForDate,    financeTab,    formatBookingMonth,    getBookingCustomerType,    getNewMonthlyPricing,    getOccupiedStallsInRound,    getStallPriceForDate,    getStallStatus,    handleAddExpense,    handleAddIncome,    handleAddUtility,    handleConfirmMoveLock,    handleCreateNewMonthlyBooking,    handleDeleteBooking,    handleDeleteMonthlyBooking,    handleGoogleLogin,    handleLogin,    handleLogout,    handleMarkAbsent,    handleMonthlyPaymentSubmit,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handleOpenStoragePrintModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handlePrintReceipt,    handlePrintStorageReceipt,    handleSaveAdminRole,    handleSaveBooking,    handleSaveEditedMonthlyBooking,    handleSaveStorage,    handleSearch,    handleSlipChange,    handleSortToggle,    handleStallClick,    handleToggleNonRenewal,    handleToggleStorageStatus,    handleUpdateMonthlyItem,    handleVacateMonthlyStallToday,    highlightedStall,    incomeForm,    incomeList,    isEditingMonthlyMode,    loading,    loadingFinance,    loadingMonthly,    loadingMonthlyTxns,    loadingSettings,    loadingStorage,    loadingVacantStalls,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    monthlySearchQuery,    moveStallFilter,    moveTargetDate,    moveTargetStall,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    paymentList,    product,    quickDates,    receiptPreviewData,    renderSortArrow,    searchQuery,    searchResults,    selectSearchResult,    selectedAdminEmail,    selectedBooking,    selectedDate,    selectedMonthlyItem,    selectedMonthlyStallBooking,    selectedStall,    selectedStallsList,    setActiveMonthlyBooking,    setAddUtilityMethod,    setAddUtilityPrice,    setAddUtilityUnit,    setAdminForm,    setBookerName,    setDateOffset,    setElecPrice,    setElecUnit,    setExpenseForm,    setFinanceTab,    setIncomeForm,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setMoveStallFilter,    setMoveTargetDate,    setMoveTargetStall,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setNote,    setPaymentList,    setProduct,    setReceiptPreviewData,    setSelectedAdminEmail,    setSelectedDate,    setSelectedMonthlyItem,    setSelectedStallsList,    setShowAddStallSelect,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowAddUtilityModal,    setShowBookingModal,    setShowFinanceMgmtModal,    setShowLoginModal,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowMonthlyStallMapModal,    setShowMoveLockModal,    setShowNewMonthlyModal,    setShowReceiptPreviewModal,    setShowSettingsMgmtModal,    setShowStorageMgmtModal,    setShowStoragePrintModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    fullScreenSlipUrl,    setStallFilter,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    setStallPrice,    setStorageForm,    setStoragePrintEndDate,    setStoragePrintFee,    setStoragePrintNote,    setStoragePrintOwner,    setStoragePrintPayment,    setStoragePrintStall,    setStoragePrintStartDate,    showAddStallSelect,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showAddUtilityModal,    showBookingModal,    showFinanceMgmtModal,    showLoginModal,    showMonthlyMgmtModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showMonthlyStallMapModal,    showMoveLockModal,    showNewMonthlyModal,    showReceiptPreviewModal,    showSettingsMgmtModal,    showStorageMgmtModal,    showStoragePrintModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilter,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stallPrice,    stalls,    storageFee,    storageForm,    storageList,    storageMap,    storagePrintEndDate,    storagePrintFee,    storagePrintItem,    storagePrintNote,    storagePrintOwner,    storagePrintPayment,    storagePrintStall,    storagePrintStartDate,    vacantStallsOnTargetDate
+    showOffGridBookingModal,
+    setShowOffGridBookingModal,
+    selectedOffGridBooking,
+    setSelectedOffGridBooking,
+    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRef,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    addUtilityMethod,    addUtilityPrice,    addUtilityUnit,    adminForm,    adminList,    adminRolesList,    adminUser,    alertInfo,    setAlertInfo,    showAlert,    bookerName,    bookings,    calculateDefaultStallPrice,    cleanStallName,    dateOffset,    elecPrice,    elecUnit,    expenseForm,    expenseList,    fetchBookingsAndStorage,    fetchMonthlyTransactions,    fetchVacantStallsForDate,    financeTab,    formatBookingMonth,    getBookingCustomerType,    getNewMonthlyPricing,    getOccupiedStallsInRound,    getStallPriceForDate,    getStallStatus,    handleAddExpense,    handleAddIncome,    handleAddUtility,    handleConfirmMoveLock,    handleCreateNewMonthlyBooking,    handleDeleteBooking,    handleDeleteMonthlyBooking,    handleGoogleLogin,    handleLogin,    handleLogout,    handleMarkAbsent,    handleMonthlyPaymentSubmit,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handlePrintReceipt,    handleSaveAdminRole,    handleSaveBooking,    handleSaveEditedMonthlyBooking,    handleSearch,    handleSlipChange,    handleSortToggle,    handleStallClick,    handleToggleNonRenewal,    handleUpdateMonthlyItem,    handleVacateMonthlyStallToday,    highlightedStall,    incomeForm,    incomeList,    isEditingMonthlyMode,    loading,    loadingFinance,    loadingMonthly,    loadingMonthlyTxns,    loadingSettings,    loadingVacantStalls,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    monthlySearchQuery,    moveStallFilter,    moveTargetDate,    moveTargetStall,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    paymentList,    product,    quickDates,    receiptPreviewData,    renderSortArrow,    searchQuery,    searchResults,    selectSearchResult,    selectedAdminEmail,    selectedBooking,    selectedDate,    selectedMonthlyItem,    selectedMonthlyStallBooking,    selectedStall,    selectedStallsList,    setActiveMonthlyBooking,    setAddUtilityMethod,    setAddUtilityPrice,    setAddUtilityUnit,    setAdminForm,    setBookerName,    setDateOffset,    setElecPrice,    setElecUnit,    setExpenseForm,    setFinanceTab,    setIncomeForm,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setMoveStallFilter,    setMoveTargetDate,    setMoveTargetStall,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setNote,    setPaymentList,    setProduct,    setReceiptPreviewData,    setSelectedAdminEmail,    setSelectedDate,    setSelectedMonthlyItem,    setSelectedStallsList,    setShowAddStallSelect,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowAddUtilityModal,    setShowBookingModal,    setShowFinanceMgmtModal,    setShowLoginModal,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowMonthlyStallMapModal,    setShowMoveLockModal,    setShowNewMonthlyModal,    setShowReceiptPreviewModal,    setShowSettingsMgmtModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    fullScreenSlipUrl,    setStallFilter,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    setStallPrice,    showAddStallSelect,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showAddUtilityModal,    showBookingModal,    showFinanceMgmtModal,    showLoginModal,    showMonthlyMgmtModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showMonthlyStallMapModal,    showMoveLockModal,    showNewMonthlyModal,    showReceiptPreviewModal,    showSettingsMgmtModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilter,    stallFilterSat,    stallFilterSun,    stallFilterWed,    stallPrice,    stalls,    vacantStallsOnTargetDate
   } = useBooking();
+
+  const {
+    showStorageMgmtModal,
+    setShowStorageMgmtModal,
+    showStoragePrintModal,
+    setShowStoragePrintModal
+  } = useStorage();
 
   const [showGearDropdown, setShowGearDropdown] = React.useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = React.useState(false);
@@ -219,7 +232,7 @@ export default function StandardBookingLayout() {
                           <button 
                             onClick={() => {
                               setShowGearDropdown(false);
-                              showAlert("ระบบจองนอกผัง (Coming Soon)", "แจ้งเตือน");
+                              setShowOffGridBookingModal(true);
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
@@ -428,7 +441,6 @@ export default function StandardBookingLayout() {
                     if (a.status !== 'ลา' && b.status === 'ลา') return -1;
                     return 0;
                   })[0];
-                  const storage = storageMap[stall.name];
                   
                   // Setup classes based on status
                   let statusClass = "bg-white";
@@ -525,14 +537,7 @@ export default function StandardBookingLayout() {
                         <span className="text-[8.5px] font-black text-red-600 leading-none mt-0.5">ลา</span>
                       )}
                       
-                      {storage && (
-                        <span 
-                          className="absolute -top-1 -right-1 bg-white border border-gray-300 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[7px] shadow cursor-help z-10"
-                          title={`ฝากของ: ${storage.owner_name}`}
-                        >
-                          📦
-                        </span>
-                      )}
+
                     </button>
                   );
                 });
@@ -595,6 +600,57 @@ export default function StandardBookingLayout() {
           )}
 
         </div>
+
+        {/* Off-Grid Bookings Cards */}
+        {bookings.filter(b => b.type === 'นอกผัง').length > 0 && (
+          <div className="mt-4 bg-white border-2 border-amber-800/40 rounded-xl p-4 shadow-md">
+            <h3 className="font-extrabold text-[#8B4513] text-xs md:text-sm flex items-center gap-1.5 border-b pb-2 mb-3">
+              <span className="text-lg">📋</span> รายการจองนอกผังวันนี้ (Off-Grid Bookings Today)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {bookings.filter(b => b.type === 'นอกผัง').map((b) => {
+                let dispPhone = '-';
+                let dispType = 'ขาจร';
+                const pMatch = (b.note || '').match(/\[เบอร์โทร:\s*([^\]]+)\]/);
+                if (pMatch) dispPhone = pMatch[1];
+                const tMatch = (b.note || '').match(/\[ประเภท:\s*([^\]]+)\]/);
+                if (tMatch) dispType = tMatch[1];
+
+                return (
+                  <div 
+                    key={b.id} 
+                    onClick={() => {
+                      setSelectedOffGridBooking(b);
+                      setShowOffGridBookingModal(true);
+                    }}
+                    className="p-3 bg-[#FFFDF9] hover:bg-amber-50/40 border border-amber-800/10 hover:border-amber-800/30 rounded-lg cursor-pointer transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start gap-1">
+                        <span className="font-extrabold text-[#8B4513] text-xs font-mono">{b.stall_name}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                          b.status === 'ชำระแล้ว'
+                            ? 'bg-green-100 text-green-800'
+                            : b.status === 'ยกเลิก'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {b.status}
+                        </span>
+                      </div>
+                      <div className="text-gray-800 text-xs font-bold mt-1.5">{b.booker_name}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">โทร: {dispPhone}</div>
+                    </div>
+                    <div className="flex justify-between items-center mt-3 pt-2 border-t border-dashed border-[#8B4513]/10">
+                      <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[9px] font-bold">{dispType}</span>
+                      <span className="font-mono font-extrabold text-xs text-[#8B4513]">{b.total_price?.toLocaleString()}.-</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Floating Bottom Info bar */}
@@ -825,7 +881,7 @@ export default function StandardBookingLayout() {
             ) : (
               // Admin View (Form & Controls)
               (() => {
-                const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
+                const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice);
                 const transferTotal = paymentList
                   .filter(p => p.method === 'โอนเงิน')
                   .reduce((sum, p) => sum + parseNumber(p.amount), 0);
@@ -1897,6 +1953,7 @@ export default function StandardBookingLayout() {
       <StoragePrintModal />
       <MonthlyPrintModal />
       <NewMonthlyModal />
+      <OffGridBookingModal />
     </div>
   );
 }

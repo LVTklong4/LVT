@@ -17,8 +17,7 @@ export function BookingProvider({ children }) {
   // States
   const [stalls, setStalls] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [storageMap, setStorageMap] = useState({});
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [dateOffset, setDateOffset] = useState(0);
   const [quickDates, setQuickDates] = useState([]);
@@ -45,8 +44,7 @@ export function BookingProvider({ children }) {
   const [bookingType, setBookingType] = useState('รายวัน');
   const [paymentMethod, setPaymentMethod] = useState('เงินสด');
   const [stallPrice, setStallPrice] = useState(0);
-  const [storageFee, setStorageFee] = useState(0);
-  const [elecUnit, setElecUnit] = useState(0);
+    const [elecUnit, setElecUnit] = useState(0);
   const [elecPrice, setElecPrice] = useState(0);
   const [note, setNote] = useState('');
   
@@ -65,20 +63,7 @@ export function BookingProvider({ children }) {
   const [moveStallFilter, setMoveStallFilter] = useState('');
   
   // Storage Management Modal States
-  const [showStorageMgmtModal, setShowStorageMgmtModal] = useState(false);
-  const [storageList, setStorageList] = useState([]);
-  const [loadingStorage, setLoadingStorage] = useState(false);
-  const [storageForm, setStorageForm] = useState({
-    id: '',
-    stall_name: '',
-    owner_name: '',
-    phone: '',
-    start_date: '',
-    end_date: '',
-    status: 'Active',
-    note: ''
-  });
-
+        
   // Monthly Management Modal States
   const [showMonthlyMgmtModal, setShowMonthlyMgmtModal] = useState(false);
   const [monthlyList, setMonthlyList] = useState([]);
@@ -152,16 +137,7 @@ export function BookingProvider({ children }) {
   const [stallFilterSun, setStallFilterSun] = useState('');
 
   // Storage Print Settings States
-  const [showStoragePrintModal, setShowStoragePrintModal] = useState(false);
-  const [storagePrintItem, setStoragePrintItem] = useState(null);
-  const [storagePrintStartDate, setStoragePrintStartDate] = useState('');
-  const [storagePrintEndDate, setStoragePrintEndDate] = useState('');
-  const [storagePrintOwner, setStoragePrintOwner] = useState('');
-  const [storagePrintStall, setStoragePrintStall] = useState('');
-  const [storagePrintNote, setStoragePrintNote] = useState('');
-  const [storagePrintFee, setStoragePrintFee] = useState(0);
-  const [storagePrintPayment, setStoragePrintPayment] = useState('เงินสด');
-
+                  
   // Multi-Stall Admin Booking States
   const [selectedStallsList, setSelectedStallsList] = useState([]);
   const [cashReceived, setCashReceived] = useState('');
@@ -465,26 +441,9 @@ export function BookingProvider({ children }) {
         .eq('date', selectedDate);
       if (bError) throw bError;
       setBookings(bookingsData || []);
-
-      // 2. Fetch Active Storage
-      const { data: storageData, error: sError } = await supabase
-        .from('storage')
-        .select('*')
-        .eq('status', 'Active');
-      if (sError) throw sError;
-
-      // Map storage by stall name for fast lookup
-      const stMap = {};
-      storageData?.forEach(item => {
-        if (item.stall_name) {
-          stMap[item.stall_name] = item;
-        }
-      });
-      setStorageMap(stMap);
-
     } catch (e) {
       console.error("Error fetching date data:", e);
-      showAlert("ดึงข้อมูลจองและฝากของไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
+      showAlert("ดึงข้อมูลจองไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setLoading(false);
     }
@@ -713,13 +672,11 @@ export function BookingProvider({ children }) {
 
         const totalStallPrice = groupBookings.reduce((sum, b) => sum + parseNumber(b.stall_price), 0);
         setStallPrice(totalStallPrice);
-        setStorageFee(groupBookings[0].storage_fee || 0);
-        setElecUnit(groupBookings[0].elec_unit || 0);
+                setElecUnit(groupBookings[0].elec_unit || 0);
         setElecPrice(groupBookings[0].elec_price || 0);
       } else {
         setStallPrice(booking.stall_price);
-        setStorageFee(booking.storage_fee || 0);
-        setElecUnit(booking.elec_unit || 0);
+                setElecUnit(booking.elec_unit || 0);
         setElecPrice(booking.elec_price || 0);
 
         // Parse multi-stall list
@@ -767,8 +724,7 @@ export function BookingProvider({ children }) {
       setBookingType('รายวัน');
       setPaymentMethod('เงินสด');
       setStallPrice(price);
-      setStorageFee(0);
-      setElecUnit(0);
+            setElecUnit(0);
       setElecPrice(0);
       setNote('');
       setSelectedStallsList([stall]);
@@ -841,7 +797,7 @@ export function BookingProvider({ children }) {
         payment_method: finalPaymentMethod,
         status: status,
         note: note,
-        storage_fee: parseNumber(storageFee)
+        storage_fee: 0
       };
 
       // Preserve master_id if editing an existing booking that has one
@@ -883,7 +839,7 @@ export function BookingProvider({ children }) {
           timestamp: new Date().toISOString(),
           stall_amt: parseNumber(stallPrice),
           elec_amt: parseNumber(elecPrice),
-          storage_amt: parseNumber(storageFee),
+          storage_amt: 0,
           bill_type: 'General'
         };
 
@@ -2509,269 +2465,10 @@ export function BookingProvider({ children }) {
   };
 
   // Open storage print modal and compute default values
-  const handleOpenStoragePrintModal = (item) => {
-    setStoragePrintItem(item);
-    setStoragePrintStartDate(item.start_date || '');
-    setStoragePrintEndDate(item.end_date || '');
-    setStoragePrintOwner(item.owner_name || '');
-    setStoragePrintStall(item.stall_name || '');
-    setStoragePrintNote(item.note || '-');
-    setStoragePrintPayment('เงินสด');
-
-    // Calculate days count
-    let days = 1;
-    if (item.start_date && item.end_date) {
-      const start = new Date(item.start_date);
-      const end = new Date(item.end_date);
-      const diffTime = Math.abs(end - start);
-      days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-    }
-    setStoragePrintFee(days * 40); // default 40 baht/day
-    setShowStoragePrintModal(true);
-  };
+  ;
 
   // Print storage receipt
-  const handlePrintStorageReceipt = () => {
-    if (!storagePrintItem) return;
-
-    // Get current date time for transaction date
-    const now = new Date();
-    const formattedTransaction = now.toLocaleDateString('th-TH', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }) + ' ' + now.toLocaleTimeString('th-TH', { hour12: false });
-
-    const empCode = adminUser?.employee_id || adminUser?.name || 'lvt-admin';
-
-    // Format start & end date
-    const formatDateWithDay = (dateStr) => {
-      if (!dateStr) return '';
-      const d = new Date(dateStr);
-      const dayName = dayNamesShort[d.getDay()] || '';
-      return `${dayName} ที่ ${d.getDate()} ${monthNamesFull[d.getMonth()]} ${d.getFullYear() + 543}`;
-    };
-
-    const startFormatted = formatDateWithDay(storagePrintStartDate);
-    const endFormatted = formatDateWithDay(storagePrintEndDate);
-    const feeVal = parseNumber(storagePrintFee);
-    const paymentText = storagePrintPayment === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
-
-    const printWindow = window.open('', '_blank', 'width=600,height=800');
-    if (!printWindow) {
-      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
-      return;
-    }
-
-    const htmlContent = `
-      <html>
-        <head>
-          <title>พิมพ์ตั๋วฝากของ</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
-            @page {
-              size: 80mm auto;
-              margin: 0;
-            }
-            body {
-              font-family: 'Sarabun', sans-serif;
-              width: 72mm;
-              margin: 0 auto;
-              padding: 4mm 2mm;
-              background: #fff;
-              color: #000;
-              font-size: 11pt;
-              line-height: 1.4;
-            }
-            .center {
-              text-align: center;
-            }
-            .bold {
-              font-weight: bold;
-            }
-            .logo {
-              width: 32mm;
-              height: auto;
-              margin: 0 auto 2mm auto;
-              display: block;
-            }
-            .divider {
-              border-top: 1.5px dashed #000;
-              margin: 3mm 0;
-            }
-            .title {
-              font-size: 13pt;
-              font-weight: 800;
-              margin: 2mm 0 1mm 0;
-            }
-            .subtitle {
-              font-size: 9.5pt;
-              font-weight: bold;
-              color: #000;
-            }
-            .info-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .info-table td {
-              padding: 1.2mm 0;
-              vertical-align: top;
-              font-size: 10.5pt;
-            }
-            .info-table td.label {
-              width: 32%;
-              white-space: nowrap;
-            }
-            .info-table td.val {
-              text-align: right;
-              font-weight: bold;
-            }
-            .total-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 2mm 0;
-            }
-            .total-table td {
-              padding: 1.5mm 0;
-            }
-            .total-table td.label {
-              text-align: right;
-              font-size: 11pt;
-              font-weight: bold;
-              padding-right: 2mm;
-            }
-            .total-table td.val {
-              text-align: right;
-              font-size: 13pt;
-              font-weight: 800;
-            }
-            .terms {
-              font-size: 8.5pt;
-              line-height: 1.35;
-              text-align: left;
-              margin: 3mm 0;
-            }
-            .terms-title {
-              font-weight: bold;
-              margin-bottom: 1mm;
-            }
-            .terms ol {
-              margin: 0;
-              padding-left: 4.5mm;
-            }
-            .terms li {
-              margin-bottom: 1mm;
-            }
-            .footer {
-              margin-top: 4mm;
-              font-size: 9.5pt;
-              text-align: center;
-              line-height: 1.5;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="center">
-            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
-            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
-            <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
-            <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
-            <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (ฝากของ)</div>
-          
-          <table class="info-table">
-            <tr>
-              <td class="label">วันที่ทำรายการ :</td>
-              <td style="text-align: right;">${formattedTransaction}</td>
-            </tr>
-            <tr>
-              <td class="label">รหัสพนักงาน :</td>
-              <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
-            </tr>
-            <tr>
-              <td class="label">วันที่เริ่ม :</td>
-              <td style="text-align: right;" class="bold">${startFormatted}</td>
-            </tr>
-            <tr>
-              <td class="label">วันที่สิ้นสุด :</td>
-              <td style="text-align: right;" class="bold">${endFormatted}</td>
-            </tr>
-            <tr>
-              <td class="label">ชื่อผู้ฝาก :</td>
-              <td style="text-align: right;" class="bold">${storagePrintOwner}</td>
-            </tr>
-            <tr>
-              <td class="label">วางของไว้ล็อค :</td>
-              <td style="text-align: right;" class="bold">[${storagePrintStall}]</td>
-            </tr>
-            <tr>
-              <td class="label">ค่าฝากของ :</td>
-              <td style="text-align: right;" class="bold">${formatPrice(feeVal)}</td>
-            </tr>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <table class="info-table">
-            <tr>
-              <td class="label" style="width: 25%;">รายการที่ฝาก :</td>
-              <td style="text-align: left;" class="bold">${storagePrintNote}</td>
-            </tr>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <table class="total-table">
-            <tr>
-              <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
-              <td class="val">${formatPrice(feeVal)}</td>
-            </tr>
-            <tr>
-              <td class="label">การชำระเงิน [${paymentText}] :</td>
-              <td class="val">${formatPrice(feeVal)}</td>
-            </tr>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <div class="terms">
-            <div class="terms-title">รายละเอียดและเงื่อนไขการฝากของมีดังต่อไปนี้</div>
-            <ol>
-              <li>การฝากของในที่นี้หมายถึง การเช่าพื้นที่วางของเท่านั้น</li>
-              <li>ทางตลาดฯ ไม่รับผิดชอบความเสียหาย สูญหายที่เกิดขึ้นทุกกรณี</li>
-              <li>ในวันที่มีนัด หากลูกค้าไม่มาทำการค้า ทางตลาดมีสิทธิ์ในการย้ายของไปไว้ที่อื่นทุกกรณี และหากของที่ฝากมีขนาดใหญ่ ไม่สามารถเคลื่อนย้ายได้สะดวก ทางตลาดฯ คิดค่าล็อคในนัดนั้น</li>
-              <li>เมื่อสิ้นสุดระยะเวลาฝากของ และไม่ได้ทำการต่อระยะเวลาฝากของ หากลูกค้าไม่มารับหรือมารับในภายหลัง ทางตลาดฯ คิดค่าฝากของย้อนหลัง</li>
-              <li>การชำระค่าฝากของ ถือว่าลูกค้าได้รับทราบรายละเอียดและเงื่อนไขการฝากของดังกล่าวแล้ว และจะปฏิบัติตามอย่างเคร่งครัด</li>
-            </ol>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="footer">
-            <div class="bold">สอบถามข้อมูลการฝากของได้ที่</div>
-            <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
-            <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
-          </div>
-          
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    setShowStoragePrintModal(false);
-  };
+  ;
 
   // Add electricity (Utility charge)
   const handleAddUtility = async () => {
@@ -2868,74 +2565,11 @@ export function BookingProvider({ children }) {
   };
 
   // --- STORAGE CRUD HANDLERS ---
-  const fetchAllStorage = async () => {
-    setLoadingStorage(true);
-    try {
-      const { data, error } = await supabase
-        .from('storage')
-        .select('*')
-        .order('timestamp', { ascending: false });
-      if (error) throw error;
-      setStorageList(data || []);
-    } catch (e) {
-      console.error(e);
-      showAlert("ดึงข้อมูลฝากของไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingStorage(false);
-    }
-  };
+  ;
 
-  const handleSaveStorage = async (e) => {
-    e.preventDefault();
-    if (!storageForm.stall_name || !storageForm.owner_name) {
-      showAlert("โปรดกรอกเลขล็อคและชื่อผู้ฝาก", "แจ้งเตือน", true);
-      return;
-    }
-    setLoadingStorage(true);
-    try {
-      const id = storageForm.id || `ST-${Date.now()}`;
-      const payload = {
-        id,
-        stall_name: storageForm.stall_name.trim(),
-        owner_name: storageForm.owner_name.trim(),
-        phone: storageForm.phone.trim(),
-        start_date: storageForm.start_date || null,
-        end_date: storageForm.end_date || null,
-        status: storageForm.status,
-        note: storageForm.note,
-        timestamp: new Date().toISOString()
-      };
-      const { error } = await supabase.from('storage').upsert(payload);
-      if (error) throw error;
-      
-      showAlert("บันทึกข้อมูลฝากของสำเร็จ", "สำเร็จ");
-      setStorageForm({ id: '', stall_name: '', owner_name: '', phone: '', start_date: '', end_date: '', status: 'Active', note: '' });
-      fetchAllStorage();
-      fetchBookingsAndStorage();
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingStorage(false);
-    }
-  };
+  ;
 
-  const handleToggleStorageStatus = async (item) => {
-    const newStatus = item.status === 'Active' ? 'Inactive' : 'Active';
-    try {
-      const { error } = await supabase
-        .from('storage')
-        .update({ status: newStatus })
-        .eq('id', item.id);
-      if (error) throw error;
-      showAlert(`อัปเดตสถานะเป็น ${newStatus} สำเร็จ`, "สำเร็จ");
-      fetchAllStorage();
-      fetchBookingsAndStorage();
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", "ข้อผิดพลาด", true);
-    }
-  };
+  ;
 
   // --- MONTHLY BOOKING CRUD HANDLERS ---
   const checkConflictingBookings = async (dailyBookings, allStallNames, excludeMasterId = null) => {
@@ -4640,10 +4274,7 @@ export function BookingProvider({ children }) {
   };
 
   // Trigger data load when modals open
-  useEffect(() => {
-    if (showStorageMgmtModal) fetchAllStorage();
-  }, [showStorageMgmtModal]);
-
+  
   useEffect(() => {
     if (showMonthlyMgmtModal) fetchAllMonthly();
   }, [showMonthlyMgmtModal]);
@@ -4821,7 +4452,6 @@ export function BookingProvider({ children }) {
     fetchAdminRoles,
     fetchAdminRolesData,
     fetchAllMonthly,
-    fetchAllStorage,
     fetchBookingsAndStorage,
     fetchFinanceData,
     fetchMonthlyTransactions,
@@ -4854,23 +4484,19 @@ export function BookingProvider({ children }) {
     handleOpenEditMonthlyModal,
     handleOpenMonthlyPrintModal,
     handleOpenNewMonthlyModal,
-    handleOpenStoragePrintModal,
     handlePrintMonthlyInvoice,
     handlePrintMonthlyReceipt,
     handlePrintMonthlyReceiptDirect,
     handlePrintReceipt,
-    handlePrintStorageReceipt,
     handleRenewMonthlyBooking,
     handleSaveAdminRole,
     handleSaveBooking,
     handleSaveEditedMonthlyBooking,
-    handleSaveStorage,
     handleSearch,
     handleSlipChange,
     handleSortToggle,
     handleStallClick,
     handleToggleNonRenewal,
-    handleToggleStorageStatus,
     handleUpdateMonthlyItem,
     handleVacateMonthlyStallToday,
     highlightedStall,
@@ -4886,7 +4512,6 @@ export function BookingProvider({ children }) {
     loadingMonthly,
     loadingMonthlyTxns,
     loadingSettings,
-    loadingStorage,
     loadingVacantStalls,
     monthlyList,
     monthlyMonthFilter,
@@ -4978,7 +4603,6 @@ export function BookingProvider({ children }) {
     setLoadingMonthly,
     setLoadingMonthlyTxns,
     setLoadingSettings,
-    setLoadingStorage,
     setLoadingVacantStalls,
     setMonthlyList,
     setMonthlyMonthFilter,
@@ -5043,8 +4667,6 @@ export function BookingProvider({ children }) {
     setShowNewMonthlyModal,
     setShowReceiptPreviewModal,
     setShowSettingsMgmtModal,
-    setShowStorageMgmtModal,
-    setShowStoragePrintModal,
     setSlipPreviewUrl,
     setFullScreenSlipUrl,
     showCancelled,
@@ -5055,18 +4677,6 @@ export function BookingProvider({ children }) {
     setStallFilterWed,
     setStallPrice,
     setStalls,
-    setStorageFee,
-    setStorageForm,
-    setStorageList,
-    setStorageMap,
-    setStoragePrintEndDate,
-    setStoragePrintFee,
-    setStoragePrintItem,
-    setStoragePrintNote,
-    setStoragePrintOwner,
-    setStoragePrintPayment,
-    setStoragePrintStall,
-    setStoragePrintStartDate,
     setVacantStallsOnTargetDate,
     showAddStallSelect,
     showAddStallSelectSat,
@@ -5087,8 +4697,6 @@ export function BookingProvider({ children }) {
     showNewMonthlyModal,
     showReceiptPreviewModal,
     showSettingsMgmtModal,
-    showStorageMgmtModal,
-    showStoragePrintModal,
     slipPreviewUrl,
     fullScreenSlipUrl,
     sortThaiMonthsDescending,
@@ -5098,18 +4706,6 @@ export function BookingProvider({ children }) {
     stallFilterWed,
     stallPrice,
     stalls,
-    storageFee,
-    storageForm,
-    storageList,
-    storageMap,
-    storagePrintEndDate,
-    storagePrintFee,
-    storagePrintItem,
-    storagePrintNote,
-    storagePrintOwner,
-    storagePrintPayment,
-    storagePrintStall,
-    storagePrintStartDate,
     vacantStallsOnTargetDate,
     verifyAndSetAdmin
     }}>
