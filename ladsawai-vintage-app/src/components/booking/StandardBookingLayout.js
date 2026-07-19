@@ -242,7 +242,7 @@ export default function StandardBookingLayout() {
                           <button 
                             onClick={() => {
                               setShowGearDropdown(false);
-                              showAlert("ระบบผังคลองถม (Coming Soon)", "แจ้งเตือน");
+                              window.open('/?view=klongthom', '_blank');
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
