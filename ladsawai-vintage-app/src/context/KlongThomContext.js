@@ -231,8 +231,6 @@ export function KlongThomProvider({ children }) {
       setPrintForm,
       remitForm,
       setRemitForm,
-      paymentList,
-      setPaymentList,
       remittanceHistory,
       showAlert,
       alertInfo,
