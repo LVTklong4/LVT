@@ -17,6 +17,8 @@ import StoragePrintModal from './modals/StoragePrintModal';
 import MonthlyPrintModal from './modals/MonthlyPrintModal';
 import NewMonthlyModal from './modals/NewMonthlyModal';
 import OffGridBookingModal from './modals/OffGridBookingModal';
+import KlongThomBookingLayout from './KlongThomBookingLayout';
+import { KlongThomProvider } from '@/context/KlongThomContext';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
 
 const TopDownCar = ({ color = "#1E88E5", className = "h-[45px] w-auto drop-shadow-sm" }) => (
@@ -57,6 +59,7 @@ export default function StandardBookingLayout() {
   // Decoupled Off-Grid Booking Local States
   const [showOffGridBooking, setShowOffGridBooking] = React.useState(false);
   const [selectedOffGridBookingObj, setSelectedOffGridBookingObj] = React.useState(null);
+  const [showKlongThomModal, setShowKlongThomModal] = React.useState(false);
 
   // States & memo for vacating multiple monthly stalls
   const [selectedVacateStallIds, setSelectedVacateStallIds] = React.useState([]);
@@ -71,11 +74,14 @@ export default function StandardBookingLayout() {
   }, [selectedMonthlyStallBooking, bookings]);
 
   React.useEffect(() => {
-    if (relatedBookings.length > 0) {
-      setSelectedVacateStallIds(relatedBookings.map(b => b.id));
-    } else {
-      setSelectedVacateStallIds([]);
-    }
+    const timer = setTimeout(() => {
+      if (relatedBookings.length > 0) {
+        setSelectedVacateStallIds(relatedBookings.map(b => b.id));
+      } else {
+        setSelectedVacateStallIds([]);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [relatedBookings]);
 
   // Dynamic grid column setup
@@ -242,7 +248,7 @@ export default function StandardBookingLayout() {
                           <button 
                             onClick={() => {
                               setShowGearDropdown(false);
-                              window.open('/?view=klongthom', '_blank');
+                              setShowKlongThomModal(true);
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                           >
@@ -1915,6 +1921,15 @@ export default function StandardBookingLayout() {
           fetchBookingsAndStorage();
         }}
       />
+
+      {/* 🚗 KlongThom Booking / Remittance Modal */}
+      {showKlongThomModal && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <KlongThomProvider>
+            <KlongThomBookingLayout onClose={() => setShowKlongThomModal(false)} />
+          </KlongThomProvider>
+        </div>
+      )}
     </div>
   );
 }
