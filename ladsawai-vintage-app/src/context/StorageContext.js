@@ -101,10 +101,10 @@ export function StorageProvider({ children }) {
       const id = payloadData.id || `ST-${Date.now()}`;
       const weeks = parseNumber(payloadData.weeks || 1);
       
-      // Calculate end date based on weeks (weeks * 7 days)
+      // Calculate end date based on weeks (weeks * 7 days - 1 day)
       const start = new Date(payloadData.start_date);
       const end = new Date(start);
-      end.setDate(start.getDate() + (weeks * 7));
+      end.setDate(start.getDate() + (weeks * 7) - 1);
       const calculatedEndDate = end.toISOString().split('T')[0];
       const fee = weeks * 160; // 160 Baht per week
 
@@ -145,16 +145,13 @@ export function StorageProvider({ children }) {
         const { error: txnError } = await supabase.from('transactions').insert(txnData);
         if (txnError) throw txnError;
 
-        // Auto print receipt
-        setStoragePrintItem(payload);
-        setStoragePrintStartDate(payload.start_date);
-        setStoragePrintEndDate(payload.end_date);
-        setStoragePrintOwner(payload.owner_name);
-        setStoragePrintStall(payload.stall_name);
-        setStoragePrintNote(payload.note);
-        setStoragePrintFee(fee);
-        setStoragePrintPayment(payloadData.paymentMethod || 'เงินสด');
-        setShowStoragePrintModal(true);
+        // Auto print receipt directly
+        handlePrintStorageReceipt(payload, {
+          startDate: payload.start_date,
+          endDate: payload.end_date,
+          fee: fee,
+          payment: payloadData.paymentMethod || 'เงินสด'
+        });
       }
 
       showAlert("บันทึกข้อมูลฝากของสำเร็จ", "สำเร็จ");
@@ -178,11 +175,14 @@ export function StorageProvider({ children }) {
       const weeks = parseNumber(weeksCount);
       const fee = weeks * 160;
 
-      // New start date is the old end date
+      // New start date is the old end date + 1 day
       const oldEndDate = item.end_date || new Date().toISOString().split('T')[0];
       const start = new Date(oldEndDate);
+      start.setDate(start.getDate() + 1);
+      const nextStartDate = start.toISOString().split('T')[0];
+
       const end = new Date(start);
-      end.setDate(start.getDate() + (weeks * 7));
+      end.setDate(start.getDate() + (weeks * 7) - 1);
       const calculatedEndDate = end.toISOString().split('T')[0];
 
       // Update storage record
@@ -201,7 +201,7 @@ export function StorageProvider({ children }) {
       const txnData = {
         id: txnId,
         booking_ref: item.id,
-        date: oldEndDate,
+        date: nextStartDate,
         category: 'ค่าฝากของ',
         total_amount: fee,
         method: paymentMethod || 'เงินสด',
@@ -217,16 +217,13 @@ export function StorageProvider({ children }) {
       const { error: txnError } = await supabase.from('transactions').insert(txnData);
       if (txnError) throw txnError;
 
-      // Print ticket
-      setStoragePrintItem(item);
-      setStoragePrintStartDate(oldEndDate);
-      setStoragePrintEndDate(calculatedEndDate);
-      setStoragePrintOwner(item.owner_name);
-      setStoragePrintStall(item.stall_name);
-      setStoragePrintNote(item.note || '-');
-      setStoragePrintFee(fee);
-      setStoragePrintPayment(paymentMethod || 'เงินสด');
-      setShowStoragePrintModal(true);
+      // Print ticket directly
+      handlePrintStorageReceipt(item, {
+        startDate: nextStartDate,
+        endDate: calculatedEndDate,
+        fee: fee,
+        payment: paymentMethod || 'เงินสด'
+      });
 
       showAlert("ต่ออายุการฝากของสำเร็จ", "สำเร็จ");
       fetchAllStorage();
@@ -361,8 +358,40 @@ export function StorageProvider({ children }) {
   };
 
   // 5. Print Ticket window
-  const handlePrintStorageReceipt = () => {
-    if (!storagePrintItem) return;
+  const handlePrintStorageReceipt = (item = null, overrideSettings = {}) => {
+    const printItem = item || storagePrintItem;
+    if (!printItem) return;
+
+    const startDate = overrideSettings.startDate || (item ? item.start_date : storagePrintStartDate) || printItem.start_date;
+    const endDate = overrideSettings.endDate || (item ? item.end_date : storagePrintEndDate) || printItem.end_date;
+    
+    // Calculate fee
+    let feeVal = 160;
+    if (overrideSettings.fee !== undefined) {
+      feeVal = parseNumber(overrideSettings.fee);
+    } else if (!item && storagePrintFee) {
+      feeVal = parseNumber(storagePrintFee);
+    } else if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = end - start;
+      if (diffTime > 0) {
+        const weeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7)) || 1;
+        feeVal = weeks * 160;
+      }
+    }
+
+    const paymentVal = overrideSettings.payment || (item ? 'เงินสด' : storagePrintPayment);
+    const paymentText = paymentVal === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
+    
+    const ownerName = printItem.owner_name || '';
+    
+    const cleanStallName = (name) => {
+      if (!name) return '';
+      return name.replace(/[\[\]]/g, '').trim();
+    };
+    const stallText = cleanStallName(printItem.stall_name);
+    const noteText = printItem.note || '';
 
     const now = new Date();
     const formattedTransaction = now.toLocaleDateString('th-TH', {
@@ -380,14 +409,12 @@ export function StorageProvider({ children }) {
       return `${dayName} ${d.getDate()} ${monthNamesFull[d.getMonth()]} ${d.getFullYear() + 543}`;
     };
 
-    const startFormatted = formatDateWithDay(storagePrintStartDate);
-    const endFormatted = formatDateWithDay(storagePrintEndDate);
-    const feeVal = parseNumber(storagePrintFee);
-    const paymentText = storagePrintPayment === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
+    const startFormatted = formatDateWithDay(startDate);
+    const endFormatted = formatDateWithDay(endDate);
 
     const printWindow = window.open('', '_blank', 'width=600,height=800');
     if (!printWindow) {
-      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
+      showAlert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว', 'แจ้งเตือน', true);
       return;
     }
 
@@ -531,11 +558,11 @@ export function StorageProvider({ children }) {
             </tr>
             <tr>
               <td class="label">ชื่อผู้ฝาก :</td>
-              <td style="text-align: right;" class="bold">${storagePrintOwner}</td>
+              <td style="text-align: right;" class="bold">${ownerName}</td>
             </tr>
             <tr>
               <td class="label">วางของไว้ล็อค :</td>
-              <td style="text-align: right;" class="bold">[${storagePrintStall}]</td>
+              <td style="text-align: right;" class="bold">${stallText}</td>
             </tr>
             <tr>
               <td class="label">ค่าฝากของ :</td>
@@ -548,7 +575,7 @@ export function StorageProvider({ children }) {
           <table class="info-table">
             <tr>
               <td class="label" style="width: 30%;">รายการที่ฝาก :</td>
-              <td style="text-align: left;" class="bold">${storagePrintNote || '-'}</td>
+              <td style="text-align: left;" class="bold">${noteText || '-'}</td>
             </tr>
           </table>
           

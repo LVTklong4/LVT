@@ -12,16 +12,8 @@ export default function StorageMgmtModal() {
     storageList,
     loadingStorage,
     handleToggleStorageStatus,
-    setIsStorageCheckout,
-    setShowStoragePrintModal,
-    setStoragePrintItem,
-    setStoragePrintStartDate,
-    setStoragePrintEndDate,
-    setStoragePrintOwner,
-    setStoragePrintStall,
-    setStoragePrintNote,
-    setStoragePrintFee,
-    setStoragePrintPayment,
+    handleCheckoutStorage,
+    handlePrintStorageReceipt,
     parseNumber
   } = useStorage();
 
@@ -40,73 +32,29 @@ export default function StorageMgmtModal() {
     setIsDepositOpen(true);
   };
 
-  // Checkout Handler: calculate overdue weeks and show checkout modal
+  // Checkout Handler: directly calls handleCheckoutStorage (soft delete)
   const handleOpenStorageCheckout = (item) => {
-    setStoragePrintItem(item);
-    setStoragePrintStartDate(item.start_date || '');
-    setStoragePrintEndDate(new Date().toISOString().split('T')[0]);
-    setStoragePrintOwner(item.owner_name || '');
-    setStoragePrintStall(item.stall_name || '');
-    setStoragePrintNote(item.note || '-');
-    setStoragePrintPayment('เงินสด');
-
-    // Calculate elapsed time vs paid amount to find if they owe anything extra
-    let expectedWeeks = 1;
-    if (item.start_date) {
-      const start = new Date(item.start_date);
-      const end = new Date();
-      const diffTime = end - start;
-      if (diffTime > 0) {
-        expectedWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7)) || 1;
-      }
+    if (confirm(`คุณต้องการเช็คออกรายการฝากของของคุณ ${item.owner_name} หรือไม่?`)) {
+      handleCheckoutStorage({
+        id: item.id,
+        endDate: new Date().toISOString().split('T')[0],
+        fee: 0,
+        paymentMethod: 'เงินสด',
+        note: item.note
+      });
     }
-
-    const expectedTotal = expectedWeeks * 160;
-    
-    // We will let the admin adjust the final fee on checkout if needed (defaults to 0 if already paid upfront)
-    // If they check out on or before the end date, fee is 0.
-    // If they check out after the end date, calculate overdue weeks.
-    let overdueFee = 0;
-    if (item.end_date) {
-      const endPaid = new Date(item.end_date);
-      const today = new Date();
-      const overdueTime = today - endPaid;
-      if (overdueTime > 0) {
-        const overdueWeeks = Math.ceil(overdueTime / (1000 * 60 * 60 * 24 * 7)) || 1;
-        overdueFee = overdueWeeks * 160;
-      }
-    }
-
-    setStoragePrintFee(overdueFee);
-    setIsStorageCheckout(true);
-    setShowStoragePrintModal(true);
   };
 
   const handleReprintReceipt = (item) => {
-    setStoragePrintItem(item);
-    setStoragePrintStartDate(item.start_date || '');
-    setStoragePrintEndDate(item.end_date || '');
-    setStoragePrintOwner(item.owner_name || '');
-    setStoragePrintStall(item.stall_name || '');
-    setStoragePrintNote(item.note || '-');
-    setStoragePrintPayment('เงินสด');
-    
-    // Total weeks paid
-    let weeks = 1;
-    if (item.start_date && item.end_date) {
-      const start = new Date(item.start_date);
-      const end = new Date(item.end_date);
-      const diffTime = end - start;
-      if (diffTime > 0) {
-        weeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7)) || 1;
-      }
-    }
-    setStoragePrintFee(weeks * 160);
-    setIsStorageCheckout(false);
-    setShowStoragePrintModal(true);
+    handlePrintStorageReceipt(item);
   };
 
   if (!showStorageMgmtModal) return null;
+
+  const cleanStallName = (name) => {
+    if (!name) return '';
+    return name.replace(/[\[\]]/g, '').trim();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
@@ -167,7 +115,7 @@ export default function StorageMgmtModal() {
                     {storageList.map((item) => (
                       <tr key={item.id} className="hover:bg-amber-50/20">
                         <td className="p-3 font-extrabold text-[#8B4513] text-sm font-mono">
-                          [{item.stall_name}]
+                          {cleanStallName(item.stall_name)}
                         </td>
                         <td className="p-3">
                           <div className="font-bold text-gray-800">{item.owner_name}</div>

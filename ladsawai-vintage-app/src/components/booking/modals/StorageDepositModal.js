@@ -22,8 +22,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
   const [note, setNote] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [weeksCount, setWeeksCount] = useState(1);
-  const [payImmediately, setPayImmediately] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState('เงินสด');
+  const [paymentMethod, setPaymentMethod] = useState('');
 
   // Search states for dropdown
   const [searchText, setSearchText] = useState('');
@@ -39,9 +38,15 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
     s.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  const cleanStallName = (name) => {
+    if (!name) return '';
+    return name.replace(/[\[\]]/g, '').trim();
+  };
+
   const handleSelectStall = (name) => {
-    setStallName(name);
-    setSearchText(name);
+    const cleaned = cleanStallName(name);
+    setStallName(cleaned);
+    setSearchText(cleaned);
     setShowDropdown(false);
   };
 
@@ -49,16 +54,21 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
   useEffect(() => {
     if (isOpen) {
       if (renewItem) {
-        setStallName(renewItem.stall_name || '');
-        setSearchText(renewItem.stall_name || '');
+        const cleanedStall = cleanStallName(renewItem.stall_name);
+        setStallName(cleanedStall);
+        setSearchText(cleanedStall);
         setOwnerName(renewItem.owner_name || '');
         setPhone(renewItem.phone || '');
         setNote(renewItem.note || '');
-        // Extension starts from previous end date
-        setStartDate(renewItem.end_date || new Date().toISOString().split('T')[0]);
+        
+        // Extension starts from previous end date + 1 day
+        const oldEnd = new Date(renewItem.end_date || new Date().toISOString().split('T')[0]);
+        const start = new Date(oldEnd);
+        start.setDate(oldEnd.getDate() + 1);
+        setStartDate(start.toISOString().split('T')[0]);
+        
         setWeeksCount(1);
-        setPayImmediately(true);
-        setPaymentMethod('เงินสด');
+        setPaymentMethod('');
       } else {
         // Reset for new deposit
         setStallName('');
@@ -68,8 +78,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
         setNote('');
         setStartDate(new Date().toISOString().split('T')[0]);
         setWeeksCount(1);
-        setPayImmediately(true);
-        setPaymentMethod('เงินสด');
+        setPaymentMethod('');
       }
       setShowDropdown(false);
     }
@@ -83,7 +92,8 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
     if (!startDateStr) return '';
     const start = new Date(startDateStr);
     const end = new Date(start);
-    end.setDate(start.getDate() + (parseNumber(weeks) * 7));
+    // Span 7 days per week inclusive (so end is +7 days - 1 day)
+    end.setDate(start.getDate() + (parseNumber(weeks) * 7) - 1);
     
     const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const thaiDayName = thaiDays[end.getDay()];
@@ -102,11 +112,27 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!stallName.trim()) {
-      alert("กรุณากรอกชื่อล็อก/จุดวางของ");
+      alert("กรุณากรอกหรือเลือกชื่อล็อก/จุดวางของ");
       return;
     }
     if (!ownerName.trim()) {
       alert("กรุณากรอกชื่อเจ้าของของ");
+      return;
+    }
+    
+    const cleanPhone = phone.replace(/\s|-/g, '');
+    if (!cleanPhone.trim()) {
+      alert("กรุณากรอกเบอร์โทรศัพท์");
+      return;
+    }
+    const phoneRegex = /^0[0-9]{8,9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      alert("กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องของประเทศไทย (เช่น 0891234567 หรือ 02123456)");
+      return;
+    }
+
+    if (!paymentMethod) {
+      alert("กรุณาเลือกวิธีการชำระเงิน (เงินสด หรือ โอน)");
       return;
     }
 
@@ -120,11 +146,11 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
       handleSaveStorage({
         stall_name: stallName,
         owner_name: ownerName,
-        phone,
+        phone: cleanPhone,
         note,
         start_date: startDate,
         weeks: weeksCount,
-        payImmediately,
+        payImmediately: true,
         paymentMethod
       });
     }
@@ -213,11 +239,12 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
 
           {/* Phone */}
           <div className="flex flex-col gap-1">
-            <label className="font-bold text-gray-700">เบอร์โทรศัพท์</label>
+            <label className="font-bold text-gray-700">เบอร์โทรศัพท์ *</label>
             <div className="relative">
               <input
                 type="text"
                 disabled={!!renewItem}
+                required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0xx-xxxxxxx"
@@ -285,43 +312,31 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
 
           {/* Payment */}
           <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-1.5 font-bold cursor-pointer">
-              <input
-                type="checkbox"
-                checked={payImmediately}
-                disabled={!!renewItem}
-                onChange={(e) => setPayImmediately(e.target.checked)}
-                className="w-3.5 h-3.5 rounded text-[#8B4513] focus:ring-[#8B4513] accent-[#8B4513]"
-              />
-              <span>ชำระเงินทันที</span>
-            </label>
-
-            {payImmediately && (
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('เงินสด')}
-                  className={`py-2 rounded-lg text-xs font-bold transition-all border ${
-                    paymentMethod === 'เงินสด'
-                      ? 'bg-green-600 text-white border-green-600 shadow'
-                      : 'bg-white text-gray-500 border-[#8B4513]/30 hover:bg-[#8B4513]/5'
-                  }`}
-                >
-                  เงินสด
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('โอนเงิน')}
-                  className={`py-2 rounded-lg text-xs font-bold transition-all border ${
-                    paymentMethod === 'โอนเงิน'
-                      ? 'bg-green-600 text-white border-green-600 shadow'
-                      : 'bg-white text-gray-500 border-[#8B4513]/30 hover:bg-[#8B4513]/5'
-                  }`}
-                >
-                  โอน
-                </button>
-              </div>
-            )}
+            <label className="font-bold text-gray-700">วิธีการชำระเงิน *</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('เงินสด')}
+                className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                  paymentMethod === 'เงินสด'
+                    ? 'bg-green-600 text-white border-green-600 shadow'
+                    : 'bg-white text-gray-500 border-[#8B4513]/30 hover:bg-[#8B4513]/5'
+                }`}
+              >
+                เงินสด
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('โอนเงิน')}
+                className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                  paymentMethod === 'โอนเงิน'
+                    ? 'bg-green-600 text-white border-green-600 shadow'
+                    : 'bg-white text-gray-500 border-[#8B4513]/30 hover:bg-[#8B4513]/5'
+                }`}
+              >
+                โอน
+              </button>
+            </div>
           </div>
 
           {/* Submit Button */}
