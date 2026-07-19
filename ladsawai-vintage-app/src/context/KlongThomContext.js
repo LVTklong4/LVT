@@ -197,6 +197,15 @@ export function KlongThomProvider({ children }) {
   };
 
   const handleDeleteRemittance = async (txnId) => {
+    const txn = remittanceHistory.find(t => t.id === txnId);
+    if (txn) {
+      const todayStr = new Date().toLocaleDateString('sv');
+      if (txn.date < todayStr) {
+        showAlert("ไม่สามารถลบรายการนำส่งเงินย้อนหลังที่เกินเที่ยงคืนแล้วได้", "ข้อห้ามทางบัญชี", true);
+        return;
+      }
+    }
+
     if (!confirm("คุณต้องการลบรายการนำส่งเงินนี้ใช่หรือไม่? รายงานทางบัญชีจะถูกหักออกด้วย")) return;
 
     setLoading(true);

@@ -4,7 +4,7 @@ import React from 'react';
 import { useKlongThom } from '@/context/KlongThomContext';
 import { 
   X, Calendar, Loader2, DollarSign, Store, Users, CheckCircle2, 
-  RefreshCw, AlertCircle, Printer, Plus, Trash2, FileText, CheckSquare, Coins
+  RefreshCw, AlertCircle, Printer, Plus, Trash2, FileText, CheckSquare, Coins, Lock
 } from 'lucide-react';
 import { printBatchKlongThomTickets } from '@/utils/klongthomReceiptPrinter';
 
@@ -478,13 +478,22 @@ export default function KlongThomBookingLayout({ onClose }) {
                           </strong>
                           <span className="text-[9px] text-gray-400 block">{txn.method}</span>
                         </div>
-                        <button
-                          onClick={() => handleDeleteRemittance(txn.id)}
-                          className="p-1 hover:bg-red-50 text-red-600 hover:text-red-700 rounded transition-colors cursor-pointer border border-transparent hover:border-red-100"
-                          title="ลบรายการนี้"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {txn.date < new Date().toLocaleDateString('sv') ? (
+                          <span 
+                            className="p-1.5 text-gray-400 bg-gray-100 rounded cursor-not-allowed border border-gray-250 flex items-center justify-center shrink-0" 
+                            title="รายการนี้ถูกล็อกทางบัญชี (ผ่านเที่ยงคืนแล้ว)"
+                          >
+                            <Lock className="w-3.5 h-3.5 text-gray-450" />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteRemittance(txn.id)}
+                            className="p-1 hover:bg-red-50 text-red-600 hover:text-red-700 rounded transition-colors cursor-pointer border border-transparent hover:border-red-100"
+                            title="ลบรายการนี้"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
