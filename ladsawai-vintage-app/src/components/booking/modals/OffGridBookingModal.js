@@ -477,14 +477,19 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
               
               {paymentList.map((entry, index) => {
                 const isAmountEntered = entry.amount && parseFloat(entry.amount) > 0;
+                const isAmtValid = entry.amount && parseFloat(entry.amount) > 0;
                 return (
                   <div key={index} className="flex items-center gap-1.5">
                     <input
                       type="number"
                       value={entry.amount}
                       onChange={(e) => {
+                        const val = e.target.value;
                         const updated = [...paymentList];
-                        updated[index].amount = e.target.value;
+                        updated[index].amount = val;
+                        if (!val || parseFloat(val) <= 0) {
+                          updated[index].method = '';
+                        }
                         setPaymentList(updated);
                       }}
                       placeholder="จำนวนเงิน"
@@ -494,6 +499,10 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                       <button
                         type="button"
                         onClick={() => {
+                          if (!isAmtValid) {
+                            alert("กรุณากรอกจำนวนเงินชำระก่อนเลือกช่องทางชำระเงิน");
+                            return;
+                          }
                           const updated = [...paymentList];
                           updated[index].method = 'เงินสด';
                           setPaymentList(updated);
@@ -501,6 +510,8 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                         className={`px-2 py-1 rounded text-[10px] font-black border transition-all cursor-pointer ${
                           entry.method === 'เงินสด'
                             ? 'bg-[#8B4513] text-white border-[#8B4513]'
+                            : !isAmtValid
+                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                             : 'bg-white text-gray-500 border-amber-200 hover:bg-amber-50'
                         }`}
                       >
@@ -509,6 +520,10 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                       <button
                         type="button"
                         onClick={() => {
+                          if (!isAmtValid) {
+                            alert("กรุณากรอกจำนวนเงินชำระก่อนเลือกช่องทางชำระเงิน");
+                            return;
+                          }
                           const updated = [...paymentList];
                           updated[index].method = 'โอนเงิน';
                           setPaymentList(updated);
@@ -516,6 +531,8 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                         className={`px-2 py-1 rounded text-[10px] font-black border transition-all cursor-pointer ${
                           entry.method === 'โอนเงิน'
                             ? 'bg-[#8B4513] text-white border-[#8B4513]'
+                            : !isAmtValid
+                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                             : 'bg-white text-gray-500 border-amber-200 hover:bg-amber-50'
                         }`}
                       >
