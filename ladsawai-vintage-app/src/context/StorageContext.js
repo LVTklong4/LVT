@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useBooking } from './BookingContext';
 import {
   dayNamesShort,
   monthNamesFull,
@@ -11,27 +12,7 @@ import {
 const StorageContext = createContext();
 
 export function StorageProvider({ children }) {
-  // Authentication & Admin context from local storage / session
-  const [adminUser, setAdminUser] = useState(null);
-
-  useEffect(() => {
-    const userStr = localStorage.getItem('adminUser');
-    if (userStr) {
-      try {
-        setAdminUser(JSON.parse(userStr));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // Listen to storage changes to sync login status
-    const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem('adminUser');
-      setAdminUser(updatedUser ? JSON.parse(updatedUser) : null);
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  const { adminUser, showAlert } = useBooking();
 
   // UI state
   const [showStorageMgmtModal, setShowStorageMgmtModal] = useState(false);
@@ -51,7 +32,7 @@ export function StorageProvider({ children }) {
   const [storagePrintStall, setStoragePrintStall] = useState('');
   const [storagePrintNote, setStoragePrintNote] = useState('');
   const [storagePrintFee, setStoragePrintFee] = useState(0);
-  const [storagePrintPayment, setStoragePrintPayment] = useState('à¹à¸à¸´à¸à¸ªà¸');
+  const [storagePrintPayment, setStoragePrintPayment] = useState('เงินสด');
 
   // Form states for the check-in modal
   const [storageForm, setStorageForm] = useState({
@@ -62,7 +43,7 @@ export function StorageProvider({ children }) {
     start_date: new Date().toISOString().split('T')[0],
     weeks: 1,
     payImmediately: true,
-    paymentMethod: 'à¹à¸à¸´à¸à¸ªà¸',
+    paymentMethod: 'เงินสด',
     note: '',
     status: 'Active'
   });
@@ -108,18 +89,11 @@ export function StorageProvider({ children }) {
     fetchAllStorage();
   }, []);
 
-  // Show alerts helper (matching layout style)
-  const showAlert = (message, title = "à¹à¸à¹à¸à¹à¸à¸·à¸­à¸", isError = false) => {
-    if (typeof window !== 'undefined') {
-      alert(`${title}
-${message}`);
-    }
-  };
 
-  // 1. Save new storage deposit (à¹à¸à¹à¸à¸à¸²à¸à¸à¸­à¸)
+  // 1. Save new storage deposit (แจ้งฝากของ)
   const handleSaveStorage = async (payloadData) => {
     if (!adminUser) {
-      showAlert("à¸à¸£à¸¸à¸à¸²à¹à¸à¹à¸²à¸ªà¸¹à¹à¸£à¸°à¸à¸à¸à¹à¸­à¸à¸à¸³à¸£à¸²à¸¢à¸à¸²à¸£", "à¹à¸à¹à¸à¹à¸à¸·à¸­à¸", true);
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
     setLoadingStorage(true);
@@ -156,10 +130,10 @@ ${message}`);
           id: txnId,
           booking_ref: id,
           date: payloadData.start_date,
-          category: 'à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸',
+          category: 'ค่าฝากของ',
           total_amount: fee,
-          method: payloadData.paymentMethod || 'à¹à¸à¸´à¸à¸ªà¸',
-          note: `à¸à¸³à¸£à¸°à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸à¸ªà¸°à¸ªà¸¡ à¸¥à¹à¸­à¸ ${payload.stall_name} (${weeks} à¸ªà¸±à¸à¸à¸²à¸«à¹)`,
+          method: payloadData.paymentMethod || 'เงินสด',
+          note: `ชำระค่าฝากของสะสม ล็อค ${payload.stall_name} (${weeks} สัปดาห์)`,
           officer: adminUser.name,
           timestamp: new Date().toISOString(),
           stall_amt: 0,
@@ -179,24 +153,24 @@ ${message}`);
         setStoragePrintStall(payload.stall_name);
         setStoragePrintNote(payload.note);
         setStoragePrintFee(fee);
-        setStoragePrintPayment(payloadData.paymentMethod || 'à¹à¸à¸´à¸à¸ªà¸');
+        setStoragePrintPayment(payloadData.paymentMethod || 'เงินสด');
         setShowStoragePrintModal(true);
       }
 
-      showAlert("à¸à¸±à¸à¸à¸¶à¸à¸à¹à¸­à¸¡à¸¹à¸¥à¸à¸²à¸à¸à¸­à¸à¸ªà¸³à¹à¸£à¹à¸", "à¸ªà¸³à¹à¸£à¹à¸");
+      showAlert("บันทึกข้อมูลฝากของสำเร็จ", "สำเร็จ");
       fetchAllStorage();
     } catch (e) {
       console.error(e);
-      showAlert("à¹à¸à¸´à¸à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸à¹à¸à¸à¸²à¸£à¸à¸±à¸à¸à¸¶à¸: " + e.message, "à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸", true);
+      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingStorage(false);
     }
   };
 
-  // 2. Extend / Renew Storage (à¸à¹à¸­à¸­à¸²à¸¢à¸¸)
+  // 2. Extend / Renew Storage (ต่ออายุ)
   const handleRenewStorage = async ({ item, weeksCount, paymentMethod }) => {
     if (!adminUser) {
-      showAlert("à¸à¸£à¸¸à¸à¸²à¹à¸à¹à¸²à¸ªà¸¹à¹à¸£à¸°à¸à¸à¸à¹à¸­à¸à¸à¸³à¸£à¸²à¸¢à¸à¸²à¸£", "à¹à¸à¹à¸à¹à¸à¸·à¸­à¸", true);
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
     setLoadingStorage(true);
@@ -228,10 +202,10 @@ ${message}`);
         id: txnId,
         booking_ref: item.id,
         date: oldEndDate,
-        category: 'à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸',
+        category: 'ค่าฝากของ',
         total_amount: fee,
-        method: paymentMethod || 'à¹à¸à¸´à¸à¸ªà¸',
-        note: `à¸à¸³à¸£à¸°à¸à¹à¸²à¸à¹à¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸à¸à¸­à¸ à¸¥à¹à¸­à¸ ${item.stall_name} (+${weeks} à¸ªà¸±à¸à¸à¸²à¸«à¹)`,
+        method: paymentMethod || 'เงินสด',
+        note: `ชำระค่าต่ออายุฝากของ ล็อค ${item.stall_name} (+${weeks} สัปดาห์)`,
         officer: adminUser.name,
         timestamp: new Date().toISOString(),
         stall_amt: 0,
@@ -251,23 +225,23 @@ ${message}`);
       setStoragePrintStall(item.stall_name);
       setStoragePrintNote(item.note || '-');
       setStoragePrintFee(fee);
-      setStoragePrintPayment(paymentMethod || 'à¹à¸à¸´à¸à¸ªà¸');
+      setStoragePrintPayment(paymentMethod || 'เงินสด');
       setShowStoragePrintModal(true);
 
-      showAlert("à¸à¹à¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸à¸²à¸à¸à¸­à¸à¸ªà¸³à¹à¸£à¹à¸", "à¸ªà¸³à¹à¸£à¹à¸");
+      showAlert("ต่ออายุการฝากของสำเร็จ", "สำเร็จ");
       fetchAllStorage();
     } catch (e) {
       console.error(e);
-      showAlert("à¹à¸à¸´à¸à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸à¹à¸à¸à¸²à¸£à¸à¹à¸­à¸­à¸²à¸¢à¸¸: " + e.message, "à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸", true);
+      showAlert("เกิดข้อผิดพลาดในการต่ออายุ: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingStorage(false);
     }
   };
 
-  // 3. Checkout Storage (à¹à¸à¹à¸à¸­à¸­à¸)
+  // 3. Checkout Storage (เช็คออก)
   const handleCheckoutStorage = async ({ id, endDate, fee, paymentMethod, note }) => {
     if (!adminUser) {
-      showAlert("à¸à¸£à¸¸à¸à¸²à¹à¸à¹à¸²à¸ªà¸¹à¹à¸£à¸°à¸à¸à¸à¹à¸­à¸à¸à¸³à¸£à¸²à¸¢à¸à¸²à¸£", "à¹à¸à¹à¸à¹à¸à¸·à¸­à¸", true);
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
     setLoadingStorage(true);
@@ -292,10 +266,10 @@ ${message}`);
           id: txnId,
           booking_ref: id,
           date: endDate || new Date().toISOString().split('T')[0],
-          category: 'à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸',
+          category: 'ค่าฝากของ',
           total_amount: feeNum,
-          method: paymentMethod || 'à¹à¸à¸´à¸à¸ªà¸',
-          note: `à¸à¸³à¸£à¸°à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸à¸ªà¸°à¸ªà¸¡à¸à¸­à¸à¹à¸à¹à¸à¸­à¸­à¸ à¸¥à¹à¸­à¸ ${stallName}`,
+          method: paymentMethod || 'เงินสด',
+          note: `ชำระค่าฝากของสะสมตอนเช็คออก ล็อค ${stallName}`,
           officer: adminUser.name,
           timestamp: new Date().toISOString(),
           stall_amt: 0,
@@ -308,12 +282,12 @@ ${message}`);
         if (txnError) throw txnError;
       }
 
-      showAlert("à¸à¸±à¸à¸à¸¶à¸à¸à¸²à¸£à¸à¸³à¸£à¸°à¹à¸à¸´à¸à¹à¸¥à¸°à¸ªà¸´à¹à¸à¸ªà¸¸à¸à¸à¸²à¸£à¸à¸²à¸à¹à¸£à¸µà¸¢à¸à¸£à¹à¸­à¸¢", "à¸ªà¸³à¹à¸£à¹à¸");
+      showAlert("บันทึกการชำระเงินและสิ้นสุดการฝากเรียบร้อย", "สำเร็จ");
       setShowStoragePrintModal(false);
       fetchAllStorage();
     } catch (e) {
       console.error("Storage checkout error:", e);
-      showAlert("à¹à¸à¸´à¸à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸à¹à¸à¸à¸²à¸£à¹à¸à¹à¸à¹à¸­à¸²à¸à¹: " + e.message, "à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸", true);
+      showAlert("เกิดข้อผิดพลาดในการเช็คเอาท์: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingStorage(false);
     }
@@ -322,7 +296,7 @@ ${message}`);
   // 4. Checkin Revert / Toggle status with 24h Lock Policy
   const handleToggleStorageStatus = async (item) => {
     if (!adminUser) {
-      showAlert("à¸à¸£à¸¸à¸à¸²à¹à¸à¹à¸²à¸ªà¸¹à¹à¸£à¸°à¸à¸à¸à¹à¸­à¸à¸à¸³à¸£à¸²à¸¢à¸à¸²à¸£", "à¹à¸à¹à¸à¹à¸à¸·à¸­à¸", true);
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
 
@@ -333,7 +307,7 @@ ${message}`);
           .from('transactions')
           .select('*')
           .eq('booking_ref', item.id)
-          .eq('category', 'à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸')
+          .eq('category', 'ค่าฝากของ')
           .order('timestamp', { ascending: false });
 
         if (txError) throw txError;
@@ -346,10 +320,10 @@ ${message}`);
 
           if (hoursDiff > 24) {
             showAlert(
-              `à¸à¸­à¸­à¸ à¸±à¸¢! à¸£à¸²à¸¢à¸à¸²à¸£à¸à¸³à¸£à¸°à¹à¸à¸´à¸à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸à¸à¸µà¹à¸à¸³à¸£à¸²à¸¢à¸à¸²à¸£à¹à¸à¸´à¸ 24 à¸à¸±à¹à¸§à¹à¸¡à¸à¹à¸¥à¹à¸§ (${hoursDiff.toFixed(1)} à¸à¸¡.)
+              `ขออภัย! รายการชำระเงินค่าฝากของนี้ทำรายการเกิน 24 ชั่วโมงแล้ว (${hoursDiff.toFixed(1)} ชม.)
 ` +
-              `à¹à¸à¸·à¹à¸­à¸à¸§à¸²à¸¡à¸à¸¥à¸­à¸à¸ à¸±à¸¢à¸à¸²à¸à¸à¸±à¸à¸à¸µ à¹à¸¡à¹à¸ªà¸²à¸¡à¸²à¸£à¸à¸¢à¸à¹à¸¥à¸´à¸à¹à¸à¹à¸à¸­à¸­à¸à¸«à¸£à¸·à¸­à¸à¸·à¸à¹à¸à¸´à¸à¹à¸à¹`,
-              "à¸£à¸°à¸à¸±à¸à¸à¸²à¸£à¸à¸³à¹à¸à¸´à¸à¸à¸²à¸£",
+              `เพื่อความปลอดภัยทางบัญชี ไม่สามารถยกเลิกเช็คออกหรือคืนเงินได้`,
+              "ระงับการดำเนินการ",
               true
             );
             return;
@@ -375,11 +349,11 @@ ${message}`);
 
         if (updErr) throw updErr;
 
-        showAlert("à¸¢à¸à¹à¸¥à¸´à¸à¸à¸²à¸£à¹à¸à¹à¸à¹à¸­à¸²à¸à¹à¹à¸¥à¸°à¸à¸·à¸à¸ªà¸à¸²à¸à¸°à¸à¸¥à¹à¸­à¸à¸à¸²à¸à¸à¸­à¸à¹à¸à¹à¸à¸à¸à¸à¸´à¹à¸£à¸µà¸¢à¸à¸£à¹à¸­à¸¢", "à¸ªà¸³à¹à¸£à¹à¸");
+        showAlert("ยกเลิกการเช็คเอาท์และคืนสถานะกล่องฝากของเป็นปกติเรียบร้อย", "สำเร็จ");
         fetchAllStorage();
       } catch (e) {
         console.error(e);
-        showAlert("à¹à¸à¸´à¸à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸à¹à¸à¸à¸²à¸£à¸à¸¶à¸à¸ªà¸à¸²à¸à¸°à¸à¸·à¸: " + e.message, "à¸à¹à¸­à¸à¸´à¸à¸à¸¥à¸²à¸", true);
+        showAlert("เกิดข้อผิดพลาดในการดึงสถานะคืน: " + e.message, "ข้อผิดพลาด", true);
       } finally {
         setLoadingStorage(false);
       }
@@ -409,18 +383,18 @@ ${message}`);
     const startFormatted = formatDateWithDay(storagePrintStartDate);
     const endFormatted = formatDateWithDay(storagePrintEndDate);
     const feeVal = parseNumber(storagePrintFee);
-    const paymentText = storagePrintPayment === 'à¹à¸­à¸à¹à¸à¸´à¸' ? 'à¹à¸­à¸à¸à¹à¸²à¸¢' : 'à¹à¸à¸´à¸à¸ªà¸';
+    const paymentText = storagePrintPayment === 'โอนเงิน' ? 'โอนจ่าย' : 'เงินสด';
 
     const printWindow = window.open('', '_blank', 'width=600,height=800');
     if (!printWindow) {
-      alert('à¸à¸£à¸¸à¸à¸²à¸­à¸à¸¸à¸à¸²à¸à¹à¸«à¹à¸à¹à¸­à¸à¸­à¸±à¸à¸à¸³à¸à¸²à¸à¹à¸à¸·à¹à¸­à¸ªà¸±à¹à¸à¸à¸´à¸¡à¸à¹à¸à¸±à¹à¸§');
+      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
       return;
     }
 
     const htmlContent = `
       <html>
         <head>
-          <title>à¸à¸´à¸¡à¸à¹à¸à¸±à¹à¸§à¸à¸²à¸à¸à¸­à¸</title>
+          <title>พิมพ์ตั๋วฝากของ</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
             @page {
@@ -528,43 +502,43 @@ ${message}`);
         <body>
           <div class="center">
             <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
-            <div class="title">à¸à¸¥à¸²à¸à¸à¸±à¸à¸¥à¸²à¸à¸ªà¸§à¸²à¸¢à¸§à¸´à¸à¹à¸à¸</div>
-            <div class="subtitle">à¹à¸¥à¸à¸à¸µà¹ 52/34 à¸«à¸¡à¸¹à¹ 5</div>
-            <div class="subtitle">à¸.à¸¥à¸²à¸à¸ªà¸§à¸²à¸¢ à¸­.à¸¥à¸³à¸¥à¸¹à¸à¸à¸² à¸.à¸à¸à¸¸à¸¡à¸à¸²à¸à¸µ 12150</div>
-            <div class="subtitle">à¹à¸à¸£: 0-92-869-7774 , 0-92-869-7775</div>
+            <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
+            <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
+            <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
+            <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
           </div>
           
           <div class="divider"></div>
           
-          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">à¸à¸±à¹à¸§/à¹à¸à¹à¸ªà¸£à¹à¸ (à¸à¸²à¸à¸à¸­à¸)</div>
+          <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (ฝากของ)</div>
           
           <table class="info-table">
             <tr>
-              <td class="label">à¸§à¸±à¸à¸à¸µà¹à¸à¸³à¸£à¸²à¸¢à¸à¸²à¸£ :</td>
+              <td class="label">วันที่ทำรายการ :</td>
               <td style="text-align: right;">${formattedTransaction}</td>
             </tr>
             <tr>
-              <td class="label">à¸£à¸«à¸±à¸ªà¸à¸à¸±à¸à¸à¸²à¸ :</td>
+              <td class="label">รหัสพนักงาน :</td>
               <td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td>
             </tr>
             <tr>
-              <td class="label">à¸§à¸±à¸à¸à¸µà¹à¹à¸£à¸´à¹à¸¡ :</td>
+              <td class="label">วันที่เริ่ม :</td>
               <td style="text-align: right;" class="bold">${startFormatted}</td>
             </tr>
             <tr>
-              <td class="label">à¸§à¸±à¸à¸à¸µà¹à¸ªà¸´à¹à¸à¸ªà¸¸à¸ :</td>
+              <td class="label">วันที่สิ้นสุด :</td>
               <td style="text-align: right;" class="bold">${endFormatted}</td>
             </tr>
             <tr>
-              <td class="label">à¸à¸·à¹à¸­à¸à¸¹à¹à¸à¸²à¸ :</td>
+              <td class="label">ชื่อผู้ฝาก :</td>
               <td style="text-align: right;" class="bold">${storagePrintOwner}</td>
             </tr>
             <tr>
-              <td class="label">à¸§à¸²à¸à¸à¸­à¸à¹à¸§à¹à¸¥à¹à¸­à¸ :</td>
+              <td class="label">วางของไว้ล็อค :</td>
               <td style="text-align: right;" class="bold">[${storagePrintStall}]</td>
             </tr>
             <tr>
-              <td class="label">à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸ :</td>
+              <td class="label">ค่าฝากของ :</td>
               <td style="text-align: right;" class="bold">${formatPrice(feeVal)}</td>
             </tr>
           </table>
@@ -573,7 +547,7 @@ ${message}`);
           
           <table class="info-table">
             <tr>
-              <td class="label" style="width: 30%;">à¸£à¸²à¸¢à¸à¸²à¸£à¸à¸µà¹à¸à¸²à¸ :</td>
+              <td class="label" style="width: 30%;">รายการที่ฝาก :</td>
               <td style="text-align: left;" class="bold">${storagePrintNote || '-'}</td>
             </tr>
           </table>
@@ -582,11 +556,11 @@ ${message}`);
           
           <table class="total-table">
             <tr>
-              <td class="label">à¸£à¸§à¸¡à¹à¸à¹à¸à¹à¸à¸´à¸à¸à¸±à¹à¸à¸ªà¸´à¹à¸ :</td>
+              <td class="label">รวมเป็นเงินทั้งสิ้น :</td>
               <td class="val">${formatPrice(feeVal)}</td>
             </tr>
             <tr>
-              <td class="label">à¸à¸²à¸£à¸à¸³à¸£à¸°à¹à¸à¸´à¸ [${paymentText}] :</td>
+              <td class="label">การชำระเงิน [${paymentText}] :</td>
               <td class="val">${formatPrice(feeVal)}</td>
             </tr>
           </table>
@@ -594,20 +568,20 @@ ${message}`);
           <div class="divider"></div>
           
           <div class="terms">
-            <div class="terms-title">à¸£à¸²à¸¢à¸¥à¸°à¹à¸­à¸µà¸¢à¸à¹à¸¥à¸°à¹à¸à¸·à¹à¸­à¸à¹à¸à¸à¸²à¸£à¸à¸²à¸à¸à¸­à¸à¸¡à¸µà¸à¸±à¸à¸à¹à¸­à¹à¸à¸à¸µà¹</div>
+            <div class="terms-title">รายละเอียดและเงื่อนไขการฝากของมีดังต่อไปนี้</div>
             <ol>
-              <li>à¸à¸²à¸£à¸à¸²à¸à¸à¸­à¸à¹à¸à¸à¸µà¹à¸à¸µà¹à¸«à¸¡à¸²à¸¢à¸à¸¶à¸ à¸à¸²à¸£à¹à¸à¹à¸²à¸à¸·à¹à¸à¸à¸µà¹à¸§à¸²à¸à¸à¸­à¸à¹à¸à¹à¸²à¸à¸±à¹à¸</li>
-              <li>à¸à¸²à¸à¸à¸¥à¸²à¸à¸¯ à¹à¸¡à¹à¸£à¸±à¸à¸à¸´à¸à¸à¸­à¸à¸à¸§à¸²à¸¡à¹à¸ªà¸µà¸¢à¸«à¸²à¸¢ à¸ªà¸¹à¸à¸«à¸²à¸¢à¸à¸µà¹à¹à¸à¸´à¸à¸à¸¶à¹à¸à¸à¸¸à¸à¸à¸£à¸à¸µ</li>
-              <li>à¹à¸à¸§à¸±à¸à¸à¸µà¹à¸¡à¸µà¸à¸±à¸ à¸«à¸²à¸à¸¥à¸¹à¸à¸à¹à¸²à¹à¸¡à¹à¸¡à¸²à¸à¸³à¸à¸²à¸£à¸à¹à¸² à¸à¸²à¸à¸à¸¥à¸²à¸à¸¡à¸µà¸ªà¸´à¸à¸à¸´à¹à¹à¸à¸à¸²à¸£à¸¢à¹à¸²à¸¢à¸à¸­à¸à¹à¸à¹à¸§à¹à¸à¸µà¹à¸­à¸·à¹à¸à¸à¸¸à¸à¸à¸£à¸à¸µ à¹à¸¥à¸°à¸«à¸²à¸à¸à¸­à¸à¸à¸µà¹à¸à¸²à¸à¸¡à¸µà¸à¸à¸²à¸à¹à¸«à¸à¹ à¹à¸¡à¹à¸ªà¸²à¸¡à¸²à¸£à¸à¹à¸à¸¥à¸·à¹à¸­à¸à¸¢à¹à¸²à¸¢à¹à¸à¹à¸ªà¸°à¸à¸§à¸ à¸à¸²à¸à¸à¸¥à¸²à¸à¸¯ à¸à¸´à¸à¸à¹à¸²à¸¥à¹à¸­à¸à¹à¸à¸à¸±à¸à¸à¸±à¹à¸</li>
-              <li>à¹à¸¡à¸·à¹à¸­à¸ªà¸´à¹à¸à¸ªà¸¸à¸à¸£à¸°à¸¢à¸°à¹à¸§à¸¥à¸²à¸à¸²à¸à¸à¸­à¸ à¹à¸¥à¸°à¹à¸¡à¹à¹à¸à¹à¸à¸³à¸à¸²à¸£à¸à¹à¸­à¸£à¸°à¸¢à¸°à¹à¸§à¸¥à¸²à¸à¸²à¸à¸à¸­à¸ à¸«à¸²à¸à¸¥à¸¹à¸à¸à¹à¸²à¹à¸¡à¹à¸¡à¸²à¸£à¸±à¸à¸«à¸£à¸·à¸­à¸¡à¸²à¸£à¸±à¸à¹à¸à¸ à¸²à¸¢à¸«à¸¥à¸±à¸ à¸à¸²à¸à¸à¸¥à¸²à¸à¸¯ à¸à¸´à¸à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸à¸¢à¹à¸­à¸à¸«à¸¥à¸±à¸</li>
-              <li>à¸à¸²à¸£à¸à¸³à¸£à¸°à¸à¹à¸²à¸à¸²à¸à¸à¸­à¸ à¸à¸·à¸­à¸§à¹à¸²à¸¥à¸¹à¸à¸à¹à¸²à¹à¸à¹à¸£à¸±à¸à¸à¸£à¸²à¸à¸£à¸²à¸¢à¸¥à¸°à¹à¸­à¸µà¸¢à¸à¹à¸¥à¸°à¹à¸à¸·à¹à¸­à¸à¹à¸à¸à¸²à¸£à¸à¸²à¸à¸à¸­à¸à¸à¸±à¸à¸à¸¥à¹à¸²à¸§à¹à¸¥à¹à¸§ à¹à¸¥à¸°à¸à¸°à¸à¸à¸´à¸à¸±à¸à¸´à¸à¸²à¸¡à¸­à¸¢à¹à¸²à¸à¹à¸à¸£à¹à¸à¸à¸£à¸±à¸</li>
+              <li>การฝากของในที่นี้หมายถึง การเช่าพื้นที่วางของเท่านั้น</li>
+              <li>ทางตลาดฯ ไม่รับผิดชอบความเสียหาย สูญหายที่เกิดขึ้นทุกกรณี</li>
+              <li>ในวันที่มีนัด หากลูกค้าไม่มาทำการค้า ทางตลาดมีสิทธิ์ในการย้ายของไปไว้ที่อื่นทุกกรณี และหากของที่ฝากมีขนาดใหญ่ ไม่สามารถเคลื่อนย้ายได้สะดวก ทางตลาดฯ คิดค่าล็อคในนัดนั้น</li>
+              <li>เมื่อสิ้นสุดระยะเวลาฝากของ และไม่ได้ทำการต่อระยะเวลาฝากของ หากลูกค้าไม่มารับหรือมารับในภายหลัง ทางตลาดฯ คิดค่าฝากของย้อนหลัง</li>
+              <li>การชำระค่าฝากของ ถือว่าลูกค้าได้รับทราบรายละเอียดและเงื่อนไขการฝากของดังกล่าวแล้ว และจะปฏิบัติตามอย่างเคร่งครัด</li>
             </ol>
           </div>
           
           <div class="divider"></div>
           
           <div class="footer">
-            <div class="bold">à¸ªà¸­à¸à¸à¸²à¸¡à¸à¹à¸­à¸¡à¸¹à¸¥à¸à¸²à¸£à¸à¸²à¸à¸à¸­à¸à¹à¸à¹à¸à¸µà¹</div>
+            <div class="bold">สอบถามข้อมูลการฝากของได้ที่</div>
             <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
             <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
           </div>

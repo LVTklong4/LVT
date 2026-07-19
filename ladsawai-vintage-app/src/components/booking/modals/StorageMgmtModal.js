@@ -110,15 +110,15 @@ export default function StorageMgmtModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-4xl border-2 border-orange-600 overflow-hidden flex flex-col max-h-[90vh] animate-pop-in">
+      <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-4xl border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[90vh] animate-pop-in">
         {/* Header */}
-        <div className="bg-orange-600 text-white px-4 py-3 flex justify-between items-center shrink-0">
+        <div className="bg-[#8B4513] text-white px-4 py-3 flex justify-between items-center shrink-0">
           <h3 className="font-extrabold text-sm flex items-center gap-1.5">
             📦 ระบบฝากของ (Storage Management)
           </h3>
           <button 
             onClick={() => setShowStorageMgmtModal(false)} 
-            className="text-orange-200 hover:text-white"
+            className="text-amber-200 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -126,7 +126,7 @@ export default function StorageMgmtModal() {
         
         {/* Main Content Area */}
         <div className="p-5 overflow-y-auto flex flex-col gap-4">
-          <div className="flex justify-between items-center border-b border-orange-200 pb-2">
+          <div className="flex justify-between items-center border-b border-[#8B4513]/25 pb-2">
             <div>
               <h4 className="font-extrabold text-sm text-[#8B4513]">รายการฝากของทั้งหมด</h4>
               <p className="text-[10px] text-gray-500 font-bold">จัดการข้อมูลฝากของสะสมรายสัปดาห์ (อัตรา 160 บาท / สัปดาห์)</p>
@@ -134,7 +134,7 @@ export default function StorageMgmtModal() {
             
             <button
               onClick={handleOpenNewDeposit}
-              className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black rounded-lg shadow transition-all flex items-center gap-1"
+              className="px-3.5 py-2 bg-[#8B4513] hover:bg-[#5D4037] text-white text-xs font-black rounded-lg shadow transition-all flex items-center gap-1"
             >
               <PlusCircle className="w-4 h-4" /> แจ้งฝากของใหม่
             </button>
@@ -143,17 +143,17 @@ export default function StorageMgmtModal() {
           {/* Table List */}
           <div className="flex flex-col min-w-0">
             {loadingStorage ? (
-              <div className="flex justify-center items-center py-20 text-orange-600">
+              <div className="flex justify-center items-center py-20 text-[#8B4513]">
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
             ) : storageList.length === 0 ? (
-              <div className="text-center py-16 text-gray-400 font-bold bg-white rounded-lg border border-dashed border-orange-200">
+              <div className="text-center py-16 text-gray-400 font-bold bg-white rounded-lg border border-dashed border-[#8B4513]/25">
                 ไม่มีรายการฝากของในระบบขณะนี้
               </div>
             ) : (
-              <div className="overflow-x-auto border border-orange-200 rounded-xl bg-white shadow-xs">
+              <div className="overflow-x-auto border border-[#8B4513]/25 rounded-xl bg-white shadow-xs">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-[#FFF8EE] text-[#8B4513] border-b border-orange-200 font-bold">
+                  <thead className="bg-[#FFF8EE] text-[#8B4513] border-b border-[#8B4513]/25 font-bold">
                     <tr>
                       <th className="p-3">ตำแหน่ง / ล็อค</th>
                       <th className="p-3">ผู้ฝาก / เบอร์ติดต่อ</th>
@@ -163,9 +163,9 @@ export default function StorageMgmtModal() {
                       <th className="p-3 text-center">การจัดการ</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-orange-100 bg-white font-semibold text-gray-700">
+                  <tbody className="divide-y divide-amber-100 bg-white font-semibold text-gray-700">
                     {storageList.map((item) => (
-                      <tr key={item.id} className="hover:bg-orange-50/20">
+                      <tr key={item.id} className="hover:bg-amber-50/20">
                         <td className="p-3 font-extrabold text-[#8B4513] text-sm font-mono">
                           [{item.stall_name}]
                         </td>
@@ -194,7 +194,7 @@ export default function StorageMgmtModal() {
                             {item.status === 'Active' && (
                               <button 
                                 onClick={() => handleOpenRenew(item)}
-                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-orange-200 rounded text-[10px] font-black flex items-center gap-0.5 transition-colors cursor-pointer"
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-[#8B4513]/25 rounded text-[10px] font-black flex items-center gap-0.5 transition-colors cursor-pointer"
                               >
                                 <CalendarClock className="w-3.5 h-3.5" /> ต่ออายุ
                               </button>
@@ -217,7 +217,7 @@ export default function StorageMgmtModal() {
                             </button>
                             <button 
                               onClick={() => handleReprintReceipt(item)}
-                              className="px-2 py-1 bg-orange-50 text-orange-700 border border-orange-200 rounded text-[10px] font-black hover:bg-orange-100 flex items-center gap-0.5 transition-colors cursor-pointer"
+                              className="px-2 py-1 bg-amber-50 text-[#8B4513] border border-[#8B4513]/25 rounded text-[10px] font-black hover:bg-amber-100 flex items-center gap-0.5 transition-colors cursor-pointer"
                             >
                               <Printer className="w-3.5 h-3.5" /> พิมพ์
                             </button>

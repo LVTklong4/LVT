@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStorage } from '@/context/StorageContext';
+import { useBooking } from '@/context/BookingContext';
 import { X, Lock, User, Phone, FileText, Calendar, DollarSign, Search } from 'lucide-react';
 
 export default function StorageDepositModal({ isOpen, onClose, renewItem = null }) {
@@ -11,6 +12,8 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
     parseNumber,
     formatPrice
   } = useStorage();
+
+  const { stalls } = useBooking();
 
   // Form states
   const [stallName, setStallName] = useState('');
@@ -22,11 +25,32 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
   const [payImmediately, setPayImmediately] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('เงินสด');
 
+  // Search states for dropdown
+  const [searchText, setSearchText] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Natural sorting of stalls
+  const sortedStalls = [...(stalls || [])].sort((a, b) => {
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  // Filter stalls by search text
+  const filteredStalls = sortedStalls.filter(s => 
+    s.name.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleSelectStall = (name) => {
+    setStallName(name);
+    setSearchText(name);
+    setShowDropdown(false);
+  };
+
   // Load data if in renew mode
   useEffect(() => {
     if (isOpen) {
       if (renewItem) {
         setStallName(renewItem.stall_name || '');
+        setSearchText(renewItem.stall_name || '');
         setOwnerName(renewItem.owner_name || '');
         setPhone(renewItem.phone || '');
         setNote(renewItem.note || '');
@@ -38,6 +62,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
       } else {
         // Reset for new deposit
         setStallName('');
+        setSearchText('');
         setOwnerName('');
         setPhone('');
         setNote('');
@@ -46,6 +71,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
         setPayImmediately(true);
         setPaymentMethod('เงินสด');
       }
+      setShowDropdown(false);
     }
   }, [isOpen, renewItem]);
 
@@ -107,17 +133,17 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-sm border-2 border-orange-600 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="bg-orange-600 text-white px-4 py-3.5 flex justify-between items-center shrink-0">
+        <div className="bg-[#8B4513] text-white px-4 py-3.5 flex justify-between items-center shrink-0">
           <h3 className="font-extrabold text-sm flex items-center gap-1.5">
-            <Lock className="w-5 h-5 text-orange-200" />
+            <Lock className="w-5 h-5 text-amber-200" />
             <span>{renewItem ? 'แจ้งต่ออายุฝากของ' : 'แจ้งฝากของ / ต่ออายุ'}</span>
           </h3>
           <button 
             type="button"
             onClick={onClose} 
-            className="text-orange-200 hover:text-white"
+            className="text-amber-200 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -125,21 +151,47 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 overflow-y-auto flex flex-col gap-3.5 text-xs text-[#5D4037]">
-          {/* Stall Name */}
-          <div className="flex flex-col gap-1">
+          {/* Stall Name Searchable Dropdown */}
+          <div className="flex flex-col gap-1 relative">
             <label className="font-bold text-gray-700">เลือกตำแหน่งฝาก (ล็อค/จุดพัก) *</label>
             <div className="relative">
               <input
                 type="text"
                 disabled={!!renewItem}
                 required
-                value={stallName}
-                onChange={(e) => setStallName(e.target.value)}
-                placeholder="พิมพ์ชื่อล็อค..."
-                className="w-full p-2 pl-8 border border-orange-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-bold"
+                value={searchText}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 250)}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                  setStallName(e.target.value);
+                  setShowDropdown(true);
+                }}
+                placeholder="พิมพ์ค้นหาชื่อล็อค..."
+                className="w-full p-2 pl-8 border border-[#8B4513]/30 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#8B4513] font-bold"
               />
-              <Search className="w-4 h-4 text-orange-400 absolute left-2.5 top-2.5" />
+              <Search className="w-4 h-4 text-amber-800 absolute left-2.5 top-2.5" />
             </div>
+
+            {/* Dropdown List */}
+            {showDropdown && !renewItem && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-[#FFFDF9] border border-[#8B4513]/30 rounded-lg shadow-lg max-h-40 overflow-y-auto z-[70] custom-scrollbar">
+                {filteredStalls.length > 0 ? (
+                  filteredStalls.map((s) => (
+                    <button
+                      key={s.name}
+                      type="button"
+                      onClick={() => handleSelectStall(s.name)}
+                      className="w-full text-left px-3 py-2 hover:bg-[#F5E6D3] text-gray-800 font-bold border-b border-gray-100 last:border-0"
+                    >
+                      {s.name}
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-2 text-gray-400 text-center font-bold">ไม่พบล็อคนี้</div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Owner Name */}
@@ -153,9 +205,9 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
                 placeholder="ระบุชื่อ"
-                className="w-full p-2 pl-8 border border-orange-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full p-2 pl-8 border border-[#8B4513]/30 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
               />
-              <User className="w-4 h-4 text-orange-400 absolute left-2.5 top-2.5" />
+              <User className="w-4 h-4 text-amber-800 absolute left-2.5 top-2.5" />
             </div>
           </div>
 
@@ -169,9 +221,9 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0xx-xxxxxxx"
-                className="w-full p-2 pl-8 border border-orange-300 rounded-lg bg-white focus:outline-none"
+                className="w-full p-2 pl-8 border border-[#8B4513]/30 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
               />
-              <Phone className="w-4 h-4 text-orange-400 absolute left-2.5 top-2.5" />
+              <Phone className="w-4 h-4 text-amber-800 absolute left-2.5 top-2.5" />
             </div>
           </div>
 
@@ -185,14 +237,14 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
                 onChange={(e) => setNote(e.target.value)}
                 rows="2"
                 placeholder="เช่น ฝากโครงเหล็ก, ร่ม"
-                className="w-full p-2 pl-8 border border-orange-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full p-2 pl-8 border border-[#8B4513]/30 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
               />
-              <FileText className="w-4 h-4 text-orange-400 absolute left-2.5 top-2.5" />
+              <FileText className="w-4 h-4 text-amber-800 absolute left-2.5 top-2.5" />
             </div>
           </div>
 
           {/* Weekly Calculation Card */}
-          <div className="bg-[#FFFDF9] border border-orange-200 rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
+          <div className="bg-[#FFFDF9] border border-[#8B4513]/25 rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <span className="font-bold text-gray-700">วันที่เริ่มฝาก</span>
@@ -201,26 +253,26 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
                   disabled={!!renewItem}
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="p-1.5 border border-orange-300 rounded bg-white text-center focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono font-bold"
+                  className="p-1.5 border border-[#8B4513]/30 rounded bg-white text-center focus:outline-none focus:ring-1 focus:ring-[#8B4513] font-mono font-bold"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="font-bold text-orange-950">จำนวนสัปดาห์</span>
+                <span className="font-bold text-[#5D4037]">จำนวนสัปดาห์</span>
                 <input
                   type="number"
                   min="1"
                   required
                   value={weeksCount}
                   onChange={(e) => setWeeksCount(e.target.value)}
-                  className="p-1.5 border border-orange-300 rounded bg-white text-center focus:outline-none focus:ring-1 focus:ring-orange-500 font-bold"
+                  className="p-1.5 border border-[#8B4513]/30 rounded bg-white text-center focus:outline-none focus:ring-1 focus:ring-[#8B4513] font-bold"
                 />
               </div>
             </div>
 
-            <div className="border-t border-dashed border-orange-200 pt-2 flex flex-col gap-1.5">
+            <div className="border-t border-dashed border-[#8B4513]/20 pt-2 flex flex-col gap-1.5">
               <div className="flex justify-between items-center text-[10px]">
                 <span className="text-gray-500 font-bold">วันสิ้นสุด:</span>
-                <span className="font-extrabold text-red-600 font-sans">{calculatedEndStr}</span>
+                <span className="font-extrabold text-red-700 font-sans">{calculatedEndStr}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[#8B4513] font-black">ค่าฝากรวม:</span>
@@ -231,15 +283,15 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
             </div>
           </div>
 
-          {/* Payment (only visible when not checking out or can toggle payImmediately) */}
+          {/* Payment */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-1.5 font-bold cursor-pointer">
               <input
                 type="checkbox"
                 checked={payImmediately}
-                disabled={!!renewItem} // Always pay upfront on renewal
+                disabled={!!renewItem}
                 onChange={(e) => setPayImmediately(e.target.checked)}
-                className="w-3.5 h-3.5 rounded text-orange-600 focus:ring-orange-500"
+                className="w-3.5 h-3.5 rounded text-[#8B4513] focus:ring-[#8B4513] accent-[#8B4513]"
               />
               <span>ชำระเงินทันที</span>
             </label>
@@ -252,7 +304,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
                   className={`py-2 rounded-lg text-xs font-bold transition-all border ${
                     paymentMethod === 'เงินสด'
                       ? 'bg-green-600 text-white border-green-600 shadow'
-                      : 'bg-white text-gray-500 border-orange-200 hover:bg-orange-50/20'
+                      : 'bg-white text-gray-500 border-[#8B4513]/30 hover:bg-[#8B4513]/5'
                   }`}
                 >
                   เงินสด
@@ -263,7 +315,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
                   className={`py-2 rounded-lg text-xs font-bold transition-all border ${
                     paymentMethod === 'โอนเงิน'
                       ? 'bg-green-600 text-white border-green-600 shadow'
-                      : 'bg-white text-gray-500 border-orange-200 hover:bg-orange-50/20'
+                      : 'bg-white text-gray-500 border-[#8B4513]/30 hover:bg-[#8B4513]/5'
                   }`}
                 >
                   โอน
@@ -275,7 +327,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-3 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
           >
             <Lock className="w-4 h-4" />
             <span>{renewItem ? 'บันทึกต่ออายุ / ออกตั๋ว' : 'บันทึกการฝาก / ออกตั๋ว'}</span>
