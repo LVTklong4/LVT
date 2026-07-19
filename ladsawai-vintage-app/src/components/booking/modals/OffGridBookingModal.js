@@ -22,11 +22,11 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   const [phoneVal, setPhoneVal] = useState('');
   const [customerType] = useState('ขาจร'); // Hardcoded state, no setter needed
   const [product, setProduct] = useState('');
-  const [stallPrice, setStallPrice] = useState('160');
+  const [stallPrice, setStallPrice] = useState('');
   const [elecUnit, setElecUnit] = useState('');
   const [elecPrice, setElecPrice] = useState(0);
 
-  const [paymentList, setPaymentList] = useState([{ method: '', amount: '160' }]);
+  const [paymentList, setPaymentList] = useState([{ method: '', amount: '' }]);
   const [status] = useState('ชำระแล้ว'); // Hardcoded state, no setter needed
   const [note, setNote] = useState('');
 
@@ -148,10 +148,10 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setBookerName('');
     setPhoneVal('');
     setProduct('');
-    setStallPrice('160');
+    setStallPrice('');
     setElecUnit('');
     setElecPrice(0);
-    setPaymentList([{ method: '', amount: '160' }]);
+    setPaymentList([{ method: '', amount: '' }]);
     setNote('');
     setEditMode(false);
   };
