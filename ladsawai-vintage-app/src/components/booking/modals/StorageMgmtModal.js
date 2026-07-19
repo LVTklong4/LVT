@@ -57,6 +57,18 @@ export default function StorageMgmtModal() {
     return name.replace(/[\[\]]/g, '').trim();
   };
 
+  const getDaysRemaining = (endDateStr) => {
+    if (!endDateStr) return null;
+    const end = new Date(endDateStr);
+    const today = new Date();
+    end.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   // Filter storage list by status
   const filteredList = (storageList || []).filter(item => {
     if (statusFilter === 'All') return true;
@@ -144,6 +156,30 @@ export default function StorageMgmtModal() {
                         <td className="p-3 text-[10px] font-mono">
                           <div className="text-green-800">เริ่ม: {item.start_date || '-'}</div>
                           <div className="text-red-700">สิ้นสุด: {item.end_date || '-'}</div>
+                          {item.status === 'Active' && (() => {
+                            const days = getDaysRemaining(item.end_date);
+                            if (days === null) return null;
+                            if (days > 0) {
+                              const isUrgent = days <= 2;
+                              return (
+                                <div className={`mt-1 font-bold ${isUrgent ? 'text-amber-600 animate-pulse' : 'text-blue-700'}`}>
+                                  ⏳ เหลืออีก {days} วัน
+                                </div>
+                              );
+                            } else if (days === 0) {
+                              return (
+                                <div className="mt-1 font-black text-red-600 animate-pulse">
+                                  🚨 หมดวันนี้
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div className="mt-1 font-black text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded text-center text-[9px] w-fit">
+                                  ⚠️ เกินกำหนด {Math.abs(days)} วัน
+                                </div>
+                              );
+                            }
+                          })()}
                         </td>
                         <td className="p-3 text-[11px] max-w-[200px] truncate text-gray-600" title={item.note}>
                           {item.note || '-'}
