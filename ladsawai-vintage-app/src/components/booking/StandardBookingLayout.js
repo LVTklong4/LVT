@@ -232,6 +232,7 @@ export default function StandardBookingLayout() {
                           <button 
                             onClick={() => {
                               setShowGearDropdown(false);
+                              setSelectedOffGridBookingObj(null);
                               setShowOffGridBooking(true);
                             }} 
                             className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"

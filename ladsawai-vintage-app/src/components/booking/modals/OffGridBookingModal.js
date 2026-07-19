@@ -69,7 +69,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
 
   // Dynamic paymentList amount adjustment when price changes
   useEffect(() => {
-    if (!editMode && paymentList.length === 1) {
+    if (paymentList.length === 1) {
       const total = (parseFloat(stallPrice) || 0) + (parseFloat(elecPrice) || 0);
       setPaymentList([{ method: paymentList[0].method, amount: String(total) }]);
     }
