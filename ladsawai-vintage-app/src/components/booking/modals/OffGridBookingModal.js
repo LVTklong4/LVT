@@ -20,14 +20,14 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   const [stallName, setStallName] = useState('');
   const [bookerName, setBookerName] = useState('');
   const [phoneVal, setPhoneVal] = useState('');
-  const [customerType, setCustomerType] = useState('ขาจร');
+  const [customerType] = useState('ขาจร'); // Hardcoded state, no setter needed
   const [product, setProduct] = useState('');
   const [stallPrice, setStallPrice] = useState('160');
   const [elecUnit, setElecUnit] = useState('');
   const [elecPrice, setElecPrice] = useState(0);
 
-  const [paymentList, setPaymentList] = useState([{ method: 'เงินสด', amount: '160' }]);
-  const [status, setStatus] = useState('ชำระแล้ว');
+  const [paymentList, setPaymentList] = useState([{ method: '', amount: '160' }]);
+  const [status] = useState('ชำระแล้ว'); // Hardcoded state, no setter needed
   const [note, setNote] = useState('');
 
   const [editMode, setEditMode] = useState(false);
@@ -69,9 +69,9 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
 
   // Dynamic paymentList amount adjustment when price changes
   useEffect(() => {
-    if (!editMode && paymentList.length === 1 && paymentList[0].method === 'เงินสด') {
+    if (!editMode && paymentList.length === 1) {
       const total = (parseFloat(stallPrice) || 0) + (parseFloat(elecPrice) || 0);
-      setPaymentList([{ method: 'เงินสด', amount: String(total) }]);
+      setPaymentList([{ method: paymentList[0].method, amount: String(total) }]);
     }
   }, [stallPrice, elecPrice]);
 
@@ -136,7 +136,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
         }]);
       }
     } else {
-      setPaymentList([{ method: 'เงินสด', amount: '' }]);
+      setPaymentList([{ method: '', amount: '' }]);
     }
   };
 
@@ -147,13 +147,11 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setStallName(nextStall);
     setBookerName('');
     setPhoneVal('');
-    setCustomerType('ขาจร');
     setProduct('');
     setStallPrice('160');
     setElecUnit('');
     setElecPrice(0);
-    setPaymentList([{ method: 'เงินสด', amount: '160' }]);
-    setStatus('ชำระแล้ว');
+    setPaymentList([{ method: '', amount: '160' }]);
     setNote('');
     setEditMode(false);
   };
@@ -192,22 +190,15 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       .filter(p => p.amount)
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
-    if (totalPaid > totalVal) {
-      alert(`ยอดเงินที่ชำระ (${totalPaid} บาท) เกินกว่ายอดรวมทั้งสิ้น (${totalVal} บาท) กรุณาตรวจสอบจำนวนเงินอีกครั้ง`);
+    const hasEmptyMethod = paymentList.some(p => !p.method);
+    if (hasEmptyMethod) {
+      alert("กรุณาเลือกช่องทางการชำระเงิน (เงินสด หรือ โอนจ่าย)");
       return;
     }
 
-    const incomplete = paymentList.some(p => p.amount !== undefined && p.amount !== null && p.amount.toString().trim() !== '' && !p.method);
-    if (incomplete) {
-      alert("กรุณาเลือกวิธีการชำระเงิน (เงินสด/โอนจ่าย) สำหรับยอดเงินที่ระบุไว้");
+    if (totalPaid !== totalVal) {
+      alert(`ยอดเงินที่ชำระ (${totalPaid} บาท) ต้องเท่ากับยอดรวมทั้งสิ้น (${totalVal} บาท) เนื่องจากเป็นรายการนอกผังที่ต้องชำระเงินทันที`);
       return;
-    }
-
-    if (status === 'ค้างชำระ' && totalPaid < totalVal) {
-      const remaining = totalVal - totalPaid;
-      if (!confirm(`ยอดเงินที่รับชำระ (${totalPaid} บ.) ยังไม่ครบตามยอดรวมทั้งสิ้น (${totalVal} บ.)\nจะมีส่วนต่างค้างจ่าย ${remaining} บ. ต้องการบันทึกรายการนี้เป็นยอดค้างชำระหรือไม่?`)) {
-        return;
-      }
     }
 
     setSaving(true);
@@ -416,31 +407,17 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
               </div>
             </div>
 
-            {/* Phone and Customer Type */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-700">เบอร์โทรศัพท์ *</label>
-                <input
-                  type="text"
-                  required
-                  value={phoneVal}
-                  onChange={(e) => setPhoneVal(e.target.value)}
-                  placeholder="08xxxxxxxx"
-                  className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none font-semibold"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-700">ประเภทลูกค้า</label>
-                <select
-                  value={customerType}
-                  onChange={(e) => setCustomerType(e.target.value)}
-                  className="p-1.5 border border-amber-300 rounded text-xs bg-white focus:outline-none font-bold text-[#8B4513]"
-                >
-                  <option value="ขาจร">ขาจร (Walk-in)</option>
-                  <option value="ประจำ">ประจำ (Regular)</option>
-                  <option value="VIP">VIP</option>
-                </select>
-              </div>
+            {/* Phone */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-gray-700">เบอร์โทรศัพท์ *</label>
+              <input
+                type="text"
+                required
+                value={phoneVal}
+                onChange={(e) => setPhoneVal(e.target.value)}
+                placeholder="08xxxxxxxx"
+                className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none font-semibold w-full"
+              />
             </div>
 
             {/* Price & Utilities */}
@@ -564,7 +541,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
               {!isFullyPaid && (
                 <button
                   type="button"
-                  onClick={() => setPaymentList([...paymentList, { method: 'เงินสด', amount: '' }])}
+                  onClick={() => setPaymentList([...paymentList, { method: '', amount: '' }])}
                   className="text-[10px] bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-dashed border-amber-400 py-1 rounded font-bold transition-all cursor-pointer"
                 >
                   + เพิ่มช่องทางชำระเงินอื่น
@@ -576,19 +553,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   เงินทอน: {changeVal.toLocaleString()} บาท
                 </div>
               )}
-            </div>
-
-            {/* Status Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-gray-700">สถานะรายการ *</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="p-1.5 border border-amber-300 rounded text-xs bg-white focus:outline-none font-bold"
-              >
-                <option value="ชำระแล้ว">ชำระแล้ว (Paid)</option>
-                <option value="ค้างชำระ">ค้างชำระ (Unpaid)</option>
-              </select>
             </div>
 
             {/* Action Buttons */}
@@ -603,7 +567,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <CheckCircle className="w-4 h-4" /> บันทึกการจอง
+                      <CheckCircle className="w-4 h-4" /> ชำระเงินและบันทึก
                     </>
                   )}
                 </button>
@@ -624,7 +588,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   onClick={() => handleDeleteOffGrid(bookingId)}
                   className="w-full py-2 bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> ยกเลิก/ลบการจองนอกผังนี้
+                  <Trash2 className="w-3.5 h-3.5" /> ยกเลิก/ลบรายการนอกผังนี้
                 </button>
               )}
             </div>
