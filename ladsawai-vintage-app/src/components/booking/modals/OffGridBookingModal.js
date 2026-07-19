@@ -32,6 +32,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Helper to auto-calculate next off-grid stall name
   const getNextOffGridStallName = () => {
@@ -77,6 +78,23 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
 
   // Load bookings for current date
   const offGridBookings = (bookings || []).filter(b => b.type === 'นอกผัง');
+
+  // Filtered bookings based on searchTerm
+  const filteredOffGridBookings = offGridBookings.filter(b => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+
+    let phoneStr = '';
+    const phoneMatch = (b.note || '').match(/\[เบอร์โทร:\s*([^\]]+)\]/);
+    if (phoneMatch) phoneStr = phoneMatch[1].trim();
+
+    return (
+      (b.stall_name || '').toLowerCase().includes(term) ||
+      (b.booker_name || '').toLowerCase().includes(term) ||
+      (b.product || '').toLowerCase().includes(term) ||
+      phoneStr.includes(term)
+    );
+  });
 
   // Load a booking into form for editing
   const loadBooking = (b) => {
@@ -154,6 +172,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setPaymentList([{ method: '', amount: '' }]);
     setNote('');
     setEditMode(false);
+    setSearchTerm('');
   };
 
   // Submit Handler
@@ -608,10 +627,26 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
               <span className="text-[10px] text-gray-500 font-bold">ทั้งหมด: {offGridBookings.length} รายการ</span>
             </h4>
 
+            {offGridBookings.length > 0 && (
+              <div className="mb-3 shrink-0">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="🔍 ค้นหาด้วยชื่อผู้ค้า, เลขล็อก, สินค้า, หรือเบอร์โทร..."
+                  className="w-full p-2 border border-[#8B4513]/20 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513] font-bold bg-[#FAF6EE]/50 placeholder-gray-500"
+                />
+              </div>
+            )}
+
             {offGridBookings.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400 py-16 gap-2">
                 <Sparkles className="w-8 h-8 text-gray-300" />
                 <span className="text-xs font-bold">ไม่มีรายการจองนอกผังสำหรับวันนี้</span>
+              </div>
+            ) : filteredOffGridBookings.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 py-16 gap-2">
+                <span className="text-xs font-bold">ไม่พบข้อมูลตรงกับที่ค้นหา</span>
               </div>
             ) : (
               <div className="overflow-x-auto border rounded-lg max-h-[55vh]">
@@ -626,7 +661,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                     </tr>
                   </thead>
                   <tbody className="divide-y bg-white font-semibold text-gray-700">
-                    {offGridBookings.map((b) => {
+                    {filteredOffGridBookings.map((b) => {
                       let dispPhone = '-';
                       let dispType = 'ขาจร';
                       const pMatch = (b.note || '').match(/\[เบอร์โทร:\s*([^\]]+)\]/);
