@@ -349,7 +349,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
           <form 
             onSubmit={(e) => {
               e.preventDefault();
-              handleSaveOffGrid(false);
+              handleSaveOffGrid(true);
             }} 
             className="flex flex-col gap-3 w-full md:w-96 shrink-0 bg-white p-4 border border-amber-200 rounded-lg shadow-sm"
           >
@@ -557,29 +557,19 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-1.5 mt-2">
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-black transition-all shadow flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4" /> ชำระเงินและบันทึก
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => handleSaveOffGrid(true)}
-                  className="py-2.5 px-3 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-black transition-all shadow flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" /> บันทึก & พิมพ์
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-black transition-all shadow flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Printer className="w-4 h-4" /> บันทึก & พิมพ์ตั๋ว
+                  </>
+                )}
+              </button>
               
               {editMode && (
                 <button
