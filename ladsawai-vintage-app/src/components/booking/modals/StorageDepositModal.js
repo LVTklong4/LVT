@@ -61,11 +61,8 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
         setPhone(renewItem.phone || '');
         setNote(renewItem.note || '');
         
-        // Extension starts from previous end date + 1 day
-        const oldEnd = new Date(renewItem.end_date || new Date().toISOString().split('T')[0]);
-        const start = new Date(oldEnd);
-        start.setDate(oldEnd.getDate() + 1);
-        setStartDate(start.toISOString().split('T')[0]);
+        // Extension starts from previous end date
+        setStartDate(renewItem.end_date || new Date().toISOString().split('T')[0]);
         
         setWeeksCount(1);
         setPaymentMethod('');
@@ -92,8 +89,8 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
     if (!startDateStr) return '';
     const start = new Date(startDateStr);
     const end = new Date(start);
-    // Span 7 days per week inclusive (so end is +7 days - 1 day)
-    end.setDate(start.getDate() + (parseNumber(weeks) * 7) - 1);
+    // Span 7 days per week
+    end.setDate(start.getDate() + (parseNumber(weeks) * 7));
     
     const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const thaiDayName = thaiDays[end.getDay()];

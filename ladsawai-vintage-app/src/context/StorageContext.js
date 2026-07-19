@@ -101,10 +101,10 @@ export function StorageProvider({ children }) {
       const id = payloadData.id || `ST-${Date.now()}`;
       const weeks = parseNumber(payloadData.weeks || 1);
       
-      // Calculate end date based on weeks (weeks * 7 days - 1 day)
+      // Calculate end date based on weeks (weeks * 7 days)
       const start = new Date(payloadData.start_date);
       const end = new Date(start);
-      end.setDate(start.getDate() + (weeks * 7) - 1);
+      end.setDate(start.getDate() + (weeks * 7));
       const calculatedEndDate = end.toISOString().split('T')[0];
       const fee = weeks * 160; // 160 Baht per week
 
@@ -175,14 +175,13 @@ export function StorageProvider({ children }) {
       const weeks = parseNumber(weeksCount);
       const fee = weeks * 160;
 
-      // New start date is the old end date + 1 day
+      // New start date is the old end date
       const oldEndDate = item.end_date || new Date().toISOString().split('T')[0];
       const start = new Date(oldEndDate);
-      start.setDate(start.getDate() + 1);
-      const nextStartDate = start.toISOString().split('T')[0];
+      const nextStartDate = oldEndDate;
 
       const end = new Date(start);
-      end.setDate(start.getDate() + (weeks * 7) - 1);
+      end.setDate(start.getDate() + (weeks * 7));
       const calculatedEndDate = end.toISOString().split('T')[0];
 
       // Update storage record
