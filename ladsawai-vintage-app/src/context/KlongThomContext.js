@@ -38,12 +38,15 @@ export function KlongThomProvider({ children }) {
 
   // Remit Form States
   const [remitForm, setRemitForm] = useState({
-    cars: '',
-    pricePerCar: '0',
-    totalAmount: '',
+    ticketPrice: '0',
+    carsCash: '',
+    carsTransfer: '',
+    ticketCash: '',
+    ticketTransfer: '',
+    elecCash: '',
+    elecTransfer: '',
     note: ''
   });
-  const [paymentList, setPaymentList] = useState([{ method: 'เงินสด', amount: '' }]);
 
   // Remittance History
   const [remittanceHistory, setRemittanceHistory] = useState([]);
@@ -91,42 +94,58 @@ export function KlongThomProvider({ children }) {
     let finalAmount = 0;
     let customNote = '';
     let category = '';
+    let stallAmt = 0;
+    let elecAmt = 0;
+    let totalCash = 0;
+    let totalTransfer = 0;
+
+    const ticketPriceVal = parseFloat(remitForm.ticketPrice) || 0;
+    const elecCashVal = parseFloat(remitForm.elecCash) || 0;
+    const elecTransferVal = parseFloat(remitForm.elecTransfer) || 0;
+    elecAmt = elecCashVal + elecTransferVal;
 
     if (ticketType === 'main') {
-      const carsVal = parseInt(remitForm.cars) || 0;
-      const priceVal = parseFloat(remitForm.pricePerCar) || 0;
-      if (carsVal <= 0) {
-        showAlert("กรุณาระบุจำนวนคันให้ถูกต้อง", "แจ้งเตือน", true);
+      const carsCashVal = parseInt(remitForm.carsCash) || 0;
+      const carsTransferVal = parseInt(remitForm.carsTransfer) || 0;
+      
+      if (carsCashVal === 0 && carsTransferVal === 0 && elecAmt === 0) {
+        showAlert("กรุณาระบุจำนวนหรือยอดเงินนำส่งอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
         return;
       }
-      finalAmount = carsVal * priceVal;
-      customNote = `นำส่งเงินคลองถม (หลัก) จำนวน ${carsVal} คัน`;
+      
+      const ticketCashVal = carsCashVal * ticketPriceVal;
+      const ticketTransferVal = carsTransferVal * ticketPriceVal;
+      
+      stallAmt = ticketCashVal + ticketTransferVal;
+      totalCash = ticketCashVal + elecCashVal;
+      totalTransfer = ticketTransferVal + elecTransferVal;
+      finalAmount = totalCash + totalTransfer;
+      
+      customNote = `นำส่งเงินคลองถม (หลัก) [ตั๋ว สด: ${carsCashVal} คัน, โอน: ${carsTransferVal} คัน | ค่าไฟ สด: ${elecCashVal} บ., โอน: ${elecTransferVal} บ.]`;
       category = 'ค่าเช่าคลองถมหลัก';
     } else {
-      finalAmount = parseFloat(remitForm.totalAmount) || 0;
-      if (finalAmount <= 0) {
-        showAlert("กรุณาระบุยอดรวมที่จัดเก็บได้", "แจ้งเตือน", true);
+      const ticketCashVal = parseFloat(remitForm.ticketCash) || 0;
+      const ticketTransferVal = parseFloat(remitForm.ticketTransfer) || 0;
+      
+      if (ticketCashVal === 0 && ticketTransferVal === 0 && elecAmt === 0) {
+        showAlert("กรุณาระบุจำนวนหรือยอดเงินนำส่งอย่างน้อย 1 รายการ", "แจ้งเตือน", true);
         return;
       }
-      customNote = `นำส่งเงินคลองถมทั่วไป (ราคาไม่คงที่)`;
+      
+      stallAmt = ticketCashVal + ticketTransferVal;
+      totalCash = ticketCashVal + elecCashVal;
+      totalTransfer = ticketTransferVal + elecTransferVal;
+      finalAmount = totalCash + totalTransfer;
+      
+      customNote = `นำส่งเงินคลองถมทั่วไป [ตั๋ว สด: ${ticketCashVal} บ., โอน: ${ticketTransferVal} บ. | ค่าไฟ สด: ${elecCashVal} บ., โอน: ${elecTransferVal} บ.]`;
       category = 'ค่าเช่าคลองถมทั่วไป';
     }
 
-    // Validate split payment
-    let totalPaid = 0;
-    const cleanPayments = paymentList.filter(p => p.method && p.amount);
-    cleanPayments.forEach(p => {
-      totalPaid += parseFloat(p.amount) || 0;
-    });
-
-    if (totalPaid !== finalAmount) {
-      showAlert(`ยอดนำส่งเงิน (${totalPaid} บ.) ไม่ตรงกับยอดสุทธิที่คำนวณได้ (${finalAmount} บ.)`, "แจ้งเตือน", true);
-      return;
-    }
-
-    const paymentMethodStr = cleanPayments
-      .map(p => `${p.method}:${p.amount}`)
-      .join(' + ') || 'เงินสด';
+    // Build payment method string
+    const methods = [];
+    if (totalCash > 0) methods.push(`เงินสด:${totalCash}`);
+    if (totalTransfer > 0) methods.push(`โอนเงิน:${totalTransfer}`);
+    const paymentMethodStr = methods.join(' + ') || 'เงินสด:0';
 
     setLoading(true);
     try {
@@ -139,12 +158,12 @@ export function KlongThomProvider({ children }) {
         total_amount: finalAmount,
         method: paymentMethodStr,
         note: remitForm.note.trim() 
-          ? `${customNote} (${remitForm.note.trim()})`
+          ? `${customNote} - ${remitForm.note.trim()}`
           : customNote,
         officer: adminUser?.name || 'lvt-admin',
         timestamp: new Date().toISOString(),
-        stall_amt: finalAmount,
-        elec_amt: 0,
+        stall_amt: stallAmt,
+        elec_amt: elecAmt,
         storage_amt: 0,
         bill_type: 'KlongThom'
       };
@@ -158,12 +177,15 @@ export function KlongThomProvider({ children }) {
       
       // Reset Form
       setRemitForm({
-        cars: '',
-        pricePerCar: '0',
-        totalAmount: '',
+        ticketPrice: '0',
+        carsCash: '',
+        carsTransfer: '',
+        ticketCash: '',
+        ticketTransfer: '',
+        elecCash: '',
+        elecTransfer: '',
         note: ''
       });
-      setPaymentList([{ method: 'เงินสด', amount: '' }]);
       
       fetchRemittanceHistory();
     } catch (e) {
