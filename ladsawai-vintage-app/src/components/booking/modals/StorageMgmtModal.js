@@ -135,6 +135,7 @@ export default function StorageMgmtModal() {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-[#FFF8EE] text-[#8B4513] border-b border-[#8B4513]/25 font-bold">
                     <tr>
+                      <th className="p-3 text-center">เวลาคงเหลือ</th>
                       <th className="p-3 text-center">ตำแหน่ง / ล็อค</th>
                       <th className="p-3">ผู้ฝาก / เบอร์ติดต่อ</th>
                       <th className="p-3">ช่วงเวลาฝาก (สัปดาห์)</th>
@@ -146,6 +147,34 @@ export default function StorageMgmtModal() {
                   <tbody className="divide-y divide-amber-100 bg-white font-semibold text-gray-700">
                     {filteredList.map((item) => (
                       <tr key={item.id} className="hover:bg-amber-50/20">
+                        <td className="p-3 text-center text-xs font-bold font-mono">
+                          {item.status === 'Active' ? (() => {
+                            const days = getDaysRemaining(item.end_date);
+                            if (days === null) return '-';
+                            if (days > 0) {
+                              const isUrgent = days <= 2;
+                              return (
+                                <span className={`font-bold ${isUrgent ? 'text-amber-600 animate-pulse' : 'text-blue-700'}`}>
+                                  ⏳ เหลืออีก {days} วัน
+                                </span>
+                              );
+                            } else if (days === 0) {
+                              return (
+                                <span className="font-black text-red-650 animate-pulse">
+                                  🚨 หมดวันนี้
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="font-black text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[9px]">
+                                  ⚠️ เกินกำหนด {Math.abs(days)} วัน
+                                </span>
+                              );
+                            }
+                          })() : (
+                            <span className="text-gray-450 font-bold">-</span>
+                          )}
+                        </td>
                         <td className="p-3 font-extrabold text-[#8B4513] text-sm font-mono text-center">
                           {cleanStallName(item.stall_name)}
                         </td>
@@ -156,30 +185,6 @@ export default function StorageMgmtModal() {
                         <td className="p-3 text-[10px] font-mono">
                           <div className="text-green-800">เริ่ม: {item.start_date || '-'}</div>
                           <div className="text-red-700">สิ้นสุด: {item.end_date || '-'}</div>
-                          {item.status === 'Active' && (() => {
-                            const days = getDaysRemaining(item.end_date);
-                            if (days === null) return null;
-                            if (days > 0) {
-                              const isUrgent = days <= 2;
-                              return (
-                                <div className={`mt-1 font-bold ${isUrgent ? 'text-amber-600 animate-pulse' : 'text-blue-700'}`}>
-                                  ⏳ เหลืออีก {days} วัน
-                                </div>
-                              );
-                            } else if (days === 0) {
-                              return (
-                                <div className="mt-1 font-black text-red-600 animate-pulse">
-                                  🚨 หมดวันนี้
-                                </div>
-                              );
-                            } else {
-                              return (
-                                <div className="mt-1 font-black text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded text-center text-[9px] w-fit">
-                                  ⚠️ เกินกำหนด {Math.abs(days)} วัน
-                                </div>
-                              );
-                            }
-                          })()}
                         </td>
                         <td className="p-3 text-[11px] max-w-[200px] truncate text-gray-600" title={item.note}>
                           {item.note || '-'}
