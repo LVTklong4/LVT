@@ -601,56 +601,6 @@ export default function StandardBookingLayout() {
 
         </div>
 
-        {/* Off-Grid Bookings Cards */}
-        {bookings.filter(b => b.type === 'นอกผัง').length > 0 && (
-          <div className="mt-4 bg-white border-2 border-amber-800/40 rounded-xl p-4 shadow-md">
-            <h3 className="font-extrabold text-[#8B4513] text-xs md:text-sm flex items-center gap-1.5 border-b pb-2 mb-3">
-              <span className="text-lg">📋</span> รายการจองนอกผังวันนี้ (Off-Grid Bookings Today)
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {bookings.filter(b => b.type === 'นอกผัง').map((b) => {
-                let dispPhone = '-';
-                let dispType = 'ขาจร';
-                const pMatch = (b.note || '').match(/\[เบอร์โทร:\s*([^\]]+)\]/);
-                if (pMatch) dispPhone = pMatch[1];
-                const tMatch = (b.note || '').match(/\[ประเภท:\s*([^\]]+)\]/);
-                if (tMatch) dispType = tMatch[1];
-
-                return (
-                  <div 
-                    key={b.id} 
-                    onClick={() => {
-                      setSelectedOffGridBookingObj(b);
-                      setShowOffGridBooking(true);
-                    }}
-                    className="p-3 bg-[#FFFDF9] hover:bg-amber-50/40 border border-amber-800/10 hover:border-amber-800/30 rounded-lg cursor-pointer transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="font-extrabold text-[#8B4513] text-xs font-mono">{b.stall_name}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                          b.status === 'ชำระแล้ว'
-                            ? 'bg-green-100 text-green-800'
-                            : b.status === 'ยกเลิก'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}>
-                          {b.status}
-                        </span>
-                      </div>
-                      <div className="text-gray-800 text-xs font-bold mt-1.5">{b.booker_name}</div>
-                      <div className="text-[10px] text-gray-500 mt-0.5">โทร: {dispPhone}</div>
-                    </div>
-                    <div className="flex justify-between items-center mt-3 pt-2 border-t border-dashed border-[#8B4513]/10">
-                      <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[9px] font-bold">{dispType}</span>
-                      <span className="font-mono font-extrabold text-xs text-[#8B4513]">{b.total_price?.toLocaleString()}.-</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Floating Bottom Info bar */}
