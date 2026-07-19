@@ -20,6 +20,7 @@ export default function StorageMgmtModal() {
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [renewItem, setRenewItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('Active');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Open new deposit modal
   const handleOpenNewDeposit = () => {
@@ -69,10 +70,19 @@ export default function StorageMgmtModal() {
     return diffDays;
   };
 
-  // Filter storage list by status
+  // Filter storage list by status and searchQuery
   const filteredList = (storageList || []).filter(item => {
-    if (statusFilter === 'All') return true;
-    return item.status === statusFilter;
+    if (statusFilter !== 'All' && item.status !== statusFilter) return false;
+
+    const term = searchQuery.toLowerCase().trim();
+    if (!term) return true;
+
+    return (
+      (item.stall_name || '').toLowerCase().includes(term) ||
+      (item.owner_name || '').toLowerCase().includes(term) ||
+      (item.phone || '').toLowerCase().includes(term) ||
+      (item.note || '').toLowerCase().includes(term)
+    );
   });
 
   return (
@@ -120,15 +130,32 @@ export default function StorageMgmtModal() {
             </div>
           </div>
 
+          {/* Search Box */}
+          {(storageList || []).length > 0 && (
+            <div className="shrink-0">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="🔍 ค้นหาด้วยเลขล็อก, ชื่อผู้ฝาก, เบอร์โทรศัพท์, หรือรายละเอียดของฝาก..."
+                className="w-full p-2 border border-[#8B4513]/20 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513] font-bold bg-[#FAF6EE]/50 placeholder-gray-500"
+              />
+            </div>
+          )}
+
           {/* Table List */}
           <div className="flex flex-col min-w-0">
             {loadingStorage ? (
               <div className="flex justify-center items-center py-20 text-[#8B4513]">
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
-            ) : filteredList.length === 0 ? (
+            ) : (storageList || []).length === 0 ? (
               <div className="text-center py-16 text-gray-400 font-bold bg-white rounded-lg border border-dashed border-[#8B4513]/25">
                 ไม่มีรายการฝากของในระบบขณะนี้
+              </div>
+            ) : filteredList.length === 0 ? (
+              <div className="text-center py-16 text-gray-400 font-bold bg-white rounded-lg border border-dashed border-[#8B4513]/25">
+                ไม่พบข้อมูลตรงกับที่ค้นหา
               </div>
             ) : (
               <div className="overflow-x-auto border border-[#8B4513]/25 rounded-xl bg-white shadow-xs">
