@@ -2,12 +2,14 @@
 
 import React from 'react';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
+import { FinanceProvider } from '@/context/FinanceContext';
 import { RefreshCw } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardFinanceKpis from '@/components/dashboard/DashboardFinanceKpis';
 import DebtRisks from '@/components/dashboard/DebtRisks';
 import PrimeCustomers from '@/components/dashboard/PrimeCustomers';
 import FinanceInsights from '@/components/dashboard/FinanceInsights';
+import FinanceLedger from '@/components/dashboard/FinanceLedger';
 
 function DashboardFinanceContent() {
   const { loading } = useDashboard();
@@ -48,6 +50,9 @@ function DashboardFinanceContent() {
               </div>
 
             </div>
+
+            {/* General Ledger Management */}
+            <FinanceLedger />
           </>
         )}
 
@@ -59,7 +64,10 @@ function DashboardFinanceContent() {
 export default function DashboardFinancePage() {
   return (
     <DashboardProvider>
-      <DashboardFinanceContent />
+      <FinanceProvider>
+        <DashboardFinanceContent />
+      </FinanceProvider>
     </DashboardProvider>
   );
 }
+

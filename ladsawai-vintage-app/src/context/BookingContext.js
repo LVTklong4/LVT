@@ -220,27 +220,6 @@ export function BookingProvider({ children }) {
     return 'Standard';
   };
 
-  // Finance Modal States
-  const [showFinanceMgmtModal, setShowFinanceMgmtModal] = useState(false);
-  const [expenseList, setExpenseList] = useState([]);
-  const [incomeList, setIncomeList] = useState([]);
-  const [loadingFinance, setLoadingFinance] = useState(false);
-  const [financeTab, setFinanceTab] = useState('income');
-  const [incomeForm, setIncomeForm] = useState({
-    date: '',
-    category: 'ค่าปรับ',
-    description: '',
-    amount: '',
-    method: 'โอนเงิน'
-  });
-  const [expenseForm, setExpenseForm] = useState({
-    date: '',
-    category: 'ค่าน้ำค่าไฟ',
-    item: '',
-    amount: '',
-    method: 'โอนเงิน'
-  });
-
   // Settings Modal States
   const [showSettingsMgmtModal, setShowSettingsMgmtModal] = useState(false);
   const [adminRolesList, setAdminRolesList] = useState([]);
@@ -749,7 +728,7 @@ export function BookingProvider({ children }) {
       return;
     }
 
-    const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
+    const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice);
     const totalPaid = paymentList
       .filter(p => p.amount)
       .reduce((sum, p) => sum + parseNumber(p.amount), 0);
@@ -775,7 +754,7 @@ export function BookingProvider({ children }) {
     setLoading(true);
     try {
       const bookingId = selectedBooking?.id || `B-${Date.now()}`;
-      const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice) + parseNumber(storageFee);
+      const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice);
 
       const finalPaymentMethod = paymentList
         .filter(p => p.method && p.amount)
@@ -4146,88 +4125,6 @@ export function BookingProvider({ children }) {
     }
   };
 
-  // --- FINANCE CRUD HANDLERS ---
-  const fetchFinanceData = async () => {
-    setLoadingFinance(true);
-    try {
-      const { data: inc, error: incErr } = await supabase.from('other_income').select('*').order('timestamp', { ascending: false });
-      const { data: exp, error: expErr } = await supabase.from('expenses').select('*').order('timestamp', { ascending: false });
-      if (incErr) throw incErr;
-      if (expErr) throw expErr;
-      setIncomeList(inc || []);
-      setExpenseList(exp || []);
-    } catch (e) {
-      console.error(e);
-      showAlert("ดึงข้อมูลการเงินไม่สำเร็จ", "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingFinance(false);
-    }
-  };
-
-  const handleAddIncome = async (e) => {
-    e.preventDefault();
-    if (!incomeForm.amount || !incomeForm.description) {
-      showAlert("กรุณากรอกข้อมูลจำนวนเงินและรายละเอียดให้ครบถ้วน", "แจ้งเตือน", true);
-      return;
-    }
-    setLoadingFinance(true);
-    try {
-      const payload = {
-        id: `INC-${Date.now()}`,
-        date: incomeForm.date || new Date().toISOString().split('T')[0],
-        category: incomeForm.category,
-        description: incomeForm.description.trim(),
-        amount: parseNumber(incomeForm.amount),
-        method: incomeForm.method,
-        officer: adminUser?.name || 'Admin',
-        timestamp: new Date().toISOString()
-      };
-      const { error } = await supabase.from('other_income').insert([payload]);
-      if (error) throw error;
-      
-      showAlert("บันทึกรายได้อื่น ๆ สำเร็จ", "สำเร็จ");
-      setIncomeForm({ date: '', category: 'ค่าปรับ', description: '', amount: '', method: 'โอนเงิน' });
-      fetchFinanceData();
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingFinance(false);
-    }
-  };
-
-  const handleAddExpense = async (e) => {
-    e.preventDefault();
-    if (!expenseForm.amount || !expenseForm.item) {
-      showAlert("กรุณากรอกข้อมูลจำนวนเงินและรายการจ่ายให้ครบถ้วน", "แจ้งเตือน", true);
-      return;
-    }
-    setLoadingFinance(true);
-    try {
-      const payload = {
-        id: `EXP-${Date.now()}`,
-        date: expenseForm.date || new Date().toISOString().split('T')[0],
-        category: expenseForm.category,
-        item: expenseForm.item.trim(),
-        amount: parseNumber(expenseForm.amount),
-        method: expenseForm.method,
-        officer: adminUser?.name || 'Admin',
-        timestamp: new Date().toISOString()
-      };
-      const { error } = await supabase.from('expenses').insert([payload]);
-      if (error) throw error;
-      
-      showAlert("บันทึกรายจ่ายสำเร็จ", "สำเร็จ");
-      setExpenseForm({ date: '', category: 'ค่าน้ำค่าไฟ', item: '', amount: '', method: 'โอนเงิน' });
-      fetchFinanceData();
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingFinance(false);
-    }
-  };
-
   // --- SETTINGS / ADMIN ROLES CRUD HANDLERS ---
   const fetchAdminRolesData = async () => {
     setLoadingSettings(true);
@@ -4279,9 +4176,7 @@ export function BookingProvider({ children }) {
     if (showMonthlyMgmtModal) fetchAllMonthly();
   }, [showMonthlyMgmtModal]);
 
-  useEffect(() => {
-    if (showFinanceMgmtModal) fetchFinanceData();
-  }, [showFinanceMgmtModal]);
+
 
   useEffect(() => {
     if (showSettingsMgmtModal) fetchAdminRolesData();
@@ -4445,19 +4340,15 @@ export function BookingProvider({ children }) {
     editingMonthlyId,
     elecPrice,
     elecUnit,
-    expenseForm,
-    expenseList,
     extractAmountFromText,
     formatPrice,
     fetchAdminRoles,
     fetchAdminRolesData,
     fetchAllMonthly,
     fetchBookingsAndStorage,
-    fetchFinanceData,
     fetchMonthlyTransactions,
     fetchStalls,
     fetchVacantStallsForDate,
-    financeTab,
     formatBookingMonth,
     getBookingCustomerType,
     getDayOccurrences,
@@ -4465,8 +4356,6 @@ export function BookingProvider({ children }) {
     getOccupiedStallsInRound,
     getStallPriceForDate,
     getStallStatus,
-    handleAddExpense,
-    handleAddIncome,
     handleAddUtility,
     handleBulkRenewSubmit,
     handleConfirmMoveLock,
@@ -4500,15 +4389,12 @@ export function BookingProvider({ children }) {
     handleUpdateMonthlyItem,
     handleVacateMonthlyStallToday,
     highlightedStall,
-    incomeForm,
-    incomeList,
     initDates,
     invoicePreviewItem,
     isEditingMonthlyMode,
     isMonthlyPageOnly,
     filteredMonthlyList,
     loading,
-    loadingFinance,
     loadingMonthly,
     loadingMonthlyTxns,
     loadingSettings,
@@ -4589,17 +4475,11 @@ export function BookingProvider({ children }) {
     setEditingMonthlyId,
     setElecPrice,
     setElecUnit,
-    setExpenseForm,
-    setExpenseList,
-    setFinanceTab,
     setHighlightedStall,
-    setIncomeForm,
-    setIncomeList,
     setInvoicePreviewItem,
     setIsEditingMonthlyMode,
     setIsMonthlyPageOnly,
     setLoading,
-    setLoadingFinance,
     setLoadingMonthly,
     setLoadingMonthlyTxns,
     setLoadingSettings,
@@ -4657,7 +4537,6 @@ export function BookingProvider({ children }) {
     setShowAddUtilityModal,
     setShowBookingModal,
     setShowBulkRenewModal,
-    setShowFinanceMgmtModal,
     setShowLoginModal,
     setShowMonthlyMgmtModal,
     setShowMonthlyPaymentModal,
@@ -4687,7 +4566,6 @@ export function BookingProvider({ children }) {
     showBookingModal,
     showBulkRenewModal,
     showCancelled,
-    showFinanceMgmtModal,
     showLoginModal,
     showMonthlyMgmtModal,
     showMonthlyPaymentModal,
