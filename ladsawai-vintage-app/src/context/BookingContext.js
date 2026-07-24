@@ -641,7 +641,10 @@ export function BookingProvider({ children }) {
   };
 
   // Save Booking handler (Insert or Update)
-  const handleSaveBooking = async (status = 'ค้างชำระ', autoPrint = false) => {
+  const handleSaveBooking = async (statusArg = 'ค้างชำระ', autoPrintArg = false) => {
+    let status = (typeof statusArg === 'string') ? statusArg : null;
+    let autoPrint = (typeof autoPrintArg === 'boolean') ? autoPrintArg : false;
+
     if (!adminUser) {
       showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
@@ -659,6 +662,10 @@ export function BookingProvider({ children }) {
     const totalPaid = paymentList
       .filter(p => p.amount)
       .reduce((sum, p) => sum + parseNumber(p.amount), 0);
+
+    if (!status) {
+      status = (totalPaid >= totalVal && totalVal > 0) ? 'ชำระแล้ว' : 'ค้างชำระ';
+    }
 
     if (totalPaid > totalVal) {
       showAlert(`ยอดเงินที่ชำระ (${totalPaid} บาท) เกินกว่ายอดรวมทั้งสิ้น (${totalVal} บาท) กรุณาตรวจสอบจำนวนเงินอีกครั้ง`, "แจ้งเตือน", true);

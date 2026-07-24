@@ -574,10 +574,10 @@ export default function BookingDetailModal({
                       ยกเลิก
                     </button>
                     <button 
-                      onClick={handleSaveBooking}
+                      onClick={() => handleSaveBooking(isFullyPaid ? 'ชำระแล้ว' : 'ค้างชำระ', isFullyPaid)}
                       className="px-5 py-2 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded-lg font-extrabold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-1"
                     >
-                      บันทึกรายการ
+                      {isFullyPaid ? "บันทึก/พิมพ์ตั๋ว" : "บันทึก (ค้างจ่าย)"}
                     </button>
                   </div>
                 </div>
