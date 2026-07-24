@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuthAdmin } from '@/context/AuthAdminContext';
 import {
   dayNamesShort,
   monthNamesShort,
@@ -15,10 +16,30 @@ import { generateReceiptHTML } from '@/utils/receiptPrinter';
 const BookingContext = createContext();
 
 export function BookingProvider({ children }) {
+  // Use AuthAdminContext for authentication state
+  const {
+    adminUser,
+    setAdminUser,
+    adminList,
+    setAdminList,
+    adminRolesList,
+    setAdminRolesList,
+    loadingSettings,
+    setLoadingSettings,
+    selectedAdminEmail,
+    setSelectedAdminEmail,
+    adminForm,
+    setAdminForm,
+    fetchAdminRoles,
+    handleGoogleLogin,
+    handleLogout: authLogout,
+    handleSaveAdminRole
+  } = useAuthAdmin();
+
   // States
   const [stalls, setStalls] = useState([]);
   const [bookings, setBookings] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [dateOffset, setDateOffset] = useState(0);
   const [quickDates, setQuickDates] = useState([]);
@@ -26,11 +47,8 @@ export function BookingProvider({ children }) {
   const [searchResults, setSearchResults] = useState([]);
   const [highlightedStall, setHighlightedStall] = useState(null);
   
-  // Authentication & Admin State
-  const [adminUser, setAdminUser] = useState(null);
-  const [adminList, setAdminList] = useState([]);
+  // Authentication & Modal State
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [selectedAdminEmail, setSelectedAdminEmail] = useState('');
   
   // Modal States
   const [selectedStall, setSelectedStall] = useState(null);
@@ -223,15 +241,6 @@ export function BookingProvider({ children }) {
 
   // Settings Modal States
   const [showSettingsMgmtModal, setShowSettingsMgmtModal] = useState(false);
-  const [adminRolesList, setAdminRolesList] = useState([]);
-  const [loadingSettings, setLoadingSettings] = useState(false);
-  const [adminForm, setAdminForm] = useState({
-    email: '',
-    name: '',
-    role: 'Staff',
-    status: 'เปิด',
-    employee_id: ''
-  });
   
   // Alert/Toast State
   const [alertInfo, setAlertInfo] = useState(null);
@@ -390,15 +399,6 @@ export function BookingProvider({ children }) {
     }, duration);
   };
 
-  const fetchAdminRoles = async () => {
-    try {
-      const { data, error } = await supabase.from('admin_roles').select('*');
-      if (error) throw error;
-      setAdminList(data || []);
-    } catch (e) {
-      console.error("Error fetching admin roles:", e);
-    }
-  };
 
   const fetchStalls = async () => {
     try {
@@ -429,20 +429,6 @@ export function BookingProvider({ children }) {
     }
   };
 
-  // Google Sign-in Handler
-  const handleGoogleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`
-        }
-      });
-      if (error) throw error;
-    } catch (e) {
-      showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ Google: " + e.message, "ข้อผิดพลาด", true);
-    }
-  };
 
   // Bypass Login handler for Testing
   const handleLogin = () => {
@@ -3867,36 +3853,6 @@ export function BookingProvider({ children }) {
     }
   };
 
-  const handleSaveAdminRole = async (e) => {
-    e.preventDefault();
-    if (!adminForm.email || !adminForm.name) {
-      showAlert("กรุณากรอกอีเมลและชื่อแอดมิน", "แจ้งเตือน", true);
-      return;
-    }
-    setLoadingSettings(true);
-    try {
-      const payload = {
-        email: adminForm.email.trim().toLowerCase(),
-        name: adminForm.name.trim(),
-        role: adminForm.role,
-        status: adminForm.status,
-        employee_id: adminForm.employee_id.trim() || null,
-        created_at: new Date().toISOString()
-      };
-      const { error } = await supabase.from('admin_roles').upsert(payload);
-      if (error) throw error;
-      
-      showAlert("บันทึกสิทธิ์ผู้ดูแลระบบสำเร็จ", "สำเร็จ");
-      setAdminForm({ email: '', name: '', role: 'Staff', status: 'เปิด', employee_id: '' });
-      fetchAdminRolesData();
-      fetchAdminRoles(); // refresh global admin roles list
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
-    } finally {
-      setLoadingSettings(false);
-    }
-  };
 
   // Trigger data load when modals open
   

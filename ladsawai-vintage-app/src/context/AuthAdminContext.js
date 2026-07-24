@@ -143,6 +143,19 @@ export function AuthAdminProvider({ children }) {
     }
   };
 
+  const handleBypassLogin = (email) => {
+    const targetEmail = email || selectedAdminEmail;
+    const admin = adminList.find(a => a.email === targetEmail);
+    if (admin) {
+      if (admin.status !== 'เปิด') {
+        return { success: false, error: 'บัญชีผู้ใช้นี้ถูกปิดการใช้งาน' };
+      }
+      setAdminUser(admin);
+      return { success: true, admin };
+    }
+    return { success: false, error: 'โปรดระบุอีเมลผู้เข้าใช้งาน' };
+  };
+
   return (
     <AuthAdminContext.Provider value={{
       adminUser,
@@ -156,6 +169,7 @@ export function AuthAdminProvider({ children }) {
       setAdminForm,
       fetchAdminRoles,
       handleLogin,
+      handleBypassLogin,
       handleGoogleLogin,
       handleLogout,
       handleSaveAdminRole,
