@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { useDashboard } from '@/context/DashboardContext';
-import { Trash2, Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Loader2, RefreshCw, X, AlertCircle } from 'lucide-react';
+import { Trash2, Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Loader2, RefreshCw, X, AlertCircle, Lock } from 'lucide-react';
+import DailyClosingModal from './DailyClosingModal';
 
 export default function FinanceLedger() {
   const { 
@@ -18,6 +19,9 @@ export default function FinanceLedger() {
   } = useFinance();
 
   const { calculateDashboard } = useDashboard();
+
+  // Daily Closing Modal state
+  const [showDailyClosingModal, setShowDailyClosingModal] = useState(false);
 
   // Local state for tabs
   const [activeTab, setActiveTab] = useState('income'); // 'income' or 'expense'
@@ -162,29 +166,39 @@ export default function FinanceLedger() {
           </p>
         </div>
 
-        <div className="flex bg-[#FDF5E6] p-1 rounded-lg border border-[#8B4513]/20 self-stretch md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto">
           <button
-            onClick={() => { setActiveTab('income'); handleResetFilters(); }}
-            className={`flex-1 md:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'income' 
-                ? 'bg-emerald-700 text-white shadow-sm' 
-                : 'text-gray-600 hover:text-emerald-700'
-            }`}
+            onClick={() => setShowDailyClosingModal(true)}
+            className="px-3.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-900 hover:to-teal-900 text-white rounded-lg text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
           >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>รายรับอื่นๆ</span>
+            <Lock className="w-4 h-4 text-emerald-300" />
+            <span>🔒 ปิดยอดประจำวัน</span>
           </button>
-          <button
-            onClick={() => { setActiveTab('expense'); handleResetFilters(); }}
-            className={`flex-1 md:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'expense' 
-                ? 'bg-red-700 text-white shadow-sm' 
-                : 'text-gray-600 hover:text-red-700'
-            }`}
-          >
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>รายจ่ายทั้งหมด</span>
-          </button>
+
+          <div className="flex bg-[#FDF5E6] p-1 rounded-lg border border-[#8B4513]/20 flex-1 md:flex-initial">
+            <button
+              onClick={() => { setActiveTab('income'); handleResetFilters(); }}
+              className={`flex-1 md:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'income' 
+                  ? 'bg-emerald-700 text-white shadow-sm' 
+                  : 'text-gray-600 hover:text-emerald-700'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>รายรับอื่นๆ</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab('expense'); handleResetFilters(); }}
+              className={`flex-1 md:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'expense' 
+                  ? 'bg-red-700 text-white shadow-sm' 
+                  : 'text-gray-600 hover:text-red-700'
+              }`}
+            >
+              <TrendingDown className="w-3.5 h-3.5" />
+              <span>รายจ่ายทั้งหมด</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -514,6 +528,12 @@ export default function FinanceLedger() {
         </div>
 
       </div>
+
+      {/* Daily Closing Modal */}
+      <DailyClosingModal 
+        isOpen={showDailyClosingModal}
+        onClose={() => setShowDailyClosingModal(false)}
+      />
 
     </div>
   );

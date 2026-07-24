@@ -3,7 +3,7 @@
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useStorage } from '@/context/StorageContext';
-import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Tag, CalendarX, Package, Archive } from 'lucide-react';
+import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Tag, CalendarX, Package, Archive, Lock } from 'lucide-react';
 
 import LoginModal from './modals/LoginModal';
 import StorageMgmtModal from './modals/StorageMgmtModal';
@@ -17,6 +17,8 @@ import MonthlyPrintModal from './modals/MonthlyPrintModal';
 import NewMonthlyModal from './modals/NewMonthlyModal';
 import OffGridBookingModal from './modals/OffGridBookingModal';
 import KlongThomBookingLayout from './KlongThomBookingLayout';
+import DailyClosingModal from '../dashboard/DailyClosingModal';
+import { FinanceProvider } from '@/context/FinanceContext';
 import { KlongThomProvider } from '@/context/KlongThomContext';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
 
@@ -58,7 +60,12 @@ export default function StandardBookingLayout() {
   // Decoupled Off-Grid Booking Local States
   const [showOffGridBooking, setShowOffGridBooking] = React.useState(false);
   const [selectedOffGridBookingObj, setSelectedOffGridBookingObj] = React.useState(null);
+
+  // Decoupled KlongThom Booking Local States
   const [showKlongThomModal, setShowKlongThomModal] = React.useState(false);
+
+  // Daily Closing Modal State
+  const [showDailyClosingModal, setShowDailyClosingModal] = React.useState(false);
 
   // States & memo for vacating multiple monthly stalls
   const [selectedVacateStallIds, setSelectedVacateStallIds] = React.useState([]);
@@ -329,6 +336,15 @@ export default function StandardBookingLayout() {
                         >
                           <Banknote className="w-4 h-4 text-emerald-600 shrink-0" /> บันทึกรายรับ-รายจ่าย
                         </a>
+                        <button 
+                          onClick={() => {
+                            setShowProfileDropdown(false);
+                            setShowDailyClosingModal(true);
+                          }} 
+                          className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 text-emerald-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
+                        >
+                          <Lock className="w-4 h-4 text-emerald-700 shrink-0" /> 🔒 ปิดยอดประจำวัน
+                        </button>
                         <button 
                           onClick={() => {
                             setShowProfileDropdown(false);
@@ -1937,6 +1953,14 @@ export default function StandardBookingLayout() {
           </KlongThomProvider>
         </div>
       )}
+
+      {/* 🔒 Daily Closing Modal */}
+      <FinanceProvider>
+        <DailyClosingModal 
+          isOpen={showDailyClosingModal}
+          onClose={() => setShowDailyClosingModal(false)}
+        />
+      </FinanceProvider>
     </div>
   );
 }
