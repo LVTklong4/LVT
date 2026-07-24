@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
-import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet } from 'lucide-react';
+import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet, Printer } from 'lucide-react';
 
 export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const { fetchDailySummary, saveDailyClosing, loading } = useFinance();
@@ -150,6 +150,15 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.print()}
+              className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              title="พิมพ์ใบนำส่งเงินประจำวัน"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>พิมพ์ใบนำส่งเงิน</span>
+            </button>
+
             {isSaved ? (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 border border-green-300 text-green-800 rounded-full text-xs font-black">
                 <ShieldCheck className="w-3.5 h-3.5 text-green-700" />
@@ -410,6 +419,128 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
         </div>
 
       </div>
+
+      {/* 🖨️ PRINTABLE REMITTANCE FORM A4 (Only visible during print) */}
+      <div className="hidden print:block fixed inset-0 bg-white text-black p-8 text-xs font-sans">
+        <div className="flex justify-between items-center border-b-2 border-black pb-3 mb-4">
+          <div>
+            <h1 className="text-lg font-black uppercase tracking-wide">ตลาดนัดลาดสวายวินเทจ</h1>
+            <h2 className="text-sm font-bold text-gray-800">ใบนำส่งเงินและสรุปการปิดยอดประจำวัน (Daily Remittance Form)</h2>
+          </div>
+          <div className="text-right">
+            <p className="font-extrabold text-sm">วันที่: {selectedDate}</p>
+            <p className="text-[10px] text-gray-600">พิมพ์เมื่อ: {new Date().toLocaleString('th-TH')}</p>
+          </div>
+        </div>
+
+        {summary && (
+          <div className="flex flex-col gap-4">
+            {/* Revenue Summary Table */}
+            <div>
+              <h3 className="font-bold border-b pb-1 mb-2">1. สรุปรายรับแยกตามประเภท</h3>
+              <table className="w-full text-left border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100 font-bold border-b border-gray-300">
+                    <th className="p-1.5 border-r border-gray-300">รายการ</th>
+                    <th className="p-1.5 text-right">จำนวนเงิน (บาท)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 border-r border-gray-200">ค่าจองแผงรายวัน</td>
+                    <td className="p-1.5 text-right font-bold">{summary.dailyStallIncome.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 border-r border-gray-200">ค่างวดรายเดือน (ชำระในวัน)</td>
+                    <td className="p-1.5 text-right font-bold">{summary.monthlyIncome.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 border-r border-gray-200">บัตรตั๋ว & ค่าไฟคลองถม</td>
+                    <td className="p-1.5 text-right font-bold">{summary.klongthomIncome.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 border-r border-gray-200">ค่าบริการฝากของ (Storage)</td>
+                    <td className="p-1.5 text-right font-bold">{summary.storageIncome.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 border-r border-gray-200">รายรับอื่นๆ</td>
+                    <td className="p-1.5 text-right font-bold">{summary.otherIncome.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-black font-black bg-gray-50">
+                    <td className="p-1.5 border-r border-gray-300">รวมรายรับทั้งหมด</td>
+                    <td className="p-1.5 text-right font-black">{summary.totalIncome.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-black font-bold text-red-700">
+                    <td className="p-1.5 border-r border-gray-300">หัก: รายจ่ายประจำวัน</td>
+                    <td className="p-1.5 text-right font-bold">-{summary.totalExpenses.toLocaleString()} ฿</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Remittance & Cash Count Table */}
+            <div>
+              <h3 className="font-bold border-b pb-1 mb-2">2. ตารางกระทบยอดเงินสดนำส่งจริง</h3>
+              <table className="w-full text-left border-collapse border border-gray-300">
+                <tbody>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 font-bold border-r border-gray-300 bg-gray-50">เงินทอนเริ่มต้น (Float Money)</td>
+                    <td className="p-1.5 text-right font-bold">{floatVal.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 font-bold border-r border-gray-300 bg-gray-50">เงินสดรับรวม (Cash In)</td>
+                    <td className="p-1.5 text-right font-bold text-green-700">+{cashIn.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-1.5 font-bold border-r border-gray-300 bg-gray-50">เงินสดจ่ายรวม (Cash Out)</td>
+                    <td className="p-1.5 text-right font-bold text-red-700">-{cashOut.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b border-gray-300 font-bold bg-gray-100">
+                    <td className="p-1.5 border-r border-gray-300">เงินสดที่ควรมีในลิ้นชัก (Expected Cash)</td>
+                    <td className="p-1.5 text-right font-black">{expectedCashInDrawer.toLocaleString()} ฿</td>
+                  </tr>
+                  <tr className="border-b-2 border-black font-black bg-emerald-50">
+                    <td className="p-2 border-r border-gray-300 text-sm">ยอดเงินสดนับนำส่งจริง (Counted Cash Remitted)</td>
+                    <td className="p-2 text-right font-black text-base">
+                      {countedCashVal !== null ? countedCashVal.toLocaleString() : '0'} ฿
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-300 font-bold">
+                    <td className="p-1.5 border-r border-gray-300">ผลต่างเงินขาด / เงินเกิน (Shortage / Surplus)</td>
+                    <td className="p-1.5 text-right font-bold">
+                      {shortageSurplus > 0 ? '+' : ''}{shortageSurplus.toLocaleString()} ฿
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {discrepancyNote && (
+              <div className="border border-gray-300 p-2 rounded">
+                <span className="font-bold">หมายเหตุ: </span> {discrepancyNote}
+              </div>
+            )}
+
+            {/* Signature Area */}
+            <div className="grid grid-cols-2 gap-8 pt-8 mt-4 border-t border-gray-300">
+              <div className="flex flex-col items-center gap-12 text-center">
+                <p className="font-bold">ลงชื่อเจ้าหน้าที่ผู้นำส่งเงิน</p>
+                <div className="w-48 border-b border-black"></div>
+                <p className="text-[10px]">( ................................................................ )</p>
+                <p className="text-[10px] text-gray-500">วันที่ .......... / .......... / ................</p>
+              </div>
+
+              <div className="flex flex-col items-center gap-12 text-center">
+                <p className="font-bold">ลงชื่อฝ่ายบัญชี / ผู้รับมอบเงินสด</p>
+                <div className="w-48 border-b border-black"></div>
+                <p className="text-[10px]">( ................................................................ )</p>
+                <p className="text-[10px] text-gray-500">วันที่ .......... / .......... / ................</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
