@@ -188,31 +188,19 @@ export default function StallMapGrid() {
               }}
               className="rounded-md p-1 flex flex-col items-center justify-center z-10 pointer-events-none shadow-sm"
             >
-              <span className="text-[#8B4513] font-black text-xs">มินิมาร์ท</span>
-            </div>
-
-            <div 
-              style={{ 
-                gridRow: "1 / span 3", 
-                gridColumn: "16 / span 5",
-                border: "2.5px dashed #0284C7",
-                backgroundColor: "#E0F2FE"
-              }}
-              className="rounded-md p-1 flex flex-col items-center justify-center z-10 pointer-events-none shadow-sm"
-            >
-              <span className="text-[#0369A1] font-black text-xs">ห้องน้ำ</span>
+              <span className="text-[#8B4513] font-black text-xs">ร้านชำ</span>
             </div>
 
             <div 
               style={{ 
                 gridRow: "23 / span 4", 
                 gridColumn: "2 / span 6",
-                border: "2.5px dashed #0284C7",
-                backgroundColor: "#E0F2FE"
+                border: "2.5px dashed #D97706",
+                backgroundColor: "#FEF9C3"
               }}
               className="rounded-md p-1 flex flex-col items-center justify-center z-10 pointer-events-none shadow-sm"
             >
-              <span className="text-[#0369A1] font-black text-xs">บ่อน้ำ</span>
+              <span className="text-[#854D0E] font-black text-xs">ร้านน้ำ</span>
             </div>
 
           </div>
