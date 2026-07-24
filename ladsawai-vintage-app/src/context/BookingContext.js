@@ -33,7 +33,8 @@ export function BookingProvider({ children }) {
     fetchAdminRoles,
     handleGoogleLogin,
     handleLogout: authLogout,
-    handleSaveAdminRole
+    handleSaveAdminRole,
+    verifyAndSetAdmin
   } = useAuthAdmin();
 
   // States
@@ -251,32 +252,10 @@ export function BookingProvider({ children }) {
 
   // Initialize
   useEffect(() => {
-    // 1. Fetch authorized admin roles
-    fetchAdminRoles();
-    // 2. Setup dates
+    // 1. Setup dates
     initDates();
-    // 3. Fetch Stallsผังตลาด
+    // 2. Fetch Stallsผังตลาด
     fetchStalls();
-    
-    // 4. Check active session from Supabase Auth
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await verifyAndSetAdmin(session.user.email);
-      } else {
-        // Fallback to local storage for bypass session
-        const savedSession = localStorage.getItem('lvt_admin_session');
-        if (savedSession) {
-          try {
-            setAdminUser(JSON.parse(savedSession));
-          } catch (e) {
-            localStorage.removeItem('lvt_admin_session');
-          }
-        }
-      }
-    };
-
-    checkUser();
 
     // Check URL parameters to auto-open monthly management
     if (typeof window !== 'undefined') {
@@ -286,46 +265,7 @@ export function BookingProvider({ children }) {
         setShowMonthlyMgmtModal(true);
       }
     }
-
-    // 5. Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await verifyAndSetAdmin(session.user.email);
-      } else if (event === 'SIGNED_OUT') {
-        setAdminUser(null);
-        localStorage.removeItem('lvt_admin_session');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
-
-  const verifyAndSetAdmin = async (email) => {
-    try {
-      const { data: admin, error } = await supabase
-        .from('admin_roles')
-        .select('*')
-        .eq('email', email)
-        .eq('status', 'เปิด')
-        .maybeSingle();
-
-      if (admin) {
-        setAdminUser(admin);
-        localStorage.setItem('lvt_admin_session', JSON.stringify(admin));
-        showAlert(`ยินดีต้อนรับคุณ ${admin.name}`, "เข้าสู่ระบบสำเร็จ");
-      } else {
-        await supabase.auth.signOut();
-        setAdminUser(null);
-        localStorage.removeItem('lvt_admin_session');
-        showAlert(`อีเมล ${email} ไม่มีสิทธิ์เข้าใช้งานระบบผู้ดูแล`, "เข้าสู่ระบบไม่สำเร็จ", true);
-      }
-    } catch (e) {
-      console.error(e);
-      showAlert("เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์: " + e.message, "ข้อผิดพลาด", true);
-    }
-  };
 
   // Fetch bookings when date changes
   useEffect(() => {
@@ -857,6 +797,7 @@ export function BookingProvider({ children }) {
 
       showAlert("ลบข้อมูลการจองเรียบร้อย", "สำเร็จ");
       setShowBookingModal(false);
+      setBookings(prev => prev.filter(b => !idsToDelete.includes(b.id)));
       fetchBookingsAndStorage();
     } catch (e) {
       console.error(e);
@@ -904,6 +845,7 @@ export function BookingProvider({ children }) {
 
       showAlert("บันทึกการแจ้งลาหยุดสำเร็จ", "สำเร็จ");
       setShowBookingModal(false);
+      setBookings(prev => [...prev.filter(b => b.id !== bookingData.id), bookingData]);
       fetchBookingsAndStorage();
     } catch (e) {
       console.error(e);
