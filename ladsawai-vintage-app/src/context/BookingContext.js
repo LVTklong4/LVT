@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
+import { logOfficerActivity } from '@/utils/logger';
 import {
   dayNamesShort,
   monthNamesShort,
@@ -47,6 +48,11 @@ export function BookingProvider({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [highlightedStall, setHighlightedStall] = useState(null);
+  
+  // Standby Waitlist & Activity Audit Log States
+  const [standbyList, setStandbyList] = useState([]);
+  const [showStandbyModal, setShowStandbyModal] = useState(false);
+  const [showActivityLogsModal, setShowActivityLogsModal] = useState(false);
   
   // Authentication & Modal State
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -495,6 +501,67 @@ export function BookingProvider({ children }) {
     }, 0);
   };
 
+  // Standby Waitlist Handlers
+  const fetchStandbyList = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('standby_waitlist')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setStandbyList(data);
+      }
+    } catch (e) {
+      console.warn('Error fetching standby list:', e);
+    }
+  };
+
+  const handleAddStandbyQueue = async (itemData) => {
+    const newItem = {
+      id: `STB-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      ...itemData
+    };
+    setStandbyList(prev => [newItem, ...prev]);
+
+    if (adminUser) {
+      logOfficerActivity(
+        adminUser.name,
+        adminUser.role || 'Staff',
+        'คิวสำรอง',
+        `ลงทะเบียนคิวสำรองสำหรับคุณ ${itemData.booker_name} โซน ${itemData.preferred_zone}`
+      );
+    }
+
+    try {
+      await supabase.from('standby_waitlist').insert(newItem);
+    } catch (e) {
+      console.warn('Error saving standby waitlist entry:', e);
+    }
+    showAlert("ลงทะเบียนคิวสำรองเรียบร้อย", "สำเร็จ");
+  };
+
+  const handleUpdateStandbyStatus = async (id, status) => {
+    setStandbyList(prev => prev.map(item => item.id === id ? { ...item, status } : item));
+    try {
+      await supabase.from('standby_waitlist').update({ status }).eq('id', id);
+    } catch (e) {
+      console.warn('Error updating standby status:', e);
+    }
+    showAlert(`อัปเดตสถานะคิวเป็น "${status}" เรียบร้อย`, "สำเร็จ");
+  };
+
+  const handleDeleteStandbyQueue = async (id) => {
+    setStandbyList(prev => prev.filter(item => item.id !== id));
+    try {
+      await supabase.from('standby_waitlist').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Error deleting standby queue:', e);
+    }
+    showAlert("ลบคิวสำรองเรียบร้อย", "สำเร็จ");
+  };
+
   const handleVacateMonthlyStallToday = async (customIds) => {
     if (!selectedMonthlyStallBooking) return;
     const idsToVacate = Array.isArray(customIds) && customIds.length > 0 
@@ -762,6 +829,15 @@ export function BookingProvider({ children }) {
         if (txnError) throw txnError;
       }
 
+      if (adminUser) {
+        logOfficerActivity(
+          adminUser.name,
+          adminUser.role || 'Staff',
+          'จองแผงค้า',
+          `บันทึกการจองล็อค ${stallNames} ให้คุณ ${bookerName} (ยอด ${totalVal} บ. สถานะ: ${status})`
+        );
+      }
+
       showAlert("บันทึกการจองสำเร็จ", "สำเร็จ");
       setShowBookingModal(false);
       fetchBookingsAndStorage();
@@ -801,6 +877,15 @@ export function BookingProvider({ children }) {
         .delete()
         .in('id', idsToDelete);
       if (error) throw error;
+
+      if (adminUser) {
+        logOfficerActivity(
+          adminUser.name,
+          adminUser.role || 'Staff',
+          'ยกเลิกจอง',
+          `ยกเลิกการจองล็อค ${stallNames} วันที่ ${selectedDate}`
+        );
+      }
 
       showAlert("ลบข้อมูลการจองเรียบร้อย", "สำเร็จ");
       setShowBookingModal(false);
@@ -849,6 +934,15 @@ export function BookingProvider({ children }) {
         .from('bookings')
         .upsert(bookingData);
       if (saveError) throw saveError;
+
+      if (adminUser) {
+        logOfficerActivity(
+          adminUser.name,
+          adminUser.role || 'Staff',
+          'แจ้งลา',
+          `แจ้งลาหยุดล็อค ${selectedStall.name} วันที่ ${selectedDate}`
+        );
+      }
 
       showAlert("บันทึกการแจ้งลาหยุดสำเร็จ", "สำเร็จ");
       setShowBookingModal(false);
@@ -4215,10 +4309,19 @@ export function BookingProvider({ children }) {
     stallFilterSat,
     stallFilterSun,
     stallFilterWed,
-    stallPrice,
     stalls,
     vacantStallsOnTargetDate,
-    verifyAndSetAdmin
+    verifyAndSetAdmin,
+    standbyList,
+    setStandbyList,
+    showStandbyModal,
+    setShowStandbyModal,
+    showActivityLogsModal,
+    setShowActivityLogsModal,
+    handleAddStandbyQueue,
+    handleUpdateStandbyStatus,
+    handleDeleteStandbyQueue,
+    fetchStandbyList
     }}>
       {children}
     </BookingContext.Provider>
