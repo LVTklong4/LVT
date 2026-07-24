@@ -63,7 +63,7 @@ export default function StallMapGrid() {
                 if (!stall) {
                   const isInsideGrocery = r >= 1 && r <= 3 && c >= 13 && c <= 15;
                   const isInsideBathroom = r >= 1 && r <= 3 && c >= 16 && c <= 20;
-                  const isInsideWater = r >= 23 && r <= 26 && c >= 2 && c <= 5;
+                  const isInsideWater = r >= 23 && r <= 26 && c >= 2 && c <= 6;
                   const isInsideParking = r >= 1 && r <= 25 && c >= 21 && c <= 24;
                   
                   if (isInsideGrocery || isInsideBathroom || isInsideWater || isInsideParking) {
@@ -194,7 +194,7 @@ export default function StallMapGrid() {
             <div 
               style={{ 
                 gridRow: "23 / span 4", 
-                gridColumn: "2 / span 4",
+                gridColumn: "2 / span 5",
                 border: "2.5px dashed #D97706",
                 backgroundColor: "#FEF9C3"
               }}
