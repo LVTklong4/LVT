@@ -320,6 +320,15 @@ export default function StandardBookingLayout() {
                         >
                           <LayoutDashboard className="w-4 h-4 text-blue-600 shrink-0" /> สรุปยอด (Dashboard)
                         </a>
+                        <a 
+                          href="/dashboard/finance" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          onClick={() => setShowProfileDropdown(false)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors"
+                        >
+                          <Banknote className="w-4 h-4 text-emerald-600 shrink-0" /> บันทึกรายรับ-รายจ่าย
+                        </a>
                         <button 
                           onClick={() => {
                             setShowProfileDropdown(false);

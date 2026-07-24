@@ -31,22 +31,14 @@ export default function DashboardHeader() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-        {/* Switch Dashboard Button */}
-        {isFinancePage ? (
+        {/* Switch back button if on finance page */}
+        {isFinancePage && (
           <a
             href="/dashboard"
             className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
           >
             <BarChart2 className="w-4 h-4" />
             <span className="hidden xs:inline">ดูสรุปยอดจองล็อค</span>
-          </a>
-        ) : (
-          <a
-            href="/dashboard/finance"
-            className="px-3.5 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-          >
-            <DollarSign className="w-4 h-4" />
-            <span className="hidden xs:inline">ดูระบบการเงิน/บัญชี</span>
           </a>
         )}
 
