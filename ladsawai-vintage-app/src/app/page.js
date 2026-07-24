@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { BookingProvider, useBooking } from '@/context/BookingContext';
+import { AuthAdminProvider } from '@/context/AuthAdminContext';
 import { StorageProvider } from '@/context/StorageContext';
 import { KlongThomProvider } from '@/context/KlongThomContext';
 import MonthlyManagerLayout from '@/components/booking/MonthlyManagerLayout';
@@ -35,11 +36,13 @@ function BookingPageContent() {
 
 export default function BookingPage() {
   return (
-    <BookingProvider>
-      <StorageProvider>
-        <BookingPageContent />
-      </StorageProvider>
-    </BookingProvider>
+    <AuthAdminProvider>
+      <BookingProvider>
+        <StorageProvider>
+          <BookingPageContent />
+        </StorageProvider>
+      </BookingProvider>
+    </AuthAdminProvider>
   );
 }
 
