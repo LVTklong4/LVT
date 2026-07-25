@@ -1230,8 +1230,8 @@ export function BookingProvider({ children }) {
     const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
 
     const targetBooking = bookingObj || {
-      id: `B-${Date.now()}`,
-      created_at: new Date().toISOString(),
+      id: selectedBooking?.id || `B-${Date.now()}`,
+      created_at: selectedBooking?.created_at || new Date().toISOString(),
       date: selectedDate,
       stall_name: selectedStallsList.map(s => s.name).join(', '),
       booker_name: bookerName || 'ไม่ระบุชื่อ',
@@ -1245,12 +1245,11 @@ export function BookingProvider({ children }) {
 
     const targetStall = stallObj || (selectedStallsList.length > 0 ? selectedStallsList[0] : selectedStall);
 
-    const printWindow = window.open('', '_blank', 'width=600,height=800');
-    if (!printWindow) {
-      alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
-      return;
-    }
+    // Show on-screen modal preview
+    setReceiptPreviewData({ bookingObj: targetBooking, stallObj: targetStall });
+    setShowReceiptPreviewModal(true);
 
+    // Open Blob URL window for direct thermal printing
     const htmlContent = generateReceiptHTML({
       bookingObj: targetBooking,
       stallObj: targetStall,
@@ -1258,19 +1257,14 @@ export function BookingProvider({ children }) {
     });
 
     try {
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        try {
-          printWindow.print();
-        } catch (err) {
-          console.error("Auto print error:", err);
-        }
-      }, 350);
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const printWindow = window.open(blobUrl, '_blank', 'width=600,height=800');
+      if (printWindow) {
+        printWindow.focus();
+      }
     } catch (e) {
-      console.error("Print window write error:", e);
+      console.error("Print window open error:", e);
     }
   };
 
