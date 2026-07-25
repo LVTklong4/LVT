@@ -1,6 +1,7 @@
 import { dayNamesShort, monthNamesFull } from './thaiDateHelper';
+import { formatPrice } from './numberHelper';
 
-export const printOffGridReceipt = (bookingObj, adminUser) => {
+export const printOffGridReceipt = (bookingObj, adminUser, showAlert) => {
   if (!bookingObj) return;
 
   const now = new Date();
@@ -51,16 +52,10 @@ export const printOffGridReceipt = (bookingObj, adminUser) => {
   const totalPaidVal = paymentLines.reduce((sum, p) => sum + p.amount, 0);
   const changeVal = totalPaidVal > totalAmountVal ? (totalPaidVal - totalAmountVal) : 0;
 
-  const printWindow = window.open('', '_blank', 'width=600,height=800');
-  if (!printWindow) {
-    alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว');
-    return;
-  }
-
   const htmlContent = `
     <html>
       <head>
-        <title>พิมพ์ตั๋วจองนอกผัง</title>
+        <title>พิมพ์ตั๋วจองนอกผัง - ${formattedStallName}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800;950&display=swap');
           @page {
@@ -284,6 +279,13 @@ export const printOffGridReceipt = (bookingObj, adminUser) => {
     </html>
   `;
 
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
+
+  const printWindow = window.open(blobUrl, '_blank', 'width=600,height=800');
+  if (!printWindow) {
+    if (showAlert) {
+      showAlert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว', 'แจ้งเตือน', true);
+    }
+  }
 };

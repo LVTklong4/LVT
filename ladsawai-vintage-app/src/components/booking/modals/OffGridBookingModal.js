@@ -13,7 +13,10 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     bookings,
     adminUser,
     parseNumber,
-    showConfirm
+    showConfirm,
+    showAlert,
+    setReceiptPreviewData,
+    setShowReceiptPreviewModal
   } = useBooking();
 
   // Form states
@@ -110,7 +113,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setEditMode(true);
 
     // Parse note to extract phone, customer type, and actual note
-    let parsedPhone = '';
+    let parsedPhone = b.phone || '';
     let parsedType = 'ขาจร';
     let parsedNote = b.note || '';
 
@@ -179,29 +182,29 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   // Submit Handler
   const handleSaveOffGrid = async (autoPrint = false) => {
     if (!adminUser) {
-      alert("กรุณาเข้าสู่ระบบก่อนทำรายการ");
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
     if (!bookerName.trim()) {
-      alert("โปรดกรอกชื่อผู้ค้า");
+      showAlert("โปรดกรอกชื่อผู้ค้า", "แจ้งเตือน", true);
       return;
     }
     const cleanPhone = phoneVal.replace(/\s|-/g, '').trim();
     if (!cleanPhone) {
-      alert("กรุณากรอกเบอร์โทรศัพท์");
+      showAlert("กรุณากรอกเบอร์โทรศัพท์", "แจ้งเตือน", true);
       return;
     }
     const phoneRegex = /^0\d{9}$/;
     if (!phoneRegex.test(cleanPhone)) {
-      alert("เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0 (เช่น 0812345678)");
+      showAlert("เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0 (เช่น 0812345678)", "แจ้งเตือน", true);
       return;
     }
     if (!product.trim()) {
-      alert("โปรดกรอกสินค้าที่ขาย");
+      showAlert("โปรดกรอกสินค้าที่ขาย", "แจ้งเตือน", true);
       return;
     }
     if (!stallPrice.trim() || parseFloat(stallPrice) <= 0) {
-      alert("โปรดกรอกค่าเช่าล็อก");
+      showAlert("โปรดกรอกค่าเช่าล็อก", "แจ้งเตือน", true);
       return;
     }
 
@@ -212,12 +215,12 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
 
     const hasEmptyMethod = paymentList.some(p => !p.method);
     if (hasEmptyMethod) {
-      alert("กรุณาเลือกช่องทางการชำระเงิน (เงินสด หรือ โอนจ่าย)");
+      showAlert("กรุณาเลือกช่องทางการชำระเงิน (เงินสด หรือ โอนจ่าย)", "แจ้งเตือน", true);
       return;
     }
 
     if (totalPaid !== totalVal) {
-      alert(`ยอดเงินที่ชำระ (${totalPaid} บาท) ต้องเท่ากับยอดรวมทั้งสิ้น (${totalVal} บาท) เนื่องจากเป็นรายการนอกผังที่ต้องชำระเงินทันที`);
+      showAlert(`ยอดเงินที่ชำระ (${totalPaid} บาท) ต้องเท่ากับยอดรวมทั้งสิ้น (${totalVal} บาท) เนื่องจากเป็นรายการนอกผังที่ต้องชำระเงินทันที`, "แจ้งเตือน", true);
       return;
     }
 
@@ -237,6 +240,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
         date: selectedDate,
         stall_name: stallName.trim(),
         booker_name: bookerName.trim(),
+        phone: cleanPhone,
         product: product.trim(),
         type: 'นอกผัง',
         elec_unit: parseFloat(elecUnit) || 0,
@@ -290,15 +294,19 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
         }
       }
 
-      alert("บันทึกการจองนอกผังสำเร็จ");
+      showAlert("บันทึกการจองนอกผังสำเร็จ", "สำเร็จ");
       if (autoPrint) {
-        printOffGridReceipt(bookingData, adminUser);
+        printOffGridReceipt(bookingData, adminUser, showAlert);
+        if (setReceiptPreviewData && setShowReceiptPreviewModal) {
+          setReceiptPreviewData({ bookingObj: bookingData, stallObj: { name: bookingData.stall_name } });
+          setShowReceiptPreviewModal(true);
+        }
       }
       resetForm();
       if (onSaveSuccess) onSaveSuccess();
     } catch (e) {
       console.error(e);
-      alert("เกิดข้อผิดพลาดในการบันทึก: " + e.message);
+      showAlert("เกิดข้อผิดพลาดในการบันทึก: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setSaving(false);
     }
@@ -329,12 +337,12 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
         .eq('booking_ref', id);
       if (txnErr) throw txnErr;
 
-      alert("ลบการจองนอกผังสำเร็จ");
+      showAlert("ลบการจองนอกผังสำเร็จ", "สำเร็จ");
       resetForm();
       if (onSaveSuccess) onSaveSuccess();
     } catch (e) {
       console.error(e);
-      alert("เกิดข้อผิดพลาดในการลบ: " + e.message);
+      showAlert("เกิดข้อผิดพลาดในการลบ: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setSaving(false);
     }
@@ -711,7 +719,13 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                               </button>
                               <button
                                 type="button"
-                                onClick={() => printOffGridReceipt(b, adminUser)}
+                                onClick={() => {
+                                  printOffGridReceipt(b, adminUser, showAlert);
+                                  if (setReceiptPreviewData && setShowReceiptPreviewModal) {
+                                    setReceiptPreviewData({ bookingObj: b, stallObj: { name: b.stall_name } });
+                                    setShowReceiptPreviewModal(true);
+                                  }
+                                }}
                                 className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
                               >
                                 <Printer className="w-3 h-3" /> พิมพ์ตั๋ว
