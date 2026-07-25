@@ -13,6 +13,7 @@ import {
   getBookingMonthStr
 } from '@/utils/thaiDateHelper';
 import { generateReceiptHTML } from '@/utils/receiptPrinter';
+import { formatPrice, formatPriceInt } from '@/utils/numberHelper';
 
 const BookingContext = createContext();
 
@@ -1375,7 +1376,7 @@ export function BookingProvider({ children }) {
           <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${satStallPrice} x ${satCount}) + (${elecRate} x ${satCount})</td>
+          <td>(${formatPriceInt(satStallPrice)} x ${satCount}) + (${formatPriceInt(elecRate)} x ${satCount})</td>
           <td></td>
         </tr>
       `;
@@ -1390,7 +1391,7 @@ export function BookingProvider({ children }) {
           <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${sunStallPrice} x ${sunCount}) + (${elecRate} x ${sunCount})</td>
+          <td>(${formatPriceInt(sunStallPrice)} x ${sunCount}) + (${formatPriceInt(elecRate)} x ${sunCount})</td>
           <td></td>
         </tr>
       `;
@@ -1405,7 +1406,7 @@ export function BookingProvider({ children }) {
           <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${wedStallPrice} x ${wedCount}) + (${elecRate} x ${wedCount})</td>
+          <td>(${formatPriceInt(wedStallPrice)} x ${wedCount}) + (${formatPriceInt(elecRate)} x ${wedCount})</td>
           <td></td>
         </tr>
       `;
@@ -1790,7 +1791,7 @@ export function BookingProvider({ children }) {
           <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${satStallPrice} x ${monthlyPrintSatCount}) + (${elecRate} x ${monthlyPrintSatCount})</td>
+          <td>(${formatPriceInt(satStallPrice)} x ${monthlyPrintSatCount}) + (${formatPriceInt(elecRate)} x ${monthlyPrintSatCount})</td>
           <td></td>
         </tr>
       `;
@@ -1806,7 +1807,7 @@ export function BookingProvider({ children }) {
           <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${sunStallPrice} x ${monthlyPrintSunCount}) + (${elecRate} x ${monthlyPrintSunCount})</td>
+          <td>(${formatPriceInt(sunStallPrice)} x ${monthlyPrintSunCount}) + (${formatPriceInt(elecRate)} x ${monthlyPrintSunCount})</td>
           <td></td>
         </tr>
       `;
@@ -1822,7 +1823,7 @@ export function BookingProvider({ children }) {
           <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
         </tr>
         <tr class="calc-row">
-          <td>(${wedStallPrice} x ${monthlyPrintWedCount}) + (${elecRate} x ${monthlyPrintWedCount})</td>
+          <td>(${formatPriceInt(wedStallPrice)} x ${monthlyPrintWedCount}) + (${formatPriceInt(elecRate)} x ${monthlyPrintWedCount})</td>
           <td></td>
         </tr>
       `;

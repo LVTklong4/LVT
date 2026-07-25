@@ -233,12 +233,12 @@ export const printOffGridReceipt = (bookingObj, adminUser) => {
           <tbody>
             <tr>
               <td>ค่าเช่าล็อคนอกผัง</td>
-              <td class="val">${stallPriceVal.toFixed(2)} บ.</td>
+              <td class="val">${formatPrice(stallPriceVal)} บ.</td>
             </tr>
             ${elecPriceVal > 0 ? `
               <tr>
                 <td>ค่าไฟ (${bookingObj.elec_unit || 0} หน่วย)</td>
-                <td class="val">${elecPriceVal.toFixed(2)} บ.</td>
+                <td class="val">${formatPrice(elecPriceVal)} บ.</td>
               </tr>
             ` : ''}
           </tbody>
@@ -248,20 +248,20 @@ export const printOffGridReceipt = (bookingObj, adminUser) => {
         
         <div class="total-row">
           <span>รวมเงินทั้งสิ้น:</span>
-          <span style="font-family: monospace;">${totalAmountVal.toFixed(2)} บ.</span>
+          <span style="font-family: monospace;">${formatPrice(totalAmountVal)} บ.</span>
         </div>
         
         <div class="payment-breakdown">
           ${paymentLines.map(p => `
             <div class="flex-row">
               <span>ชำระด้วย [${p.method}]:</span>
-              <span style="font-family: monospace;">${p.amount.toFixed(2)} บ.</span>
+              <span style="font-family: monospace;">${formatPrice(p.amount)} บ.</span>
             </div>
           `).join('')}
           ${changeVal > 0 ? `
             <div class="flex-row" style="color: #b91c1c;">
               <span>เงินทอน:</span>
-              <span style="font-family: monospace;">${changeVal.toFixed(2)} บ.</span>
+              <span style="font-family: monospace;">${formatPrice(changeVal)} บ.</span>
             </div>
           ` : ''}
         </div>

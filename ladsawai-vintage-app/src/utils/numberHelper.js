@@ -45,3 +45,8 @@ export const formatPrice = (val) => {
   const num = parseNumber(val);
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
+
+export const formatPriceInt = (val) => {
+  const num = parseNumber(val);
+  return num.toLocaleString('en-US');
+};

@@ -3,7 +3,7 @@
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
-import { cleanStallName, parseNumber } from '@/utils/numberHelper';
+import { cleanStallName, parseNumber, formatPrice } from '@/utils/numberHelper';
 import { getModalDateFormat } from '@/utils/thaiDateHelper';
 import {
   Store, X, Utensils, Shirt, CalendarDays, CheckCircle, AlertCircle,
@@ -381,7 +381,7 @@ export default function BookingDetailModal({
                       <div className="flex justify-between items-center text-xs font-black text-[#5D4037] px-0.5 font-bold">
                         <span>รวมเงินทั้งสิ้น:</span>
                         <span className="text-sm md:text-base font-black text-red-800 font-mono">
-                          {totalVal.toFixed(2)} บ.
+                          {formatPrice(totalVal)} บ.
                         </span>
                       </div>
                     </div>
@@ -493,7 +493,7 @@ export default function BookingDetailModal({
                     {changeVal > 0 && (
                       <div className="mt-2 pt-2 border-t border-dashed border-gray-200 text-right">
                         <span className="inline-block bg-green-50 border border-green-200 text-green-700 font-mono font-extrabold text-[11px] px-3 py-1 rounded-lg">
-                          เงินทอน: {changeVal.toFixed(2)} บาท
+                          เงินทอน: {formatPrice(changeVal)} บาท
                         </span>
                       </div>
                     )}

@@ -25,6 +25,7 @@ import { FinanceProvider } from '@/context/FinanceContext';
 import { KlongThomProvider } from '@/context/KlongThomContext';
 import StallMapGrid from './StallMapGrid';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
+import { formatPrice } from '@/utils/numberHelper';
 
 const TopDownCar = ({ color = "#1E88E5", className = "h-[45px] w-auto drop-shadow-sm" }) => (
   <svg viewBox="0 0 40 80" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -762,18 +763,18 @@ export default function StandardBookingLayout() {
                     <tbody className="font-black text-black">
                       <tr>
                         <td className="py-1">ค่าล็อกสะสม</td>
-                        <td className="py-1 text-right font-mono">{stallPriceVal.toFixed(2)} บ.</td>
+                        <td className="py-1 text-right font-mono">{formatPrice(stallPriceVal)} บ.</td>
                       </tr>
                       {elecPriceVal > 0 && (
                         <tr>
                           <td className="py-1">ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
-                          <td className="py-1 text-right font-mono">{elecPriceVal.toFixed(2)} บ.</td>
+                          <td className="py-1 text-right font-mono">{formatPrice(elecPriceVal)} บ.</td>
                         </tr>
                       )}
                       {storageFeeVal > 0 && (
                         <tr>
                           <td className="py-1">ค่าฝากของ</td>
-                          <td className="py-1 text-right font-mono">{storageFeeVal.toFixed(2)} บ.</td>
+                          <td className="py-1 text-right font-mono">{formatPrice(storageFeeVal)} บ.</td>
                         </tr>
                       )}
                     </tbody>
@@ -784,20 +785,20 @@ export default function StandardBookingLayout() {
                   <div className="space-y-1 text-xs font-black text-black">
                     <div className="flex justify-between font-black text-black text-sm">
                       <span>รวมเงินทั้งสิ้น:</span>
-                      <span className="font-mono">{totalAmountVal.toFixed(2)} บ.</span>
+                      <span className="font-mono">{formatPrice(totalAmountVal)} บ.</span>
                     </div>
                     
                     <div className="pt-1.5 space-y-0.5 text-[10px] font-black text-black">
                       {paymentLines.map((p, idx) => (
                         <div key={idx} className="flex justify-between">
                           <span>ชำระด้วย [{p.method}]:</span>
-                          <span className="font-mono">{p.amount.toFixed(2)} บ.</span>
+                          <span className="font-mono">{formatPrice(p.amount)} บ.</span>
                         </div>
                       ))}
                       {changeVal > 0 && (
                         <div className="flex justify-between text-red-700 font-black">
                           <span>เงินทอน:</span>
-                          <span className="font-mono">{changeVal.toFixed(2)} บ.</span>
+                          <span className="font-mono">{formatPrice(changeVal)} บ.</span>
                         </div>
                       )}
                     </div>
