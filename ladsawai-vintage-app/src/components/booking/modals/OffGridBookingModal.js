@@ -83,14 +83,35 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   // Load bookings for current date
   const offGridBookings = (bookings || []).filter(b => b.type === 'นอกผัง');
 
+  // Helper to extract phone number from booking object or note
+  const extractPhone = (b) => {
+    if (!b) return '';
+    if (b.phone && String(b.phone).trim() !== '-' && String(b.phone).trim() !== '') {
+      return String(b.phone).trim();
+    }
+    const noteText = b.note || '';
+
+    // Match 1: [เบอร์โทร: 0812345678] or [เบอร์: 0812345678] or [โทร: 0812345678]
+    const m1 = noteText.match(/\[(?:เบอร์โทร|เบอร์|โทร)\s*:\s*([^\]]+)\]/i);
+    if (m1 && m1[1].trim() !== '-') return m1[1].trim();
+
+    // Match 2: เบอร์โทร 0812345678 or โทร 0812345678
+    const m2 = noteText.match(/(?:เบอร์โทร|เบอร์|โทร)\s*[:\s]?\s*(0\d{8,9})/i);
+    if (m2) return m2[1].trim();
+
+    // Match 3: Any 10-digit number starting with 0
+    const m3 = noteText.match(/(?:^|[^\d])(0\d{9})(?:[^\d]|$)/);
+    if (m3) return m3[1].trim();
+
+    return '';
+  };
+
   // Filtered bookings based on searchTerm
   const filteredOffGridBookings = offGridBookings.filter(b => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
 
-    let phoneStr = '';
-    const phoneMatch = (b.note || '').match(/\[เบอร์โทร:\s*([^\]]+)\]/);
-    if (phoneMatch) phoneStr = phoneMatch[1].trim();
+    const phoneStr = extractPhone(b);
 
     return (
       (b.stall_name || '').toLowerCase().includes(term) ||
@@ -113,22 +134,19 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setEditMode(true);
 
     // Parse note to extract phone, customer type, and actual note
-    let parsedPhone = b.phone || '';
+    const extractedPhone = extractPhone(b);
     let parsedType = 'ขาจร';
     let parsedNote = b.note || '';
-
-    const phoneMatch = parsedNote.match(/\[เบอร์โทร:\s*([^\]]+)\]/);
-    if (phoneMatch) parsedPhone = phoneMatch[1].trim();
 
     const typeMatch = parsedNote.match(/\[ประเภท:\s*([^\]]+)\]/);
     if (typeMatch) parsedType = typeMatch[1].trim();
 
     parsedNote = parsedNote
-      .replace(/\[เบอร์โทร:\s*[^\]]+\]/, '')
-      .replace(/\[ประเภท:\s*[^\]]+\]/, '')
+      .replace(/\[(?:เบอร์โทร|เบอร์|โทร)\s*:\s*[^\]]+\]/gi, '')
+      .replace(/\[ประเภท:\s*[^\]]+\]/gi, '')
       .trim();
 
-    setPhoneVal(parsedPhone === '-' ? '' : parsedPhone);
+    setPhoneVal(extractedPhone);
     setCustomerType(parsedType);
     setNote(parsedNote);
 
@@ -297,10 +315,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       showAlert("บันทึกการจองนอกผังสำเร็จ", "สำเร็จ");
       if (autoPrint) {
         printOffGridReceipt(bookingData, adminUser, showAlert);
-        if (setReceiptPreviewData && setShowReceiptPreviewModal) {
-          setReceiptPreviewData({ bookingObj: bookingData, stallObj: { name: bookingData.stall_name } });
-          setShowReceiptPreviewModal(true);
-        }
       }
       resetForm();
       if (onSaveSuccess) onSaveSuccess();
@@ -677,10 +691,8 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   </thead>
                   <tbody className="divide-y bg-white font-semibold text-gray-700">
                     {filteredOffGridBookings.map((b) => {
-                      let dispPhone = '-';
+                      const dispPhone = extractPhone(b) || '-';
                       let dispType = 'ขาจร';
-                      const pMatch = (b.note || '').match(/\[เบอร์โทร:\s*([^\]]+)\]/);
-                      if (pMatch) dispPhone = pMatch[1];
                       const tMatch = (b.note || '').match(/\[ประเภท:\s*([^\]]+)\]/);
                       if (tMatch) dispType = tMatch[1];
 
@@ -719,13 +731,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                               </button>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  printOffGridReceipt(b, adminUser, showAlert);
-                                  if (setReceiptPreviewData && setShowReceiptPreviewModal) {
-                                    setReceiptPreviewData({ bookingObj: b, stallObj: { name: b.stall_name } });
-                                    setShowReceiptPreviewModal(true);
-                                  }
-                                }}
+                                onClick={() => printOffGridReceipt(b, adminUser, showAlert)}
                                 className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
                               >
                                 <Printer className="w-3 h-3" /> พิมพ์ตั๋ว
