@@ -250,8 +250,9 @@ export function BookingProvider({ children }) {
   // Settings Modal States
   const [showSettingsMgmtModal, setShowSettingsMgmtModal] = useState(false);
   
-  // Alert/Toast State
+  // Alert/Toast & Confirm Modal States
   const [alertInfo, setAlertInfo] = useState(null);
+  const [confirmInfo, setConfirmInfo] = useState(null);
 
   // Receipt On-screen Preview for mobile screenshots
   const [showReceiptPreviewModal, setShowReceiptPreviewModal] = useState(false);
@@ -344,6 +345,26 @@ export function BookingProvider({ children }) {
       setAlertInfo(null);
       alertTimeoutRef.current = null;
     }, duration);
+  };
+
+  const showConfirm = ({ title = 'ยืนยันการทำรายการ', message, confirmText = 'ตกลง', cancelText = 'ยกเลิก', isDanger = false }) => {
+    return new Promise((resolve) => {
+      setConfirmInfo({
+        title,
+        message,
+        confirmText,
+        cancelText,
+        isDanger,
+        onConfirm: () => {
+          setConfirmInfo(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setConfirmInfo(null);
+          resolve(false);
+        }
+      });
+    });
   };
 
 
@@ -780,9 +801,13 @@ export function BookingProvider({ children }) {
 
     if (status === 'ค้างชำระ' && totalPaid < totalVal) {
       const remaining = totalVal - totalPaid;
-      if (!confirm(`ยอดเงินที่รับชำระ (${totalPaid} บ.) ยังไม่ครบตามยอดรวมทั้งสิ้น (${totalVal} บ.)\nจะมีส่วนต่างค้างจ่าย ${remaining} บ. ต้องการบันทึกรายการนี้เป็นยอดค้างชำระหรือไม่?`)) {
-        return;
-      }
+      const isConfirmed = await showConfirm({
+        title: 'แจ้งเตือนชำระเงินไม่ครบ',
+        message: `ยอดเงินที่รับชำระ (${totalPaid} บ.) ยังไม่ครบตามยอดรวมทั้งสิ้น (${totalVal} บ.)\nจะมีส่วนต่างค้างจ่าย ${remaining} บ. ต้องการบันทึกรายการนี้เป็นยอดค้างชำระหรือไม่?`,
+        confirmText: 'บันทึกค้างจ่าย',
+        cancelText: 'ยกเลิก'
+      });
+      if (!isConfirmed) return;
     }
 
     setLoading(true);
@@ -897,7 +922,14 @@ export function BookingProvider({ children }) {
     if (!selectedBooking) return;
 
     const stallNames = selectedStallsList.map(s => s.name).join(', ');
-    if (!confirm(`ยืนยันการลบการจองล็อค ${stallNames} หรือไม่?`)) return;
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันการลบการจอง',
+      message: `ยืนยันการลบการจองล็อค [${cleanStallName(stallNames)}] หรือไม่?`,
+      confirmText: 'ลบการจอง',
+      cancelText: 'ยกเลิก',
+      isDanger: true
+    });
+    if (!isConfirmed) return;
 
     setLoading(true);
     try {
@@ -947,9 +979,13 @@ export function BookingProvider({ children }) {
     const displayStallNames = stallsToLeave.map(s => cleanStallName(s.name)).join(', ');
     const countText = stallsToLeave.length > 1 ? ` (${stallsToLeave.length} ล็อค)` : '';
 
-    if (!confirm(`ยืนยันการแจ้ง "ลาหยุด" สำหรับล็อค [${displayStallNames}]${countText} ในวันที่ ${getModalDateFormat(selectedDate)} หรือไม่?\n(ระบบจะปล่อยล็อคว่างให้ร้านค้าอื่นจองรายวันได้)`)) {
-      return;
-    }
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันการแจ้งลาหยุด',
+      message: `ยืนยันการแจ้ง "ลาหยุด" สำหรับล็อค [${displayStallNames}]${countText} ในวันที่ ${getModalDateFormat(selectedDate)} หรือไม่?\n(ระบบจะปล่อยล็อคว่างให้ร้านค้าอื่นจองรายวันได้)`,
+      confirmText: 'ยืนยันแจ้งลา',
+      cancelText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
 
     setLoading(true);
     try {
@@ -2785,9 +2821,13 @@ export function BookingProvider({ children }) {
       }
 
       const confirmMsg = `ยืนยันการบันทึกการแก้ไขข้อมูลดังต่อไปนี้ใช่หรือไม่?\n\n` + changes.join('\n');
-      if (!confirm(confirmMsg)) {
-        return;
-      }
+      const isConfirmed = await showConfirm({
+        title: 'ยืนยันการบันทึกแก้ไข',
+        message: confirmMsg,
+        confirmText: 'บันทึกแก้ไข',
+        cancelText: 'ยกเลิก'
+      });
+      if (!isConfirmed) return;
     }
 
     const cleanPhone = newMonthlyPhone.replace(/\s|-/g, '').trim();
@@ -3214,9 +3254,13 @@ export function BookingProvider({ children }) {
     const nextBookingMonthStr = nextDateThai.toString();
     const nextMonthFormatted = formatBookingMonth(nextBookingMonthStr);
 
-    if (!confirm(`ยืนยันการต่อสัญญาสำหรับ "${activeMonthlyBooking.booker_name}" (ล็อค ${activeMonthlyBooking.stalls})\nจากรอบเดือน: ${currentMonthFormatted}\nไปยังรอบเดือน: ${nextMonthFormatted} หรือไม่?`)) {
-      return;
-    }
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันการต่อสัญญารายเดือน',
+      message: `ยืนยันการต่อสัญญาสำหรับ "${activeMonthlyBooking.booker_name}" (ล็อค ${activeMonthlyBooking.stalls})\nจากรอบเดือน: ${currentMonthFormatted}\nไปยังรอบเดือน: ${nextMonthFormatted} หรือไม่?`,
+      confirmText: 'ต่อสัญญา',
+      cancelText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
 
     setLoadingMonthly(true);
     try {
@@ -3671,7 +3715,14 @@ export function BookingProvider({ children }) {
       `วิธีการชำระ: ${txn.method || '-'}\n\n` +
       `* ระบบจะหักลดยอดชำระสะสมของสัญญาหลักลงโดยอัตโนมัติ`;
 
-    if (!confirm(msg)) return;
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันยกเลิกรายการชำระเงิน',
+      message: msg,
+      confirmText: 'ยกเลิกรายการ',
+      cancelText: 'ย้อนกลับ',
+      isDanger: true
+    });
+    if (!isConfirmed) return;
 
     setLoadingMonthly(true);
     try {
@@ -3720,7 +3771,7 @@ export function BookingProvider({ children }) {
     }
   };
 
-  const handleOpenMonthlyPaymentModal = () => {
+  const handleOpenMonthlyPaymentModal = async () => {
     if (!activeMonthlyBooking) return;
     
     // Clean target phone
@@ -3745,9 +3796,13 @@ export function BookingProvider({ children }) {
       }).join('\n');
 
       const msg = `⚠️ ผู้ค้า "${activeMonthlyBooking.booker_name}" (เบอร์โทร: ${activeMonthlyBooking.phone || '-'}) ยังมียอดค้างชำระของเดือนก่อนหน้าดังนี้:\n\n${unpaidDetails}\n\nต้องการดำเนินการทำรายการชำระเงินของรอบเดือนปัจจุบัน (${formatBookingMonth(activeMonthlyBooking.booking_month)}) ต่อไปใช่หรือไม่?`;
-      if (!confirm(msg)) {
-        return;
-      }
+      const isConfirmed = await showConfirm({
+        title: 'แจ้งเตือนยอดค้างชำระเดือนก่อนหน้า',
+        message: msg,
+        confirmText: 'ดำเนินการต่อ',
+        cancelText: 'ยกเลิก'
+      });
+      if (!isConfirmed) return;
     }
 
     setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
@@ -3822,9 +3877,14 @@ export function BookingProvider({ children }) {
 
     if (paidAmt === 0) {
       // Hard delete if no payments exist
-      if (!confirm(`⚠️ ยืนยันการลบข้อมูลการจองรายเดือนของคุณ "${item.booker_name}" (ล็อค ${item.stalls}) หรือไม่?\nการลบนี้จะไม่สามารถย้อนกลับได้`)) {
-        return;
-      }
+      const isConfirmed = await showConfirm({
+        title: 'ยืนยันการลบข้อมูลการจองรายเดือน',
+        message: `⚠️ ยืนยันการลบข้อมูลการจองรายเดือนของคุณ "${item.booker_name}" (ล็อค ${item.stalls}) หรือไม่?\nการลบนี้จะไม่สามารถย้อนกลับได้`,
+        confirmText: 'ลบข้อมูลถาวร',
+        cancelText: 'ยกเลิก',
+        isDanger: true
+      });
+      if (!isConfirmed) return;
 
       setLoadingMonthly(true);
       try {
@@ -3884,7 +3944,14 @@ export function BookingProvider({ children }) {
             `2. เก็บประวัติข้อมูลสัญญาและประวัติยอดรับเงินไว้ในรายงานระบบบัญชี\n\n` +
             `ยืนยันการยกเลิกสัญญาของ "${item.booker_name}" (ล็อค ${item.stalls}) ใช่หรือไม่?`;
 
-          if (!confirm(msg)) {
+          const isConfirmed = await showConfirm({
+            title: 'ยืนยันการยกเลิกสัญญา (Soft Delete)',
+            message: msg,
+            confirmText: 'ยืนยันยกเลิกสัญญา',
+            cancelText: 'ย้อนกลับ',
+            isDanger: true
+          });
+          if (!isConfirmed) {
             setLoadingMonthly(false);
             return;
           }
@@ -4399,7 +4466,10 @@ export function BookingProvider({ children }) {
     handleAddStandbyQueue,
     handleUpdateStandbyStatus,
     handleDeleteStandbyQueue,
-    fetchStandbyList
+    fetchStandbyList,
+    confirmInfo,
+    setConfirmInfo,
+    showConfirm
     }}>
       {children}
     </BookingContext.Provider>

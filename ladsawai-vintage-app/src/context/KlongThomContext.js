@@ -196,7 +196,7 @@ export function KlongThomProvider({ children }) {
     }
   };
 
-  const handleDeleteRemittance = async (txnId) => {
+  const handleDeleteRemittance = async (txnId, showConfirm) => {
     const txn = remittanceHistory.find(t => t.id === txnId);
     if (txn) {
       const todayStr = new Date().toLocaleDateString('sv');
@@ -206,7 +206,16 @@ export function KlongThomProvider({ children }) {
       }
     }
 
-    if (!confirm("คุณต้องการลบรายการนำส่งเงินนี้ใช่หรือไม่? รายงานทางบัญชีจะถูกหักออกด้วย")) return;
+    if (showConfirm) {
+      const isConfirmed = await showConfirm({
+        title: 'ยืนยันการลบรายการนำส่งเงิน',
+        message: 'คุณต้องการลบรายการนำส่งเงินนี้ใช่หรือไม่? รายงานทางบัญชีจะถูกหักออกด้วย',
+        confirmText: 'ลบรายการ',
+        cancelText: 'ยกเลิก',
+        isDanger: true
+      });
+      if (!isConfirmed) return;
+    }
 
     setLoading(true);
     try {

@@ -1,13 +1,13 @@
 import { dayNamesShort, monthNamesFull } from './thaiDateHelper';
 
-export const printBatchKlongThomTickets = (params, adminUser) => {
+export const printBatchKlongThomTickets = (params, adminUser, showAlert) => {
   const { ticketType, dateStr, price, startNo, endNo } = params;
   
   const start = parseInt(startNo) || 1;
   const end = parseInt(endNo) || 1;
   
   if (end < start) {
-    alert("หมายเลขสิ้นสุดต้องมากกว่าหรือเท่ากับหมายเลขเริ่มต้น");
+    if (showAlert) showAlert("หมายเลขสิ้นสุดต้องมากกว่าหรือเท่ากับหมายเลขเริ่มต้น", "แจ้งเตือน", true);
     return;
   }
 
@@ -36,7 +36,7 @@ export const printBatchKlongThomTickets = (params, adminUser) => {
   const tradingDateFormatted = getThaiFormattedDateOnly(d);
   const printWindow = window.open('', '_blank', 'width=600,height=800');
   if (!printWindow) {
-    alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อพิมพ์ตั๋ว');
+    if (showAlert) showAlert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อพิมพ์ตั๋ว', 'แจ้งเตือน', true);
     return;
   }
 

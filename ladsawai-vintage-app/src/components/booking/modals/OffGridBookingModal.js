@@ -12,7 +12,8 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     selectedDate,
     bookings,
     adminUser,
-    parseNumber
+    parseNumber,
+    showConfirm
   } = useBooking();
 
   // Form states
@@ -303,10 +304,16 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     }
   };
 
-  // Delete Handler
   const handleDeleteOffGrid = async (id) => {
     if (!id) return;
-    if (!confirm("คุณต้องการลบ/ยกเลิกรายการจองนอกผังนี้ใช่หรือไม่? (การลบจะลบรายการธุรกรรมการเงินที่เกี่ยวข้องด้วย)")) return;
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันยกเลิกจองนอกผัง',
+      message: 'คุณต้องการลบ/ยกเลิกรายการจองนอกผังนี้ใช่หรือไม่? (การลบจะลบรายการธุรกรรมการเงินที่เกี่ยวข้องด้วย)',
+      confirmText: 'ลบรายการนอกผัง',
+      cancelText: 'ยกเลิก',
+      isDanger: true
+    });
+    if (!isConfirmed) return;
     
     setSaving(true);
     try {

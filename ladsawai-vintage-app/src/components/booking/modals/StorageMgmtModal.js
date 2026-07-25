@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useStorage } from '@/context/StorageContext';
+import { useBooking } from '@/context/BookingContext';
+import { cleanStallName } from '@/utils/numberHelper';
 import { Loader2, X, Printer, PlusCircle, CalendarClock, Trash2 } from 'lucide-react';
 import StorageDepositModal from './StorageDepositModal';
 
@@ -34,9 +36,14 @@ export default function StorageMgmtModal() {
     setIsDepositOpen(true);
   };
 
-  // Checkout Handler: directly calls handleCheckoutStorage (soft delete / release items)
-  const handleOpenStorageCheckout = (item) => {
-    if (confirm(`ยืนยันว่าลูกค้ารับของกลับและต้องการปิดงานฝากของ [${cleanStallName(item.stall_name)}] ใช่หรือไม่?`)) {
+  const handleOpenStorageCheckout = async (item) => {
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันการปิดงานฝากของ',
+      message: `ยืนยันว่าลูกค้ารับของกลับและต้องการปิดงานฝากของ [${cleanStallName(item.stall_name)}] ใช่หรือไม่?`,
+      confirmText: 'ปิดงานฝากของ',
+      cancelText: 'ยกเลิก'
+    });
+    if (isConfirmed) {
       handleCheckoutStorage({
         id: item.id,
         endDate: new Date().toISOString().split('T')[0],

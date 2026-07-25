@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { useDashboard } from '@/context/DashboardContext';
+import { useBooking } from '@/context/BookingContext';
 import { Trash2, Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Loader2, RefreshCw, X, AlertCircle, Lock } from 'lucide-react';
 import DailyClosingModal from './DailyClosingModal';
 
@@ -17,6 +18,8 @@ export default function FinanceLedger() {
     deleteIncome, 
     deleteExpense 
   } = useFinance();
+
+  const { showConfirm } = useBooking();
 
   const { calculateDashboard } = useDashboard();
 
@@ -114,7 +117,14 @@ export default function FinanceLedger() {
 
   // Delete handlers
   const handleDeleteItem = async (id, type) => {
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้? การลบไม่สามารถย้อนกลับได้')) return;
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันการลบรายการบัญชี',
+      message: 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้? การลบไม่สามารถย้อนกลับได้',
+      confirmText: 'ลบรายการ',
+      cancelText: 'ยกเลิก',
+      isDanger: true
+    });
+    if (!isConfirmed) return;
 
     let res;
     if (type === 'income') {

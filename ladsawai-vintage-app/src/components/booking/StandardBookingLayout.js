@@ -3,7 +3,7 @@
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useStorage } from '@/context/StorageContext';
-import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Tag, CalendarX, Package, Archive, Lock } from 'lucide-react';
+import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Tag, CalendarX, Package, Archive, Lock, HelpCircle } from 'lucide-react';
 
 import LoginModal from './modals/LoginModal';
 import StorageMgmtModal from './modals/StorageMgmtModal';
@@ -57,7 +57,8 @@ export default function StandardBookingLayout() {
     setShowActivityLogsModal,
     handleAddStandbyQueue,
     handleUpdateStandbyStatus,
-    handleDeleteStandbyQueue
+    handleDeleteStandbyQueue,
+    confirmInfo
   } = useBooking();
 
   const {
@@ -132,6 +133,43 @@ export default function StandardBookingLayout() {
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmInfo && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
+            <div className={`px-5 py-4 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
+              {confirmInfo.isDanger ? <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" /> : <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />}
+              <h3 className="font-extrabold text-sm flex-1">{confirmInfo.title}</h3>
+            </div>
+            <div className="p-5 flex flex-col gap-3">
+              <p className="text-xs font-bold text-gray-700 whitespace-pre-line leading-relaxed">
+                {confirmInfo.message}
+              </p>
+              <div className="flex gap-2.5 mt-2 pt-2 border-t border-amber-900/10">
+                <button
+                  type="button"
+                  onClick={confirmInfo.onCancel}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all cursor-pointer"
+                >
+                  {confirmInfo.cancelText || 'ยกเลิก'}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmInfo.onConfirm}
+                  className={`flex-1 py-2.5 rounded-xl font-extrabold text-xs text-white shadow-md hover:shadow-lg transition-all cursor-pointer ${
+                    confirmInfo.isDanger
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-[#8B4513] hover:bg-[#5D4037]'
+                  }`}
+                >
+                  {confirmInfo.confirmText || 'ตกลง'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
