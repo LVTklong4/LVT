@@ -665,25 +665,28 @@ export function BookingProvider({ children }) {
         const allStallNames = groupBookings.map(b => b.stall_name);
         const names = allStallNames.flatMap(nameStr => nameStr.split(',').map(s => s.trim()));
         const matched = stalls.filter(s => names.includes(s.name));
-        setSelectedStallsList(matched.length > 0 ? matched : [stall]);
+        const matchedStalls = matched.length > 0 ? matched : [stall];
+        setSelectedStallsList(matchedStalls);
 
         const totalStallPrice = groupBookings.reduce((sum, b) => sum + parseNumber(b.stall_price), 0);
-        setStallPrice(totalStallPrice);
-                setElecUnit(groupBookings[0].elec_unit || 0);
+        const defaultPrice = calculateDefaultStallPrice(matchedStalls, selectedDate);
+        setStallPrice(totalStallPrice > 0 ? totalStallPrice : defaultPrice);
+        setElecUnit(groupBookings[0].elec_unit || 0);
         setElecPrice(groupBookings[0].elec_price || 0);
       } else {
-        setStallPrice(booking.stall_price);
-                setElecUnit(booking.elec_unit || 0);
-        setElecPrice(booking.elec_price || 0);
-
-        // Parse multi-stall list
+        let matched = [stall];
         if (booking.stall_name) {
           const names = booking.stall_name.split(',').map(s => s.trim());
-          const matched = stalls.filter(s => names.includes(s.name));
-          setSelectedStallsList(matched.length > 0 ? matched : [stall]);
-        } else {
-          setSelectedStallsList([stall]);
+          const m = stalls.filter(s => names.includes(s.name));
+          if (m.length > 0) matched = m;
         }
+        setSelectedStallsList(matched);
+
+        const savedStallPrice = parseNumber(booking.stall_price);
+        const defaultPrice = calculateDefaultStallPrice(matched, selectedDate);
+        setStallPrice(savedStallPrice > 0 ? savedStallPrice : defaultPrice);
+        setElecUnit(booking.elec_unit || 0);
+        setElecPrice(booking.elec_price || 0);
       }
 
       const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
@@ -720,8 +723,10 @@ export function BookingProvider({ children }) {
       setProduct('');
       setBookingType('รายวัน');
       setPaymentMethod('เงินสด');
-      setStallPrice(price);
-            setElecUnit(0);
+      const calculatedPrice = calculateDefaultStallPrice([stall], selectedDate);
+      const finalInitialPrice = (parseNumber(price) > 0) ? parseNumber(price) : calculatedPrice;
+      setStallPrice(finalInitialPrice);
+      setElecUnit(0);
       setElecPrice(0);
       setNote('');
       setSelectedStallsList([stall]);
@@ -749,7 +754,10 @@ export function BookingProvider({ children }) {
       return;
     }
 
-    const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice);
+    const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
+    const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
+    const totalVal = finalStallPrice + parseNumber(elecPrice);
+
     const totalPaid = paymentList
       .filter(p => p.amount)
       .reduce((sum, p) => sum + parseNumber(p.amount), 0);
@@ -779,7 +787,9 @@ export function BookingProvider({ children }) {
     setLoading(true);
     try {
       const bookingId = selectedBooking?.id || `B-${Date.now()}`;
-      const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice);
+      const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
+      const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
+      const totalVal = finalStallPrice + parseNumber(elecPrice);
 
       const finalPaymentMethod = paymentList
         .filter(p => p.method && p.amount)
@@ -796,7 +806,7 @@ export function BookingProvider({ children }) {
         type: bookingType,
         elec_unit: parseNumber(elecUnit),
         elec_price: parseNumber(elecPrice),
-        stall_price: parseNumber(stallPrice),
+        stall_price: finalStallPrice,
         total_price: totalVal,
         payment_method: finalPaymentMethod,
         status: status,

@@ -154,7 +154,10 @@ export default function BookingDetailModal({
         ) : (
           // Admin View (Form & Controls)
           (() => {
-            const totalVal = parseNumber(stallPrice) + parseNumber(elecPrice);
+            const computedStallPrice = parseNumber(stallPrice) > 0 
+              ? parseNumber(stallPrice) 
+              : (typeof calculateDefaultStallPrice === 'function' ? calculateDefaultStallPrice(selectedStallsList, selectedDate) : 0);
+            const totalVal = computedStallPrice + parseNumber(elecPrice);
             const transferTotal = paymentList
               .filter(p => p.method === 'โอนเงิน')
               .reduce((sum, p) => sum + parseNumber(p.amount), 0);
