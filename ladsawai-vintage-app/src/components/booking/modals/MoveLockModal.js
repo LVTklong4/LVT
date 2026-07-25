@@ -19,6 +19,7 @@ export default function MoveLockModal() {
     parseNumber,
     paymentList,
     selectedBooking,
+    selectedDate,
     setMoveStallFilter,
     setMoveTargetDate,
     setMoveTargetStall,
@@ -35,12 +36,21 @@ export default function MoveLockModal() {
       const names = selectedBooking.stall_name.split(',').map(s => s.trim());
       if (names.length > 0) {
         setSourceStallName(names[0]);
-        // Reset target stall selection when booking changes
-        setMoveTargetStall(null);
-        setMoveStallFilter('');
       }
     }
-  }, [selectedBooking, setMoveTargetStall, setMoveStallFilter]);
+  }, [selectedBooking]);
+
+  React.useEffect(() => {
+    if (showMoveLockModal) {
+      const targetD = moveTargetDate || selectedBooking?.date || selectedDate;
+      if (!moveTargetDate && targetD) {
+        setMoveTargetDate(targetD);
+      }
+      if (targetD) {
+        fetchVacantStallsForDate(targetD);
+      }
+    }
+  }, [showMoveLockModal, moveTargetDate, selectedBooking, selectedDate]);
 
   if (!showMoveLockModal || !selectedBooking) return null;
 
@@ -185,6 +195,7 @@ export default function MoveLockModal() {
                   <Loader2 className="w-4 h-4 animate-spin text-[#8B4513]" /> กำลังโหลดล็อคว่าง...
                 </div>
               ) : (() => {
+                const isSameDate = moveTargetDate === selectedBooking.date;
                 const originalNamesSet = new Set(
                   selectedBooking.stall_name.split(',').map(name => cleanStallName(name))
                 );
@@ -193,7 +204,7 @@ export default function MoveLockModal() {
                   const sClean = cleanStallName(s.name);
                   const matchesSearch = sClean.toLowerCase().includes(moveStallFilter.toLowerCase()) || 
                                         s.name.toLowerCase().includes(moveStallFilter.toLowerCase());
-                  const isOriginalStall = originalNamesSet.has(sClean);
+                  const isOriginalStall = isSameDate && originalNamesSet.has(sClean);
                   return matchesSearch && !isOriginalStall;
                 });
 

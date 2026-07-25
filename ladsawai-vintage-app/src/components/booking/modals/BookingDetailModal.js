@@ -53,6 +53,7 @@ export default function BookingDetailModal({
   setAddUtilityMethod
 }) {
   const { adminUser } = useAuthAdmin();
+  const { setMoveTargetDate, setMoveTargetStall, fetchVacantStallsForDate } = useBooking();
 
   if (!showBookingModal || !selectedStall) return null;
 
@@ -541,7 +542,13 @@ export default function BookingDetailModal({
 
                         <button
                           type="button"
-                          onClick={() => setShowMoveLockModal(true)}
+                          onClick={() => {
+                            const initDate = selectedBooking?.date || selectedDate;
+                            setMoveTargetDate(initDate);
+                            setMoveTargetStall(null);
+                            fetchVacantStallsForDate(initDate);
+                            setShowMoveLockModal(true);
+                          }}
                           className="px-3 py-2 bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer"
                         >
                           <Move className="w-4 h-4 shrink-0" /> ย้ายล็อค
