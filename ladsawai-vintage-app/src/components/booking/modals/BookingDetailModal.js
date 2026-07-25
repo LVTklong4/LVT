@@ -568,10 +568,11 @@ export default function BookingDetailModal({
 
                 {/* Modal Footer Actions */}
                 <div className="bg-[#FAEBD7] border-t-2 border-[#8B4513] p-3 flex justify-between items-center gap-2">
-                  {selectedBooking ? (
+                  {selectedBooking && (!isFullyPaid && selectedBooking.status !== 'ชำระแล้ว') ? (
                     <button 
+                      type="button"
                       onClick={handleDeleteBooking}
-                      className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold text-xs flex items-center gap-1 transition-all border border-red-300"
+                      className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold text-xs flex items-center gap-1 transition-all border border-red-300 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" /> ยกเลิกจอง
                     </button>

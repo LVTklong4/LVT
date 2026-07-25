@@ -42,6 +42,8 @@ export default function MoveLockModal() {
 
   React.useEffect(() => {
     if (showMoveLockModal) {
+      setMoveStallFilter('');
+      setMoveTargetStall(null);
       const targetD = moveTargetDate || selectedBooking?.date || selectedDate;
       if (!moveTargetDate && targetD) {
         setMoveTargetDate(targetD);
@@ -50,7 +52,7 @@ export default function MoveLockModal() {
         fetchVacantStallsForDate(targetD);
       }
     }
-  }, [showMoveLockModal, moveTargetDate, selectedBooking, selectedDate]);
+  }, [showMoveLockModal, selectedBooking]);
 
   if (!showMoveLockModal || !selectedBooking) return null;
 
@@ -167,6 +169,7 @@ export default function MoveLockModal() {
                 const d = e.target.value;
                 setMoveTargetDate(d);
                 setMoveTargetStall(null);
+                setMoveStallFilter('');
                 fetchVacantStallsForDate(d);
               }}
               className="p-2.5 border-2 border-amber-200 rounded-xl text-xs text-center font-bold focus:border-[#8B4513] focus:ring-0 bg-white"
@@ -259,14 +262,14 @@ export default function MoveLockModal() {
           {/* 5. Price Details & Differences Comparison Card */}
           {moveTargetStall && (() => {
             const newStallPrice = getStallPriceForDate(moveTargetStall, moveTargetDate);
-            const finalSourcePrice = Math.max(newStallPrice, allocatedSourcePaid);
-            const difference = finalSourcePrice - allocatedSourcePaid;
+            const origPrice = originalSourcePrice || getStallPriceForDate(sourceStallObj || { name: sourceStallName }, selectedBooking.date);
+            const difference = newStallPrice - origPrice;
 
             return (
               <div className="bg-[#FAEBD7]/30 border border-amber-900/10 rounded-xl p-3.5 flex flex-col gap-2 shadow-inner">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-bold">ยอดชำระแผงเดิม ({cleanStallName(sourceStallName)}):</span>
-                  <span className="font-mono font-black text-gray-800">{allocatedSourcePaid} บ.</span>
+                  <span className="text-gray-500 font-bold">ราคาแผงเดิม ({cleanStallName(sourceStallName)}):</span>
+                  <span className="font-mono font-black text-gray-800">{origPrice} บ.</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-gray-500 font-bold">ราคาแผงใหม่ ({cleanStallName(moveTargetStall.name)}):</span>
@@ -276,13 +279,13 @@ export default function MoveLockModal() {
                 <div className="border-t border-dashed border-[#8B4513]/20 pt-2.5 flex justify-between items-center font-black">
                   {difference > 0 ? (
                     <>
-                      <span className="text-red-700 text-xs">ต้องชำระส่วนต่างเพิ่ม:</span>
+                      <span className="text-red-700 text-xs">ส่วนต่างราคาแผงต้องชำระเพิ่ม:</span>
                       <span className="font-mono text-red-800 text-sm">+{difference} บ.</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-green-700 text-xs">ราคาแผงใหม่ถูกกว่า (ไม่คืนเงิน):</span>
-                      <span className="font-mono text-green-800 text-xs">0 บ. (โอนสิทธิ์ชำระครบ)</span>
+                      <span className="text-green-700 text-xs">ราคาแผงใหม่เท่ากันหรือถูกกว่า (ไม่คืนเงิน):</span>
+                      <span className="font-mono text-green-800 text-xs">0 บ. (ชำระครบแล้ว)</span>
                     </>
                   )}
                 </div>

@@ -1131,8 +1131,10 @@ export function BookingProvider({ children }) {
         currentPaid = parseNumber(selectedBooking.total_price);
       }
 
+      const wasOriginalPaid = selectedBooking.status === 'ชำระแล้ว';
+
       // 2. Calculate standard prices of the stalls to find ratio
-      const standardSourcePrice = getStallPriceForDate(stalls.find(s => s.name === srcStallName) || { name: srcStallName }, selectedBooking.date);
+      const standardSourcePrice = getStallPriceForDate(stalls.find(s => s.name === srcStallName) || { name: srcStallName }, selectedBooking.date) || Math.round(parseNumber(selectedBooking.stall_price) / allStalls.length);
       let totalStandard = standardSourcePrice;
       if (isMultiStall) {
         totalStandard = allStalls.reduce((sum, name) => {
@@ -1153,10 +1155,24 @@ export function BookingProvider({ children }) {
 
       // New target price
       const newTargetPrice = getStallPriceForDate(targetStall, targetDate);
-      const finalSourcePrice = Math.max(newTargetPrice, allocatedSourcePaid);
-      const finalSourceTotal = finalSourcePrice + allocatedSourceElecPrice + allocatedSourceStorageFee;
-      const isPaidSource = allocatedSourcePaid >= finalSourceTotal && finalSourceTotal > 0;
-      const newStatusSource = isPaidSource ? 'ชำระแล้ว' : 'ค้างชำระ';
+      const stallPriceDiff = newTargetPrice - standardSourcePrice;
+
+      let finalSourcePrice = newTargetPrice;
+      let finalSourceTotal = 0;
+      let newStatusSource = 'ชำระแล้ว';
+
+      if (stallPriceDiff <= 0) {
+        // Move to cheaper/equal lock: No refund, no extra charge!
+        finalSourcePrice = newTargetPrice;
+        finalSourceTotal = wasOriginalPaid ? allocatedSourcePaid : (newTargetPrice + allocatedSourceElecPrice + allocatedSourceStorageFee);
+        newStatusSource = wasOriginalPaid ? 'ชำระแล้ว' : (currentPaid >= finalSourceTotal ? 'ชำระแล้ว' : 'ค้างชำระ');
+      } else {
+        // Move to more expensive lock: Calculate ONLY the stallPriceDiff!
+        const extraToPay = stallPriceDiff;
+        finalSourcePrice = newTargetPrice;
+        finalSourceTotal = allocatedSourcePaid + extraToPay;
+        newStatusSource = (wasOriginalPaid && extraToPay <= 0) || (!wasOriginalPaid && currentPaid >= finalSourceTotal) ? 'ชำระแล้ว' : 'ค้างชำระ';
+      }
 
       // Move Note
       const originalDate = selectedBooking.date;
