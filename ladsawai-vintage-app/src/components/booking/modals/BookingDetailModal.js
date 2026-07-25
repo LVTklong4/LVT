@@ -54,16 +54,6 @@ export default function BookingDetailModal({
 }) {
   const { adminUser } = useAuthAdmin();
 
-  // Auto-recalculate stall price whenever selectedStallsList changes for new bookings
-  React.useEffect(() => {
-    if (showBookingModal && !selectedBooking && selectedStallsList && selectedStallsList.length > 0 && typeof calculateDefaultStallPrice === 'function') {
-      const calculated = calculateDefaultStallPrice(selectedStallsList, selectedDate);
-      if (calculated !== undefined && calculated !== null && calculated >= 0) {
-        setStallPrice(calculated);
-      }
-    }
-  }, [showBookingModal, selectedBooking, selectedStallsList, selectedDate]);
-
   if (!showBookingModal || !selectedStall) return null;
 
   return (
@@ -250,7 +240,7 @@ export default function BookingDetailModal({
                               onClick={() => {
                                 const updated = selectedStallsList.filter(item => item.name !== st.name);
                                 setSelectedStallsList(updated);
-                                setStallPrice(calculateDefaultStallPrice(updated));
+                                setStallPrice(calculateDefaultStallPrice(updated, selectedDate));
                               }}
                               className="text-amber-700 hover:text-red-700 font-black ml-1 text-[10px] transition-colors"
                               title="ลบออก"
@@ -313,7 +303,7 @@ export default function BookingDetailModal({
                                     onClick={() => {
                                       const updated = [...selectedStallsList, vSt];
                                       setSelectedStallsList(updated);
-                                      setStallPrice(calculateDefaultStallPrice(updated));
+                                      setStallPrice(calculateDefaultStallPrice(updated, selectedDate));
                                       setShowAddStallSelect(false);
                                       setStallFilter('');
                                     }}

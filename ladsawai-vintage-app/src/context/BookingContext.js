@@ -491,27 +491,32 @@ export function BookingProvider({ children }) {
 
   // Get price based on day of week for target stall on target date
   const getStallPriceForDate = (stall, dateStr = selectedDate) => {
-    if (!stall || !dateStr) return 0;
+    if (!stall) return 0;
+    const effectiveDateStr = dateStr || selectedDate;
 
     let day = 0;
-    if (typeof dateStr === 'string' && dateStr.includes('-')) {
-      const parts = dateStr.split('-');
+    if (typeof effectiveDateStr === 'string' && effectiveDateStr.includes('-')) {
+      const parts = effectiveDateStr.split('-');
       if (parts.length === 3) {
         let yr = parseInt(parts[0], 10);
         if (yr > 2500) yr -= 543;
         const dateObj = new Date(yr, parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
         day = dateObj.getDay();
       } else {
-        day = new Date(dateStr).getDay();
+        day = new Date(effectiveDateStr).getDay();
       }
-    } else {
-      day = new Date(dateStr).getDay();
+    } else if (effectiveDateStr) {
+      day = new Date(effectiveDateStr).getDay();
     }
 
     let price = 0;
     if (day === 6) price = stall.price_sat || stall.price_wed || stall.price_sun || stall.price || 0;
     else if (day === 0) price = stall.price_sun || stall.price_sat || stall.price_wed || stall.price || 0;
     else price = stall.price_wed || stall.price_sat || stall.price_sun || stall.price || 0;
+
+    if (!price || parseNumber(price) === 0) {
+      price = stall.price_sat || stall.price_wed || stall.price_sun || stall.price || 0;
+    }
 
     return parseNumber(price);
   };
