@@ -54,6 +54,16 @@ export default function BookingDetailModal({
 }) {
   const { adminUser } = useAuthAdmin();
 
+  // Auto-recalculate stall price whenever selectedStallsList changes for new bookings
+  React.useEffect(() => {
+    if (showBookingModal && !selectedBooking && selectedStallsList && selectedStallsList.length > 0 && typeof calculateDefaultStallPrice === 'function') {
+      const calculated = calculateDefaultStallPrice(selectedStallsList, selectedDate);
+      if (calculated !== undefined && calculated !== null && calculated >= 0) {
+        setStallPrice(calculated);
+      }
+    }
+  }, [showBookingModal, selectedBooking, selectedStallsList, selectedDate]);
+
   if (!showBookingModal || !selectedStall) return null;
 
   return (
