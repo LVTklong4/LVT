@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
+import { cleanStallName } from '@/utils/numberHelper';
 import { Search, RefreshCw, Loader2, X, Calendar, MapPin, ArrowRight } from 'lucide-react';
 
 export default function MoveLockModal() {
@@ -136,7 +137,7 @@ export default function MoveLockModal() {
                           : 'bg-white border border-amber-200 hover:bg-amber-50 text-gray-700'
                       }`}
                     >
-                      แผง {name}
+                      แผง {cleanStallName(name)}
                     </button>
                   );
                 })}
@@ -184,10 +185,15 @@ export default function MoveLockModal() {
                   <Loader2 className="w-4 h-4 animate-spin text-[#8B4513]" /> กำลังโหลดล็อคว่าง...
                 </div>
               ) : (() => {
-                const isSameDate = moveTargetDate === selectedBooking.date;
+                const originalNamesSet = new Set(
+                  selectedBooking.stall_name.split(',').map(name => cleanStallName(name))
+                );
+
                 const filtered = vacantStallsOnTargetDate.filter(s => {
-                  const matchesSearch = s.name.toLowerCase().includes(moveStallFilter.toLowerCase());
-                  const isOriginalStall = isSameDate && selectedBooking.stall_name.split(',').map(name => name.trim()).includes(s.name);
+                  const sClean = cleanStallName(s.name);
+                  const matchesSearch = sClean.toLowerCase().includes(moveStallFilter.toLowerCase()) || 
+                                        s.name.toLowerCase().includes(moveStallFilter.toLowerCase());
+                  const isOriginalStall = originalNamesSet.has(sClean);
                   return matchesSearch && !isOriginalStall;
                 });
 
@@ -209,7 +215,7 @@ export default function MoveLockModal() {
                           : 'hover:bg-amber-50/50 text-gray-700'
                       }`}
                     >
-                      <span>{s.name} <span className="text-[9px] text-gray-400">({s.type})</span></span>
+                      <span>{cleanStallName(s.name)} <span className="text-[9px] text-gray-400">({s.type})</span></span>
                       <span className="text-[#8B4513] font-black">{price} บ.</span>
                     </button>
                   );
@@ -228,10 +234,10 @@ export default function MoveLockModal() {
               <div>วันที่ใหม่: <span className="text-gray-900 font-extrabold">{formatDateThai(moveTargetDate)}</span></div>
               <div className="col-span-2 flex items-center gap-1.5 border-t border-[#8B4513]/10 pt-1.5 mt-0.5">
                 <span>ย้ายแผง:</span>
-                <span className="bg-amber-100 px-2 py-0.5 rounded-md text-[#8B4513] font-black">{sourceStallName}</span>
+                <span className="bg-amber-100 px-2 py-0.5 rounded-md text-[#8B4513] font-black">{cleanStallName(sourceStallName)}</span>
                 <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
                 {moveTargetStall ? (
-                  <span className="bg-green-100 px-2 py-0.5 rounded-md text-green-800 font-black">{moveTargetStall.name}</span>
+                  <span className="bg-green-100 px-2 py-0.5 rounded-md text-green-800 font-black">{cleanStallName(moveTargetStall.name)}</span>
                 ) : (
                   <span className="text-red-500 font-black">ยังไม่ได้เลือก</span>
                 )}
@@ -248,11 +254,11 @@ export default function MoveLockModal() {
             return (
               <div className="bg-[#FAEBD7]/30 border border-amber-900/10 rounded-xl p-3.5 flex flex-col gap-2 shadow-inner">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-bold">ยอดชำระแผงเดิม ({sourceStallName}):</span>
+                  <span className="text-gray-500 font-bold">ยอดชำระแผงเดิม ({cleanStallName(sourceStallName)}):</span>
                   <span className="font-mono font-black text-gray-800">{allocatedSourcePaid} บ.</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-bold">ราคาแผงใหม่ ({moveTargetStall.name}):</span>
+                  <span className="text-gray-500 font-bold">ราคาแผงใหม่ ({cleanStallName(moveTargetStall.name)}):</span>
                   <span className="font-mono font-black text-gray-800">{newStallPrice} บ.</span>
                 </div>
                 

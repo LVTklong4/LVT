@@ -934,54 +934,74 @@ export function BookingProvider({ children }) {
     }
   };
 
-  // Mark Absence (แจ้งลาหยุด)
+  // Mark Absence (แจ้งลาหยุดแบบกลุ่ม)
   const handleMarkAbsent = async () => {
     if (!adminUser) {
       showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
       return;
     }
-    if (!confirm(`ยืนยันการแจ้ง "ลาหยุด" สำหรับล็อค ${selectedStall.name} ในวันที่ ${getModalDateFormat(selectedDate)} หรือไม่?\n(ระบบจะปล่อยล็อคว่างให้ร้านค้าอื่นจองรายวันได้)`)) {
+
+    const stallsToLeave = selectedStallsList && selectedStallsList.length > 0 ? selectedStallsList : (selectedStall ? [selectedStall] : []);
+    if (stallsToLeave.length === 0) return;
+
+    const displayStallNames = stallsToLeave.map(s => cleanStallName(s.name)).join(', ');
+    const countText = stallsToLeave.length > 1 ? ` (${stallsToLeave.length} ล็อค)` : '';
+
+    if (!confirm(`ยืนยันการแจ้ง "ลาหยุด" สำหรับล็อค [${displayStallNames}]${countText} ในวันที่ ${getModalDateFormat(selectedDate)} หรือไม่?\n(ระบบจะปล่อยล็อคว่างให้ร้านค้าอื่นจองรายวันได้)`)) {
       return;
     }
 
     setLoading(true);
     try {
-      const bookingId = selectedBooking?.id || `B-${Date.now()}`;
-      
-      const bookingData = {
-        id: bookingId,
-        date: selectedDate,
-        stall_name: selectedStall.name,
-        booker_name: selectedBooking?.booker_name || 'ร้านประจำลาหยุด',
-        product: 'แจ้งลาหยุด',
-        type: selectedStall.type === 'รายเดือน' ? 'รายเดือน' : 'รายวัน',
-        elec_unit: 0,
-        elec_price: 0,
-        stall_price: 0,
-        total_price: 0,
-        payment_method: 'เงินสด',
-        status: 'ลา',
-        note: 'แจ้งลาหยุดโดยระบบแอดมิน',
-        storage_fee: 0
-      };
+      const bookerNameVal = selectedBooking?.booker_name || bookerName || 'ร้านประจำลาหยุด';
+      const masterIdVal = selectedBooking?.master_id || selectedBooking?.id || `B-ABSENT-${Date.now()}`;
+      const savedBookings = [];
 
-      const { error: saveError } = await supabase
-        .from('bookings')
-        .upsert(bookingData);
-      if (saveError) throw saveError;
+      for (let i = 0; i < stallsToLeave.length; i++) {
+        const st = stallsToLeave[i];
+        const bookingId = (selectedBooking && stallsToLeave.length === 1) 
+          ? selectedBooking.id 
+          : `B-ABSENT-${Date.now()}-${i}-${cleanStallName(st.name)}`;
+
+        const bookingData = {
+          id: bookingId,
+          date: selectedDate,
+          stall_name: st.name,
+          booker_name: bookerNameVal,
+          product: 'แจ้งลาหยุด',
+          type: st.type === 'รายเดือน' ? 'รายเดือน' : 'รายวัน',
+          elec_unit: 0,
+          elec_price: 0,
+          stall_price: 0,
+          total_price: 0,
+          payment_method: 'เงินสด',
+          status: 'ลา',
+          note: 'แจ้งลาหยุดแบบกลุ่มโดยแอดมิน',
+          storage_fee: 0,
+          master_id: masterIdVal
+        };
+
+        const { error: saveError } = await supabase
+          .from('bookings')
+          .upsert(bookingData);
+        if (saveError) throw saveError;
+        savedBookings.push(bookingData);
+      }
 
       if (adminUser) {
         logOfficerActivity(
           adminUser.name,
           adminUser.role || 'Staff',
           'แจ้งลา',
-          `แจ้งลาหยุดล็อค ${selectedStall.name} วันที่ ${selectedDate}`
+          `แจ้งลาหยุดกลุ่มล็อค ${displayStallNames} วันที่ ${selectedDate}`
         );
       }
 
-      showAlert("บันทึกการแจ้งลาหยุดสำเร็จ", "สำเร็จ");
+      showAlert(`บันทึกการแจ้งลาหยุดสำเร็จ (${stallsToLeave.length} ล็อค)`, "สำเร็จ");
       setShowBookingModal(false);
-      setBookings(prev => [...prev.filter(b => b.id !== bookingData.id), bookingData]);
+      
+      const savedIds = new Set(savedBookings.map(b => b.id));
+      setBookings(prev => [...prev.filter(b => !savedIds.has(b.id)), ...savedBookings]);
       fetchBookingsAndStorage();
     } catch (e) {
       console.error(e);
@@ -998,15 +1018,24 @@ export function BookingProvider({ children }) {
     try {
       const { data: bookingsData, error } = await supabase
         .from('bookings')
-        .select('stall_name, status, id')
+        .select('stall_name, status, id, master_id')
         .eq('date', targetDateStr);
       if (error) throw error;
 
+      const currentMasterId = selectedBooking?.master_id;
+      const currentBookingId = selectedBooking?.id;
+
       const bookedStallsSet = new Set();
       bookingsData?.forEach(b => {
-        if (b.status !== 'ลา' && b.id !== selectedBooking?.id && b.stall_name) {
+        const isSelf = (currentBookingId && b.id === currentBookingId) || (currentMasterId && b.master_id === currentMasterId);
+        if (b.status !== 'ลา' && !isSelf && b.stall_name) {
           b.stall_name.split(',').map(s => s.trim()).forEach(name => {
-            if (name) bookedStallsSet.add(name);
+            if (name) {
+              const clean = cleanStallName(name);
+              bookedStallsSet.add(name);
+              bookedStallsSet.add(clean);
+              bookedStallsSet.add(`[${clean}]`);
+            }
           });
         }
       });
@@ -1014,7 +1043,8 @@ export function BookingProvider({ children }) {
       const vacant = stalls.filter(s => 
         s.type !== 'ทางเดิน' && 
         s.type !== 'อื่นๆ' && 
-        !bookedStallsSet.has(s.name)
+        !bookedStallsSet.has(s.name) &&
+        !bookedStallsSet.has(cleanStallName(s.name))
       );
 
       setVacantStallsOnTargetDate(vacant);
@@ -1196,7 +1226,24 @@ export function BookingProvider({ children }) {
 
   // Print thermal 80mm ticket
   const handlePrintReceipt = (bookingObj, stallObj) => {
-    if (!bookingObj) return;
+    const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
+    const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
+
+    const targetBooking = bookingObj || {
+      id: `B-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      date: selectedDate,
+      stall_name: selectedStallsList.map(s => s.name).join(', '),
+      booker_name: bookerName || 'ไม่ระบุชื่อ',
+      product: product || 'สินค้าทั่วไป',
+      stall_price: finalStallPrice,
+      elec_unit: parseNumber(elecUnit),
+      elec_price: parseNumber(elecPrice),
+      storage_fee: 0,
+      payment_method: paymentList.filter(p => p.method && p.amount).map(p => `${p.method}:${p.amount}`).join(' + ') || 'เงินสด'
+    };
+
+    const targetStall = stallObj || (selectedStallsList.length > 0 ? selectedStallsList[0] : selectedStall);
 
     const printWindow = window.open('', '_blank', 'width=600,height=800');
     if (!printWindow) {
@@ -1205,13 +1252,26 @@ export function BookingProvider({ children }) {
     }
 
     const htmlContent = generateReceiptHTML({
-      bookingObj,
-      stallObj,
+      bookingObj: targetBooking,
+      stallObj: targetStall,
       adminUser
     });
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    try {
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        try {
+          printWindow.print();
+        } catch (err) {
+          console.error("Auto print error:", err);
+        }
+      }, 350);
+    } catch (e) {
+      console.error("Print window write error:", e);
+    }
   };
 
   // Open monthly print parameters settings modal
