@@ -24,12 +24,12 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   const [bookerName, setBookerName] = useState('');
   const [customerType, setCustomerType] = useState('ขาจร');
   const [product, setProduct] = useState('');
-  const [stallPrice, setStallPrice] = useState('200');
+  const [stallPrice, setStallPrice] = useState('0');
   const [elecUnit, setElecUnit] = useState('0');
   const [elecPrice, setElecPrice] = useState(0);
 
-  const [paymentList, setPaymentList] = useState([{ method: 'เงินสด', amount: '200' }]);
-  const [status] = useState('ชำระแล้ว');
+  const [paymentList, setPaymentList] = useState([{ method: '', amount: '' }]);
+  const [status, setStatus] = useState('ชำระแล้ว');
   const [note, setNote] = useState('');
 
   const [editMode, setEditMode] = useState(false);
@@ -62,10 +62,11 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setBookerName('');
     setCustomerType('ขาจร');
     setProduct('');
-    setStallPrice('200');
+    setStallPrice('0');
     setElecUnit('0');
     setElecPrice(0);
-    setPaymentList([{ method: 'เงินสด', amount: '200' }]);
+    setPaymentList([{ method: '', amount: '' }]);
+    setStatus('ชำระแล้ว');
     setNote('');
     setEditMode(false);
     setSearchTerm('');
@@ -81,6 +82,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setStallPrice(String(b.stall_price || 0));
     setElecUnit(String(b.elec_unit || 0));
     setElecPrice(b.elec_price || 0);
+    setStatus(b.status || 'ชำระแล้ว');
     setEditMode(true);
 
     let parsedType = 'ขาจร';
@@ -106,14 +108,14 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
           const amount = parts[1]?.trim() || '';
           const isSaved = !!(method && amount && parseNumber(amount) > 0);
           return { 
-            method: isSaved ? method : 'เงินสด', 
+            method: isSaved ? method : '', 
             amount: amount,
             isSaved: isSaved
           };
         });
         setPaymentList(splits);
       } else {
-        const method = b.payment_method.trim() || 'เงินสด';
+        const method = b.payment_method.trim();
         const amount = String(b.total_price || (parseFloat(b.stall_price || 0) + parseFloat(b.elec_price || 0)));
         setPaymentList([{ 
           method, 
@@ -123,7 +125,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       }
     } else {
       const total = (parseFloat(b.stall_price || 0) + parseFloat(b.elec_price || 0));
-      setPaymentList([{ method: 'เงินสด', amount: String(total) }]);
+      setPaymentList([{ method: '', amount: total > 0 ? String(total) : '' }]);
     }
   };
 
@@ -148,7 +150,10 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   useEffect(() => {
     if (paymentList.length === 1) {
       const total = (parseFloat(stallPrice) || 0) + (parseFloat(elecPrice) || 0);
-      setPaymentList([{ method: paymentList[0].method || 'เงินสด', amount: String(total) }]);
+      setPaymentList(prev => [{ 
+        method: prev[0]?.method || '', 
+        amount: total > 0 ? String(total) : '' 
+      }]);
     }
   }, [stallPrice, elecPrice]);
 
@@ -181,8 +186,8 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       showAlert("โปรดกรอกสินค้าที่ขาย", "แจ้งเตือน", true);
       return;
     }
-    if (!stallPrice.trim() || parseFloat(stallPrice) <= 0) {
-      showAlert("โปรดกรอกค่าเช่าล็อก", "แจ้งเตือน", true);
+    if (!stallPrice.trim() || parseFloat(stallPrice) < 0) {
+      showAlert("โปรดกรอกค่าเช่าล็อกให้ถูกต้อง", "แจ้งเตือน", true);
       return;
     }
 
@@ -495,7 +500,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
             {/* Payments Section */}
             <div className="flex flex-col gap-1.5 border-t border-amber-100 pt-2">
               <label className="text-[10px] font-bold text-gray-700 flex justify-between items-center">
-                <span>ช่องทางชำระเงิน</span>
+                <span>ช่องทางชำระเงิน <span className="text-red-500">*</span></span>
               </label>
 
               {paymentList.map((entry, index) => {
@@ -602,7 +607,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                 )}
               </button>
               
-              {editMode && (
+              {editMode && status !== 'ชำระแล้ว' && (
                 <button
                   type="button"
                   disabled={saving}
