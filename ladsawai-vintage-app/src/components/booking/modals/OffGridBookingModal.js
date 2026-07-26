@@ -37,6 +37,29 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Helper to extract phone number from booking object or note
+  const extractPhone = (b) => {
+    if (!b) return '';
+    if (b.phone && String(b.phone).trim() !== '-' && String(b.phone).trim() !== '') {
+      return String(b.phone).trim();
+    }
+    const noteText = b.note || '';
+
+    // Match 1: [เบอร์โทร: 0812345678] or [เบอร์: 0812345678] or [โทร: 0812345678]
+    const m1 = noteText.match(/\[(?:เบอร์โทร|เบอร์|โทร)\s*:\s*([^\]]+)\]/i);
+    if (m1 && m1[1].trim() !== '-') return m1[1].trim();
+
+    // Match 2: เบอร์โทร 0812345678 or โทร 0812345678
+    const m2 = noteText.match(/(?:เบอร์โทร|เบอร์|โทร)\s*[:\s]?\s*(0\d{8,9})/i);
+    if (m2) return m2[1].trim();
+
+    // Match 3: Any 10-digit number starting with 0
+    const m3 = noteText.match(/(?:^|[^\d])(0\d{9})(?:[^\d]|$)/);
+    if (m3) return m3[1].trim();
+
+    return '';
+  };
+
   // Helper to auto-calculate next off-grid stall name
   const getNextOffGridStallName = (customList = null) => {
     const list = customList || bookings || [];
@@ -72,72 +95,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setEditMode(false);
     setSearchTerm('');
   };
-
-  // Helper to extract phone number from booking object or note
-  const extractPhone = (b) => {
-    if (!b) return '';
-    if (b.phone && String(b.phone).trim() !== '-' && String(b.phone).trim() !== '') {
-      return String(b.phone).trim();
-    }
-    const noteText = b.note || '';
-
-    // Match 1: [เบอร์โทร: 0812345678] or [เบอร์: 0812345678] or [โทร: 0812345678]
-    const m1 = noteText.match(/\[(?:เบอร์โทร|เบอร์|โทร)\s*:\s*([^\]]+)\]/i);
-    if (m1 && m1[1].trim() !== '-') return m1[1].trim();
-
-    // Match 2: เบอร์โทร 0812345678 or โทร 0812345678
-    const m2 = noteText.match(/(?:เบอร์โทร|เบอร์|โทร)\s*[:\s]?\s*(0\d{8,9})/i);
-    if (m2) return m2[1].trim();
-
-    // Match 3: Any 10-digit number starting with 0
-    const m3 = noteText.match(/(?:^|[^\d])(0\d{9})(?:[^\d]|$)/);
-    if (m3) return m3[1].trim();
-
-    return '';
-  };
-
-  // Sync with isOpen and selectedBooking
-  useEffect(() => {
-    if (isOpen) {
-      if (selectedBooking) {
-        loadBooking(selectedBooking);
-      } else {
-        resetForm();
-      }
-    }
-  }, [isOpen, selectedBooking]);
-
-  // Sync electricity price when units change
-  useEffect(() => {
-    const units = parseNumber(elecUnit);
-    setElecPrice(units * 10);
-  }, [elecUnit]);
-
-  // Dynamic paymentList amount adjustment when price changes
-  useEffect(() => {
-    if (paymentList.length === 1) {
-      const total = (parseFloat(stallPrice) || 0) + (parseFloat(elecPrice) || 0);
-      setPaymentList([{ method: paymentList[0].method || 'เงินสด', amount: String(total) }]);
-    }
-  }, [stallPrice, elecPrice]);
-
-  // Load bookings for current date
-  const offGridBookings = (bookings || []).filter(b => b.type === 'นอกผัง' && b.date === selectedDate);
-
-  // Filtered bookings based on searchTerm
-  const filteredOffGridBookings = offGridBookings.filter(b => {
-    const term = searchTerm.toLowerCase().trim();
-    if (!term) return true;
-
-    const phoneStr = extractPhone(b);
-
-    return (
-      (b.stall_name || '').toLowerCase().includes(term) ||
-      (b.booker_name || '').toLowerCase().includes(term) ||
-      (b.product || '').toLowerCase().includes(term) ||
-      phoneStr.includes(term)
-    );
-  });
 
   // Load a booking into form for editing
   const loadBooking = (b) => {
@@ -196,6 +153,49 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       setPaymentList([{ method: 'เงินสด', amount: String(total) }]);
     }
   };
+
+  // Sync with isOpen and selectedBooking
+  useEffect(() => {
+    if (isOpen) {
+      if (selectedBooking) {
+        loadBooking(selectedBooking);
+      } else {
+        resetForm();
+      }
+    }
+  }, [isOpen, selectedBooking]);
+
+  // Sync electricity price when units change
+  useEffect(() => {
+    const units = parseNumber(elecUnit);
+    setElecPrice(units * 10);
+  }, [elecUnit]);
+
+  // Dynamic paymentList amount adjustment when price changes
+  useEffect(() => {
+    if (paymentList.length === 1) {
+      const total = (parseFloat(stallPrice) || 0) + (parseFloat(elecPrice) || 0);
+      setPaymentList([{ method: paymentList[0].method || 'เงินสด', amount: String(total) }]);
+    }
+  }, [stallPrice, elecPrice]);
+
+  // Load bookings for current date
+  const offGridBookings = (bookings || []).filter(b => b.type === 'นอกผัง' && b.date === selectedDate);
+
+  // Filtered bookings based on searchTerm
+  const filteredOffGridBookings = offGridBookings.filter(b => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+
+    const phoneStr = extractPhone(b);
+
+    return (
+      (b.stall_name || '').toLowerCase().includes(term) ||
+      (b.booker_name || '').toLowerCase().includes(term) ||
+      (b.product || '').toLowerCase().includes(term) ||
+      phoneStr.includes(term)
+    );
+  });
 
   // Submit Handler
   const handleSaveOffGrid = async (autoPrint = false) => {
@@ -674,7 +674,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
             <div className="bg-white p-3 border border-amber-200 rounded-lg shadow-sm flex flex-col gap-2">
               <div className="flex justify-between items-center">
                 <span className="font-extrabold text-xs text-[#8B4513] flex items-center gap-1.5">
-                  📋 รายการจองนอกผังวันที่ {getModalDateFormat(selectedDate)}
+                  📋 รายการจองนอกผังวันที่ {selectedDate}
                 </span>
                 <span className="text-[10px] font-extrabold text-gray-500 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                   ทั้งหมด: {offGridBookings.length} รายการ
