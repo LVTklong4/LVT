@@ -382,7 +382,10 @@ export function BookingProvider({ children }) {
   const fetchBookingsAndStorage = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Bookings for date
+      // 1. Fetch Stalls structure & prices
+      await fetchStalls();
+
+      // 2. Fetch Bookings for selected date
       const { data: bookingsData, error: bError } = await supabase
         .from('bookings')
         .select('*')
