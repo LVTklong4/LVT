@@ -15,7 +15,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
     const dObj = new Date(selectedDate);
     const dateFormattedShort = `${dObj.getDate()}/${dObj.getMonth() + 1}/${dObj.getFullYear() + 543}`;
 
-    const maxCol = 24;
+    const maxCol = 20; // Expanded grid: removed 4 rightmost parking columns (col 21-24)
     const maxRow = 26;
 
     // Filter bookings for selectedDate
@@ -48,14 +48,11 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
           const isInsideGrocery = r >= 1 && r <= 3 && c >= 13 && c <= 15;
           const isInsideBathroom = r >= 1 && r <= 3 && c >= 16 && c <= 20;
           const isInsideWater = r >= 23 && r <= 26 && c >= 2 && c <= 6;
-          const isInsideParking = r >= 1 && r <= 25 && c >= 21 && c <= 24;
 
           let bgStyle = 'background-color: #94a3b8; border: 1px solid #64748b;'; // default walkway gray
           let labelText = '';
 
-          if (isInsideParking) {
-            bgStyle = 'background-color: #fef08a; border: 1px solid #fde047;'; // parking yellow
-          } else if (isInsideGrocery) {
+          if (isInsideGrocery) {
             if (r === 1 && c === 13) labelText = '<span style="font-weight:900; font-size:7pt; color:#8B4513;">ร้านชำ</span>';
             bgStyle = 'background-color: #faf0e6; border: 1px dashed #8B4513;';
           } else if (isInsideWater) {
@@ -78,7 +75,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
         const displayName = stall.name.replace(/[\[\]]/g, '');
         const isFood = stall.type.includes('อาหาร') || stall.name.startsWith('F');
 
-        let cellBg = 'background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b;';
+        let cellBg = 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;'; // default vacant cloth
         let productText = '';
 
         if (stall.type === 'ทางเดิน') {
@@ -91,17 +88,19 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
               cellBg = isFood 
                 ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
                 : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
-              productText = 'ลา';
+              productText = 'ว่าง (ลา)';
             } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-              cellBg = 'background-color: #ffe0b2; border: 1px solid #ffb74d; color: #e65100;';
-              productText = booking.product || 'รายเดือน';
+              // Paid = Soft Red (matching main map)
+              cellBg = 'background-color: #ffcdd2; border: 1px solid #e57373; color: #b71c1c;';
+              productText = booking.product || 'จองแล้ว';
             } else {
-              // Unpaid
-              cellBg = 'background-color: #ffffff; border: 2px solid #f97316; color: #c2410c;';
+              // Unpaid = Warm Amber/Orange (matching main map)
+              cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
               productText = booking.product || 'ประจำ';
               unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ประจำ'}`);
             }
           } else {
+            // Monthly stall = Lavender / Soft Purple (matching main map)
             cellBg = 'background-color: #d1c4e9; border: 1px solid #b39ddb; color: #4a148c;';
             productText = 'รายเดือน';
           }
@@ -114,18 +113,20 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
                 : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
               productText = 'ว่าง (ลา)';
             } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-              cellBg = 'background-color: #ffe0b2; border: 1px solid #ffb74d; color: #e65100;';
+              // Paid = Soft Red (matching main map)
+              cellBg = 'background-color: #ffcdd2; border: 1px solid #e57373; color: #b71c1c;';
               productText = booking.product || booking.booker_name || 'จองแล้ว';
             } else {
-              // Unpaid
-              cellBg = 'background-color: #ffffff; border: 2px solid #ea580c; color: #c2410c;';
+              // Unpaid = Warm Amber/Orange (matching main map)
+              cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
               productText = booking.product || booking.booker_name || 'ค้างชำระ';
               unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ค้างชำระ'}`);
             }
           } else {
+            // Vacant stall (Food = Green, Cloth = Blue)
             cellBg = isFood 
-              ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #33691e;' 
-              : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #0277bd;';
+              ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
+              : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
             productText = '';
           }
         }
@@ -139,8 +140,9 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
       }
     }
 
+    // Join unpaid items with "  |  " for clear separation
     const unpaidText = unpaidItems.length > 0
-      ? unpaidItems.join('  ')
+      ? unpaidItems.join(' &nbsp;|&nbsp; ')
       : 'ไม่มีรายการค้างชำระประจำวัน';
 
     const htmlContent = `
@@ -216,10 +218,10 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
               margin-top: 6px;
               border-top: 1.5px solid #d97706;
               padding-top: 4px;
-              font-size: 8pt;
+              font-size: 8.5pt;
               font-weight: 800;
               color: #c2410c;
-              line-height: 1.35;
+              line-height: 1.4;
             }
 
             .footer-row {
@@ -254,7 +256,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
 
             <div>
               <div class="unpaid-section">
-                <strong>ค้างชำระ (รายวัน/ประจำ):</strong> ${unpaidText}
+                <strong style="color: #9a3412;">ค้างชำระ (รายวัน/ประจำ):</strong> ${unpaidText}
               </div>
 
               <div class="footer-row">
