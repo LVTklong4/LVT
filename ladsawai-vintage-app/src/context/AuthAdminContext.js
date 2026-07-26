@@ -22,6 +22,13 @@ export function AuthAdminProvider({ children }) {
       if (session?.user?.email) {
         await verifyAndSetAdmin(session.user.email);
       } else {
+        const savedSession = localStorage.getItem('lvt_admin_session');
+        if (savedSession) {
+          try {
+            setAdminUser(JSON.parse(savedSession));
+            return;
+          } catch (e) {}
+        }
         setAdminUser(null);
       }
     };
@@ -32,6 +39,13 @@ export function AuthAdminProvider({ children }) {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user?.email) {
         await verifyAndSetAdmin(session.user.email);
       } else if (event === 'SIGNED_OUT') {
+        const savedSession = localStorage.getItem('lvt_admin_session');
+        if (savedSession) {
+          try {
+            setAdminUser(JSON.parse(savedSession));
+            return;
+          } catch (e) {}
+        }
         setAdminUser(null);
       }
     });
@@ -53,9 +67,11 @@ export function AuthAdminProvider({ children }) {
 
       if (admin) {
         setAdminUser(admin);
+        localStorage.setItem('lvt_admin_session', JSON.stringify(admin));
       } else {
         await supabase.auth.signOut();
         setAdminUser(null);
+        localStorage.removeItem('lvt_admin_session');
       }
     } catch (e) {
       console.error('Admin verification error:', e);
@@ -117,6 +133,7 @@ export function AuthAdminProvider({ children }) {
       console.error('Logout error:', e);
     } finally {
       setAdminUser(null);
+      localStorage.removeItem('lvt_admin_session');
     }
   };
 
@@ -151,6 +168,7 @@ export function AuthAdminProvider({ children }) {
         return { success: false, error: 'บัญชีผู้ใช้นี้ถูกปิดการใช้งาน' };
       }
       setAdminUser(admin);
+      localStorage.setItem('lvt_admin_session', JSON.stringify(admin));
       return { success: true, admin };
     }
     return { success: false, error: 'โปรดระบุอีเมลผู้เข้าใช้งาน' };
