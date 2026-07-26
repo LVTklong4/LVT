@@ -26,6 +26,7 @@ import { KlongThomProvider } from '@/context/KlongThomContext';
 import StallMapGrid from './StallMapGrid';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
 import { formatPrice } from '@/utils/numberHelper';
+import { printMarketLayoutA4 } from '@/utils/marketLayoutPrinter';
 
 const TopDownCar = ({ color = "#1E88E5", className = "h-[45px] w-auto drop-shadow-sm" }) => (
   <svg viewBox="0 0 40 80" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -417,7 +418,7 @@ export default function StandardBookingLayout() {
                         <button 
                           onClick={() => {
                             setShowProfileDropdown(false);
-                            window.print();
+                            printMarketLayoutA4({ selectedDate, stalls, bookings, adminUser, showAlert });
                           }} 
                           className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
