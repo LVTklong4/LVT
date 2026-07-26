@@ -22,7 +22,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   const [bookingId, setBookingId] = useState('');
   const [stallName, setStallName] = useState('');
   const [bookerName, setBookerName] = useState('');
-  const [phoneVal, setPhoneVal] = useState('');
   const [customerType, setCustomerType] = useState('ขาจร');
   const [product, setProduct] = useState('');
   const [stallPrice, setStallPrice] = useState('200');
@@ -36,29 +35,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Helper to extract phone number from booking object or note
-  const extractPhone = (b) => {
-    if (!b) return '';
-    if (b.phone && String(b.phone).trim() !== '-' && String(b.phone).trim() !== '') {
-      return String(b.phone).trim();
-    }
-    const noteText = b.note || '';
-
-    // Match 1: [เบอร์โทร: 0812345678] or [เบอร์: 0812345678] or [โทร: 0812345678]
-    const m1 = noteText.match(/\[(?:เบอร์โทร|เบอร์|โทร)\s*:\s*([^\]]+)\]/i);
-    if (m1 && m1[1].trim() !== '-') return m1[1].trim();
-
-    // Match 2: เบอร์โทร 0812345678 or โทร 0812345678
-    const m2 = noteText.match(/(?:เบอร์โทร|เบอร์|โทร)\s*[:\s]?\s*(0\d{8,9})/i);
-    if (m2) return m2[1].trim();
-
-    // Match 3: Any 10-digit number starting with 0
-    const m3 = noteText.match(/(?:^|[^\d])(0\d{9})(?:[^\d]|$)/);
-    if (m3) return m3[1].trim();
-
-    return '';
-  };
 
   // Helper to auto-calculate next off-grid stall name
   const getNextOffGridStallName = (customList = null) => {
@@ -84,7 +60,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     const nextStall = getNextOffGridStallName(customList);
     setStallName(nextStall);
     setBookerName('');
-    setPhoneVal('');
     setCustomerType('ขาจร');
     setProduct('');
     setStallPrice('200');
@@ -108,7 +83,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setElecPrice(b.elec_price || 0);
     setEditMode(true);
 
-    const extractedPhone = extractPhone(b);
     let parsedType = 'ขาจร';
     let parsedNote = b.note || '';
 
@@ -120,7 +94,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       .replace(/\[ประเภท:\s*[^\]]+\]/gi, '')
       .trim();
 
-    setPhoneVal(extractedPhone);
     setCustomerType(parsedType);
     setNote(parsedNote);
 
@@ -187,13 +160,10 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
 
-    const phoneStr = extractPhone(b);
-
     return (
       (b.stall_name || '').toLowerCase().includes(term) ||
       (b.booker_name || '').toLowerCase().includes(term) ||
-      (b.product || '').toLowerCase().includes(term) ||
-      phoneStr.includes(term)
+      (b.product || '').toLowerCase().includes(term)
     );
   });
 
@@ -204,17 +174,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
       return;
     }
     if (!bookerName.trim()) {
-      showAlert("โปรดกรอกชื่อผู้ค้า", "แจ้งเตือน", true);
-      return;
-    }
-    const cleanPhone = phoneVal.replace(/\s|-/g, '').trim();
-    if (!cleanPhone) {
-      showAlert("กรุณากรอกเบอร์โทรศัพท์", "แจ้งเตือน", true);
-      return;
-    }
-    const phoneRegex = /^0\d{9}$/;
-    if (!phoneRegex.test(cleanPhone)) {
-      showAlert("เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0 (เช่น 0812345678)", "แจ้งเตือน", true);
+      showAlert("โปรดกรอกชื่อผู้ค้า / เบอร์โทร", "แจ้งเตือน", true);
       return;
     }
     if (!product.trim()) {
@@ -245,7 +205,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
     setSaving(true);
     try {
       const targetId = bookingId || `B-OFF-${Date.now()}`;
-      const formattedNote = `[เบอร์โทร: ${cleanPhone}] [ประเภท: ${customerType}] ${note.trim()}`.trim();
+      const formattedNote = `[ประเภท: ${customerType}] ${note.trim()}`.trim();
       
       const finalPaymentMethod = paymentList
         .filter(p => p.method && p.amount)
@@ -457,16 +417,16 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
               />
             </div>
 
-            {/* Booker Name & Product */}
+            {/* Booker Name / Phone & Product */}
             <div className="grid grid-cols-2 gap-2">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-700">ชื่อผู้ค้า *</label>
+                <label className="text-[10px] font-bold text-gray-700">ชื่อผู้ค้า / เบอร์โทร *</label>
                 <input
                   type="text"
                   required
                   value={bookerName}
                   onChange={(e) => setBookerName(e.target.value)}
-                  placeholder="ชื่อผู้ค้า"
+                  placeholder="ชื่อผู้ค้า หรือ เบอร์โทร"
                   className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
                 />
               </div>
@@ -481,19 +441,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
                 />
               </div>
-            </div>
-
-            {/* Phone */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-gray-700">เบอร์โทรศัพท์ *</label>
-              <input
-                type="text"
-                required
-                value={phoneVal}
-                onChange={(e) => setPhoneVal(e.target.value)}
-                placeholder="08xxxxxxxx"
-                className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none font-semibold w-full font-mono"
-              />
             </div>
 
             {/* Price & Utilities */}
@@ -684,7 +631,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="🔍 ค้นหาด้วยชื่อผู้ค้า, เลขล็อก, สินค้า, หรือเบอร์โทร..."
+                placeholder="🔍 ค้นหาด้วยชื่อผู้ค้า, เบอร์โทร, เลขล็อก, หรือสินค้า..."
                 className="p-2 border border-amber-300 rounded text-xs w-full focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
               />
             </div>
@@ -704,7 +651,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   <thead className="bg-amber-100/70 text-[#8B4513] border-b border-amber-200 font-extrabold sticky top-0 z-10">
                     <tr>
                       <th className="p-2.5">ชื่อพื้นที่ / ล็อก</th>
-                      <th className="p-2.5">ผู้จอง / เบอร์</th>
+                      <th className="p-2.5">ผู้จอง / เบอร์โทร</th>
                       <th className="p-2.5 text-right">ยอดรวม</th>
                       <th className="p-2.5 text-center">สถานะ</th>
                       <th className="p-2.5 text-center">จัดการ</th>
@@ -712,7 +659,6 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   </thead>
                   <tbody className="divide-y divide-amber-100 font-semibold text-gray-700">
                     {filteredOffGridBookings.map((b) => {
-                      const dispPhone = extractPhone(b) || '-';
                       let dispType = 'ขาจร';
                       const tMatch = (b.note || '').match(/\[ประเภท:\s*([^\]]+)\]/);
                       if (tMatch) dispType = tMatch[1];
@@ -736,9 +682,8 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                             )}
                           </td>
                           <td className="p-2.5">
-                            <div className="font-bold text-gray-900">{b.booker_name}</div>
+                            <div className="font-bold text-gray-900">{b.booker_name || '-'}</div>
                             <div className="text-[10px] text-gray-500 flex items-center gap-1 font-mono">
-                              <span>โทร: {dispPhone}</span>
                               <span className="bg-amber-100 text-amber-800 px-1 rounded-sm text-[8px] font-bold">{dispType}</span>
                             </div>
                           </td>
