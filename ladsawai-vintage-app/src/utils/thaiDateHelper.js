@@ -136,3 +136,17 @@ export const computeNextMonthThai = (monthYearStr) => {
   const nextDate = new Date(yearCE, mIdx + 1, 1);
   return `${monthNamesFull[nextDate.getMonth()]} ${nextDate.getFullYear() + 543}`;
 };
+
+export const formatPhoneDisplay = (phoneStr) => {
+  if (!phoneStr) return '-';
+  const str = String(phoneStr).trim();
+  if (str === '' || str === '-') return '-';
+  const clean = str.replace(/[^0-9]/g, '');
+  if (clean.length === 9 && !clean.startsWith('0')) {
+    return '0' + clean;
+  }
+  if (clean.length === 8 && !clean.startsWith('0')) {
+    return '0' + clean;
+  }
+  return str;
+};

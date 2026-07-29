@@ -10,7 +10,8 @@ import {
   monthNamesFull,
   getThaiShortYear,
   getModalDateFormat,
-  getBookingMonthStr
+  getBookingMonthStr,
+  formatPhoneDisplay
 } from '@/utils/thaiDateHelper';
 import { generateReceiptHTML } from '@/utils/receiptPrinter';
 import { formatPrice, formatPriceInt } from '@/utils/numberHelper';
@@ -2780,7 +2781,7 @@ export function BookingProvider({ children }) {
     setNewMonthlyCustomerType(item.customer_type || 'Standard');
     setNewMonthlyBookerName(item.booker_name || '');
     setNewMonthlyProduct(item.product || '');
-    setNewMonthlyPhone(item.phone || '');
+    setNewMonthlyPhone(formatPhoneDisplay(item.phone));
     setNewMonthlyNote(item.note || '');
     setNewMonthlyStorageFee(String(item.storage_fee || ''));
     setNewMonthlyElecUnit(String(item.elec_unit || ''));

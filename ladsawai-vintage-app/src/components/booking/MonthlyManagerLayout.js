@@ -12,7 +12,12 @@ import BulkRenewModal from './modals/BulkRenewModal';
 import PreRenewalEditSubModal from './modals/PreRenewalEditSubModal';
 import InvoicePreviewModal from './modals/InvoicePreviewModal';
 import MonthlyPrintModal from './modals/MonthlyPrintModal';
-import { monthNamesFull } from '@/utils/thaiDateHelper';
+import {
+  monthNamesFull,
+  formatBookingMonth,
+  sortThaiMonthsDescending,
+  formatPhoneDisplay
+} from '@/utils/thaiDateHelper';
 
 export default function MonthlyManagerLayout() {
   const {
@@ -301,7 +306,7 @@ export default function MonthlyManagerLayout() {
                         </td>
                         <td className="p-2">
                           <div className="font-bold text-gray-800">{item.booker_name}</div>
-                          <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
+                          <div className="text-[10px] text-gray-500">{formatPhoneDisplay(item.phone)}</div>
                         </td>
                         <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
                         <td className="p-2 text-center font-semibold text-gray-800">
