@@ -176,7 +176,7 @@ export default function StandardBookingLayout() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[AntiqueWhite] border-b-3 border-[#8B4513] shadow-md py-2 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+        <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
           
           {/* Logo & title */}
           <div className="flex items-center gap-2">
@@ -480,7 +480,7 @@ export default function StandardBookingLayout() {
       </header>
 
       {/* Main content grid area */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-1 mb-24">
+      <main className="flex-1 max-w-[1360px] mx-auto w-full px-4 py-1 mb-24">
         
         {/* Stall Map Grid Component */}
         <StallMapGrid />
@@ -489,7 +489,7 @@ export default function StandardBookingLayout() {
 
       {/* Floating Bottom Info bar */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#FAEBD7] border-t-3 border-[#8B4513] p-2.5 z-30 shadow-lg">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-xs text-gray-700 font-bold gap-2">
+        <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row justify-between items-center text-xs text-gray-700 font-bold gap-2">
           <div className="flex items-center gap-1">
             <CalendarDays className="w-4 h-4 text-[#8B4513]" />
             <span>วันที่จอง: {selectedDate ? new Date(selectedDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>

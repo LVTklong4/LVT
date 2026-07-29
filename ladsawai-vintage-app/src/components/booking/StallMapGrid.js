@@ -49,8 +49,8 @@ export default function StallMapGrid() {
           <div 
             className="grid"
             style={{
-              gridTemplateColumns: `repeat(${maxCol}, 40px)`,
-              gridAutoRows: 'minmax(20px, auto)',
+              gridTemplateColumns: `repeat(${maxCol}, 50px)`,
+              gridAutoRows: 'minmax(25px, auto)',
               gap: '3px'
             }}
           >
