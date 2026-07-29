@@ -83,17 +83,41 @@ export const sortThaiMonthsDescending = (monthsArray) => {
 
 export const formatBookingMonth = (monthStr) => {
   if (!monthStr) return '-';
-  const parts = monthStr.split(' ');
-  if (parts.length < 4) return monthStr;
-  const monthAbbr = parts[1];
-  const yearStr = parts[3];
-  const monthsMap = {
-    Jan: 'มกราคม', Feb: 'กุมภาพันธ์', Mar: 'มีนาคม', Apr: 'เมษายน',
-    May: 'พฤษภาคม', Jun: 'มิถุนายน', Jul: 'กรกฎาคม', Aug: 'สิงหาคม',
-    Sep: 'กันยายน', Oct: 'ตุลาคม', Nov: 'พฤศจิกายน', Dec: 'ธันวาคม'
-  };
-  const thaiMonth = monthsMap[monthAbbr] || monthAbbr;
-  return `${thaiMonth} ${yearStr}`;
+  const str = String(monthStr).trim();
+
+  // 1. If already formatted in Thai (e.g. "กรกฎาคม 2569")
+  if (/^[ก-ฮ]+\s+\d{4}$/.test(str)) {
+    return str;
+  }
+
+  // 2. Handle ISO or YYYY-MM / YYYY-MM-DD (e.g. "2026-07" or "2026-07-01")
+  const isoMatch = str.match(/^(\d{4})-(\d{2})/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const monthIdx = parseInt(isoMatch[2], 10) - 1;
+    if (monthIdx >= 0 && monthIdx < 12) {
+      const thaiMonth = monthNamesFull[monthIdx];
+      const thaiYear = year + 543;
+      return `${thaiMonth} ${thaiYear}`;
+    }
+  }
+
+  // 3. Handle English Date String (e.g. "Wed Jul 01 2026 ...")
+  const parts = str.split(' ');
+  if (parts.length >= 4) {
+    const monthAbbr = parts[1];
+    let yearNum = parseInt(parts[3], 10);
+    if (!isNaN(yearNum) && yearNum < 2500) yearNum += 543;
+    const monthsMap = {
+      Jan: 'มกราคม', Feb: 'กุมภาพันธ์', Mar: 'มีนาคม', Apr: 'เมษายน',
+      May: 'พฤษภาคม', Jun: 'มิถุนายน', Jul: 'กรกฎาคม', Aug: 'สิงหาคม',
+      Sep: 'กันยายน', Oct: 'ตุลาคม', Nov: 'พฤศจิกายน', Dec: 'ธันวาคม'
+    };
+    const thaiMonth = monthsMap[monthAbbr] || monthAbbr;
+    return `${thaiMonth} ${yearNum}`;
+  }
+
+  return str;
 };
 
 export const computeNextMonthThai = (monthYearStr) => {

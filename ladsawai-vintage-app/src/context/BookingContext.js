@@ -3253,17 +3253,38 @@ export function BookingProvider({ children }) {
 
   const formatBookingMonth = (monthStr) => {
     if (!monthStr) return '-';
-    const parts = monthStr.split(' ');
-    if (parts.length < 4) return monthStr;
-    const monthAbbr = parts[1];
-    const yearStr = parts[3];
-    const monthsMap = {
-      Jan: 'มกราคม', Feb: 'กุมภาพันธ์', Mar: 'มีนาคม', Apr: 'เมษายน',
-      May: 'พฤษภาคม', Jun: 'มิถุนายน', Jul: 'กรกฎาคม', Aug: 'สิงหาคม',
-      Sep: 'กันยายน', Oct: 'ตุลาคม', Nov: 'พฤศจิกายน', Dec: 'ธันวาคม'
-    };
-    const thaiMonth = monthsMap[monthAbbr] || monthAbbr;
-    return `${thaiMonth} ${yearStr}`;
+    const str = String(monthStr).trim();
+
+    if (/^[ก-ฮ]+\s+\d{4}$/.test(str)) {
+      return str;
+    }
+
+    const isoMatch = str.match(/^(\d{4})-(\d{2})/);
+    if (isoMatch) {
+      const year = parseInt(isoMatch[1], 10);
+      const monthIdx = parseInt(isoMatch[2], 10) - 1;
+      if (monthIdx >= 0 && monthIdx < 12) {
+        const thaiMonth = monthNamesFull[monthIdx];
+        const thaiYear = year + 543;
+        return `${thaiMonth} ${thaiYear}`;
+      }
+    }
+
+    const parts = str.split(' ');
+    if (parts.length >= 4) {
+      const monthAbbr = parts[1];
+      let yearNum = parseInt(parts[3], 10);
+      if (!isNaN(yearNum) && yearNum < 2500) yearNum += 543;
+      const monthsMap = {
+        Jan: 'มกราคม', Feb: 'กุมภาพันธ์', Mar: 'มีนาคม', Apr: 'เมษายน',
+        May: 'พฤษภาคม', Jun: 'มิถุนายน', Jul: 'กรกฎาคม', Aug: 'สิงหาคม',
+        Sep: 'กันยายน', Oct: 'ตุลาคม', Nov: 'พฤศจิกายน', Dec: 'ธันวาคม'
+      };
+      const thaiMonth = monthsMap[monthAbbr] || monthAbbr;
+      return `${thaiMonth} ${yearNum}`;
+    }
+
+    return str;
   };
 
   const handleOpenBulkRenewModal = () => {

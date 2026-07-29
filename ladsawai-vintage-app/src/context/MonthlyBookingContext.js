@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { monthNamesFull, getBookingMonthStr } from '@/utils/thaiDateHelper';
+import { monthNamesFull, getBookingMonthStr, formatBookingMonth } from '@/utils/thaiDateHelper';
 
 const MonthlyBookingContext = createContext();
 
@@ -25,26 +25,18 @@ export function MonthlyBookingProvider({ children }) {
   const [showPreRenewalModal, setShowPreRenewalModal] = useState(false);
   const [selectedMonthlyItem, setSelectedMonthlyItem] = useState(null);
 
-  // Fetch monthly bookings
-  const fetchMonthlyBookings = async () => {
-    setLoadingMonthly(true);
-    try {
-      const { data, error } = await supabase
-        .from('monthly_bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMonthlyList(data || []);
-    } catch (e) {
-      console.error('Error fetching monthly bookings:', e);
-    } finally {
-      setLoadingMonthly(false);
-    }
-  };
-
   useEffect(() => {
-    fetchMonthlyBookings();
+    let isMounted = true;
+    supabase
+      .from('monthly_bookings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (isMounted && !error) {
+          setMonthlyList(data || []);
+        }
+      });
+    return () => { isMounted = false; };
   }, []);
 
   // Filtered & sorted monthly list
@@ -54,9 +46,8 @@ export function MonthlyBookingProvider({ children }) {
     if (monthlyMonthFilter && monthlyMonthFilter !== 'ทั้งหมด') {
       list = list.filter(item => {
         if (!item.booking_month) return false;
-        const d = new Date(item.booking_month);
-        const monthStr = `${monthNamesFull[d.getMonth()]} ${d.getFullYear() + 543}`;
-        return monthStr === monthlyMonthFilter;
+        const formattedItemMonth = formatBookingMonth(item.booking_month);
+        return formattedItemMonth === monthlyMonthFilter;
       });
     }
 
