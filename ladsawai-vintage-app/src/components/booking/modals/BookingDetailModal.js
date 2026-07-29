@@ -519,7 +519,7 @@ export default function BookingDetailModal({
                   {selectedBooking && (selectedBooking.type === 'รายวัน' || selectedBooking.type === 'ประจำ') && isAlreadyPaid && (
                     <div className="mt-2.5 border-t border-[#8B4513]/10 pt-3.5 flex flex-col gap-2">
                       <span className="text-[10px] font-black text-[#8B4513]/60 uppercase tracking-widest block mb-0.5">เครื่องมือบริการลูกค้า:</span>
-                      <div className="grid grid-cols-5 gap-1.5 w-full">
+                      <div className="grid grid-cols-5 gap-1 w-full">
                         <button
                           type="button"
                           onClick={() => {
@@ -528,17 +528,17 @@ export default function BookingDetailModal({
                             setAddUtilityMethod('');
                             setShowAddUtilityModal(true);
                           }}
-                          className="px-1.5 py-2 md:px-2.5 bg-gradient-to-br from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white rounded-lg text-[9px] md:text-xs font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-amber-600/10 cursor-pointer text-center w-full"
+                          className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-amber-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
-                          <Zap className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> เพิ่มไฟ
+                          <Zap className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> เพิ่มไฟ
                         </button>
 
                         <button
                           type="button"
                           onClick={handleMarkAbsent}
-                          className="px-1.5 py-2 md:px-2.5 bg-gradient-to-br from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white rounded-lg text-[9px] md:text-xs font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer text-center w-full"
+                          className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-orange-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
-                          <X className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> แจ้งลา
+                          <X className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> แจ้งลา
                         </button>
 
                         <button
@@ -550,25 +550,25 @@ export default function BookingDetailModal({
                             fetchVacantStallsForDate(initDate);
                             setShowMoveLockModal(true);
                           }}
-                          className="px-1.5 py-2 md:px-2.5 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-lg text-[9px] md:text-xs font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer text-center w-full"
+                          className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-blue-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
-                          <Move className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> ย้ายล็อค
+                          <Move className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> ย้ายล็อค
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handleShowReceiptPreview(selectedBooking, selectedStall)}
-                          className="px-1.5 py-2 md:px-2.5 bg-gradient-to-br from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 text-white rounded-lg text-[9px] md:text-xs font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-purple-600/10 cursor-pointer text-center w-full"
+                          className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-purple-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
-                          <Camera className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> แคปตั๋ว
+                          <Camera className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> แคปตั๋ว
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
-                          className="px-1.5 py-2 md:px-2.5 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-[9px] md:text-xs font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-emerald-600/10 cursor-pointer text-center w-full"
+                          className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-emerald-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
-                          <Printer className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> พิมพ์ตั๋ว
+                          <Printer className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> พิมพ์ตั๋ว
                         </button>
                       </div>
                     </div>
