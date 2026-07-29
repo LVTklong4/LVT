@@ -1279,7 +1279,8 @@ export function BookingProvider({ children }) {
   };
 
   // Print thermal 80mm ticket
-  const handlePrintReceipt = (bookingObj, stallObj) => {
+  // Show receipt preview for mobile screen capture
+  const handleShowReceiptPreview = (bookingObj, stallObj) => {
     const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
     const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
 
@@ -1302,8 +1303,29 @@ export function BookingProvider({ children }) {
     // Show on-screen modal preview
     setReceiptPreviewData({ bookingObj: targetBooking, stallObj: targetStall });
     setShowReceiptPreviewModal(true);
+  };
 
-    // Open Blob URL window for direct thermal printing
+  // Print thermal 80mm ticket directly
+  const handlePrintReceipt = (bookingObj, stallObj) => {
+    const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
+    const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
+
+    const targetBooking = bookingObj || {
+      id: selectedBooking?.id || `B-${Date.now()}`,
+      created_at: selectedBooking?.created_at || new Date().toISOString(),
+      date: selectedDate,
+      stall_name: selectedStallsList.map(s => s.name).join(', '),
+      booker_name: bookerName || 'ไม่ระบุชื่อ',
+      product: product || 'สินค้าทั่วไป',
+      stall_price: finalStallPrice,
+      elec_unit: parseNumber(elecUnit),
+      elec_price: parseNumber(elecPrice),
+      storage_fee: 0,
+      payment_method: paymentList.filter(p => p.method && p.amount).map(p => `${p.method}:${p.amount}`).join(' + ') || 'เงินสด'
+    };
+
+    const targetStall = stallObj || (selectedStallsList.length > 0 ? selectedStallsList[0] : selectedStall);
+
     const htmlContent = generateReceiptHTML({
       bookingObj: targetBooking,
       stallObj: targetStall,
@@ -4270,6 +4292,7 @@ export function BookingProvider({ children }) {
     handlePrintMonthlyReceipt,
     handlePrintMonthlyReceiptDirect,
     handlePrintReceipt,
+    handleShowReceiptPreview,
     handleRenewMonthlyBooking,
     handleSaveAdminRole,
     handleSaveBooking,
