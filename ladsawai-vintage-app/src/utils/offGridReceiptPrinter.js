@@ -279,11 +279,12 @@ export const printOffGridReceipt = (bookingObj, adminUser, showAlert) => {
     </html>
   `;
 
-  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
-
-  const printWindow = window.open(blobUrl, '_blank', 'width=600,height=800');
-  if (!printWindow) {
+  const printWindow = window.open('', '_blank', 'width=600,height=800');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  } else {
     if (showAlert) {
       showAlert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ตั๋ว', 'แจ้งเตือน', true);
     }

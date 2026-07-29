@@ -276,12 +276,12 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
       </html>
     `;
 
-    // Create Blob URL & open window
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const blobUrl = URL.createObjectURL(blob);
-
-    const printWin = window.open(blobUrl, '_blank', 'width=1200,height=850');
-    if (!printWin) {
+    const printWin = window.open('', '_blank', 'width=1200,height=850');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(htmlContent);
+      printWin.document.close();
+    } else {
       if (showAlert) {
         showAlert("เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้เพื่อพิมพ์ผังตลาด", "แจ้งเตือน", true);
       }
