@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Search, Settings, CalendarDays, RotateCcw, User, Loader2, Plus, Trash2, CheckCircle, AlertCircle, X, CreditCard, FileText, Phone, Info, Sun, PlusCircle, Printer, Banknote, Check, Tag, CalendarX, Edit } from 'lucide-react';
+import { Search, Settings, CalendarDays, RotateCcw, User, Loader2, Plus, Trash2, CheckCircle, AlertCircle, X, CreditCard, FileText, Phone, Info, Sun, PlusCircle, Printer, Banknote, Check, Tag, CalendarX, Edit, HelpCircle } from 'lucide-react';
 
 import NewMonthlyModal from './modals/NewMonthlyModal';
 import EditMonthlyModal from './modals/EditMonthlyModal';
@@ -16,9 +16,129 @@ import { monthNamesFull } from '@/utils/thaiDateHelper';
 
 export default function MonthlyManagerLayout() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    addStallDropdownRefSat,    addStallDropdownRefSun,    addStallDropdownRefWed,    adminUser,    alertInfo,    setAlertInfo,    bulkRenewCheckedIds,    bulkRenewEditData,    bulkRenewEditingItem,    bulkRenewFromMonth,    cleanStallName,    computeNextMonthThai,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    getDayOccurrences,    getNewMonthlyPricing,    getOccupiedStallsInRound,    handleBulkRenewSubmit,    handleCreateNewMonthlyBooking,    handleDeleteMonthlyBooking,    handleMonthlyPaymentSubmit,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceipt,    handlePrintMonthlyReceiptDirect,    handleSaveEditedMonthlyBooking,    handleSlipChange,    handleSortToggle,    handleToggleNonRenewal,    handleUpdateMonthlyItem,    invoicePreviewItem,    isEditingMonthlyMode,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlyPaymentForm,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintWedCount,    monthlySearchQuery,    newMonthlyBookerName,    newMonthlyCustomerType,    newMonthlyDays,    newMonthlyElecUnit,    newMonthlyNote,    newMonthlyPhone,    newMonthlyProduct,    newMonthlyStallsSat,    newMonthlyStallsSun,    newMonthlyStallsWed,    newMonthlyStartDate,    newMonthlyStorageFee,    note,    parseNumber,    product,    renderSortArrow,    selectedMonthlyItem,    setActiveMonthlyBooking,    setBulkRenewCheckedIds,    setBulkRenewEditData,    setBulkRenewEditingItem,    setBulkRenewFromMonth,    setInvoicePreviewItem,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlyPrintMonth,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintWedCount,    setMonthlySearchQuery,    setNewMonthlyBookerName,    setNewMonthlyCustomerType,    setNewMonthlyDays,    setNewMonthlyElecUnit,    setNewMonthlyNote,    setNewMonthlyPhone,    setNewMonthlyProduct,    setNewMonthlyStallsSat,    setNewMonthlyStallsSun,    setNewMonthlyStallsWed,    setNewMonthlyStartDate,    setNewMonthlyStorageFee,    setSelectedMonthlyItem,    setShowAddStallSelectSat,    setShowAddStallSelectSun,    setShowAddStallSelectWed,    setShowBulkRenewModal,    setShowMonthlyPaymentModal,    setShowMonthlyPrintModal,    setShowNewMonthlyModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    setStallFilterSat,    setStallFilterSun,    setStallFilterWed,    showAddStallSelectSat,    showAddStallSelectSun,    showAddStallSelectWed,    showBulkRenewModal,    showMonthlyPaymentModal,    showMonthlyPrintModal,    showNewMonthlyModal,    slipPreviewUrl,    sortThaiMonthsDescending,    stallFilterSat,    stallFilterSun,    stallFilterWed,    showCancelled,
+    activeMonthlyBooking,
+    activeMonthlyTransactions,
+    addStallDropdownRefSat,
+    addStallDropdownRefSun,
+    addStallDropdownRefWed,
+    adminUser,
+    alertInfo,
+    setAlertInfo,
+    bulkRenewCheckedIds,
+    bulkRenewEditData,
+    bulkRenewEditingItem,
+    bulkRenewFromMonth,
+    cleanStallName,
+    computeNextMonthThai,
+    fetchMonthlyTransactions,
+    filteredMonthlyList,
+    formatBookingMonth,
+    getDayOccurrences,
+    getNewMonthlyPricing,
+    getOccupiedStallsInRound,
+    handleBulkRenewSubmit,
+    handleCreateNewMonthlyBooking,
+    handleDeleteMonthlyBooking,
+    handleMonthlyPaymentSubmit,
+    handleOpenMonthlyPaymentModal,
+    handleDeleteMonthlyTransaction,
+    handleOpenBulkRenewModal,
+    handleOpenEditMonthlyModal,
+    handleOpenNewMonthlyModal,
+    handlePrintMonthlyInvoice,
+    handlePrintMonthlyReceipt,
+    handlePrintMonthlyReceiptDirect,
+    handleSaveEditedMonthlyBooking,
+    handleSlipChange,
+    handleSortToggle,
+    handleToggleNonRenewal,
+    handleUpdateMonthlyItem,
+    invoicePreviewItem,
+    isEditingMonthlyMode,
+    loadingMonthly,
+    loadingMonthlyTxns,
+    monthlyList,
+    monthlyMonthFilter,
+    monthlyPaymentForm,
+    monthlyPrintItem,
+    monthlyPrintMonth,
+    monthlyPrintProduct,
+    monthlyPrintSatCount,
+    monthlyPrintSunCount,
+    monthlyPrintWedCount,
+    monthlySearchQuery,
+    newMonthlyBookerName,
+    newMonthlyCustomerType,
+    newMonthlyDays,
+    newMonthlyElecUnit,
+    newMonthlyNote,
+    newMonthlyPhone,
+    newMonthlyProduct,
+    newMonthlyStallsSat,
+    newMonthlyStallsSun,
+    newMonthlyStallsWed,
+    newMonthlyStartDate,
+    newMonthlyStorageFee,
+    note,
+    parseNumber,
+    product,
+    renderSortArrow,
+    selectedMonthlyItem,
+    setActiveMonthlyBooking,
+    setBulkRenewCheckedIds,
+    setBulkRenewEditData,
+    setBulkRenewEditingItem,
+    setBulkRenewFromMonth,
+    setInvoicePreviewItem,
+    setMonthlyMonthFilter,
+    setMonthlyPaymentForm,
+    setMonthlyPrintMonth,
+    setMonthlyPrintProduct,
+    setMonthlyPrintSatCount,
+    setMonthlyPrintSunCount,
+    setMonthlyPrintWedCount,
+    setMonthlySearchQuery,
+    setNewMonthlyBookerName,
+    setNewMonthlyCustomerType,
+    setNewMonthlyDays,
+    setNewMonthlyElecUnit,
+    setNewMonthlyNote,
+    setNewMonthlyPhone,
+    setNewMonthlyProduct,
+    setNewMonthlyStallsSat,
+    setNewMonthlyStallsSun,
+    setNewMonthlyStallsWed,
+    setNewMonthlyStartDate,
+    setNewMonthlyStorageFee,
+    setSelectedMonthlyItem,
+    setShowAddStallSelectSat,
+    setShowAddStallSelectSun,
+    setShowAddStallSelectWed,
+    setShowBulkRenewModal,
+    setShowMonthlyPaymentModal,
+    setShowMonthlyPrintModal,
+    setShowNewMonthlyModal,
+    setSlipPreviewUrl,
+    setFullScreenSlipUrl,
+    setStallFilterSat,
+    setStallFilterSun,
+    setStallFilterWed,
+    showAddStallSelectSat,
+    showAddStallSelectSun,
+    showAddStallSelectWed,
+    showBulkRenewModal,
+    showMonthlyPaymentModal,
+    showMonthlyPrintModal,
+    showNewMonthlyModal,
+    slipPreviewUrl,
+    sortThaiMonthsDescending,
+    stallFilterSat,
+    stallFilterSun,
+    stallFilterWed,
+    showCancelled,
     setShowCancelled,
-    stalls
+    stalls,
+    confirmInfo
   } = useBooking();
 
   return (
@@ -474,6 +594,43 @@ export default function MonthlyManagerLayout() {
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        )}
+
+        {/* Custom Confirmation Modal */}
+        {confirmInfo && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
+              <div className={`px-5 py-4 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
+                {confirmInfo.isDanger ? <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" /> : <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />}
+                <h3 className="font-extrabold text-sm flex-1">{confirmInfo.title}</h3>
+              </div>
+              <div className="p-5 flex flex-col gap-3 text-left">
+                <p className="text-xs font-bold text-gray-700 whitespace-pre-line leading-relaxed">
+                  {confirmInfo.message}
+                </p>
+                <div className="flex gap-2.5 mt-2 pt-2 border-t border-amber-900/10">
+                  <button
+                    type="button"
+                    onClick={confirmInfo.onCancel}
+                    className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all cursor-pointer"
+                  >
+                    {confirmInfo.cancelText || 'ยกเลิก'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmInfo.onConfirm}
+                    className={`flex-1 py-2.5 rounded-xl font-extrabold text-xs text-white shadow-md hover:shadow-lg transition-all cursor-pointer ${
+                      confirmInfo.isDanger
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'bg-[#8B4513] hover:bg-[#5D4037]'
+                    }`}
+                  >
+                    {confirmInfo.confirmText || 'ตกลง'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       
