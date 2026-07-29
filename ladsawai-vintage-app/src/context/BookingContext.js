@@ -3968,7 +3968,7 @@ export function BookingProvider({ children }) {
         const { data: txns, error: txnsError } = await supabase
           .from('transactions')
           .select('timestamp, date')
-          .eq('monthly_booking_id', item.id);
+          .eq('booking_ref', item.id);
         
         if (txnsError) throw txnsError;
 

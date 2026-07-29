@@ -163,7 +163,15 @@ export default function BulkRenewModal() {
                                     if (dayOfWeek === 6 && sMaster) price = sMaster.price_sat;
                                     if (dayOfWeek === 0 && sMaster) price = sMaster.price_sun;
                                     if (dispType === 'Standard' && isFullPkg && sMaster && sMaster.price_month > 0) {
-                                      price = sMaster.price_month;
+                                      const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
+                                      const packageSum = 3 * parseNumber(sMaster.price_month);
+                                      const weeklyDiscount = Math.max(0, normalSum - packageSum);
+                                      const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
+                                      const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
+
+                                      if (dayOfWeek === 3) price = sMaster.price_wed;
+                                      else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
+                                      else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
                                     }
                                     totalRent += price;
                                   }
