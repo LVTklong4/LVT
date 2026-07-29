@@ -14,7 +14,7 @@ export default function StallMapGrid() {
     handleStallClick
   } = useBooking();
 
-  const maxCol = 24;
+  const maxCol = 20;
   const maxRow = 26;
 
   return (
