@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { monthNamesFull, getBookingMonthStr, formatBookingMonth } from '@/utils/thaiDateHelper';
 
@@ -25,19 +25,27 @@ export function MonthlyBookingProvider({ children }) {
   const [showPreRenewalModal, setShowPreRenewalModal] = useState(false);
   const [selectedMonthlyItem, setSelectedMonthlyItem] = useState(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    supabase
-      .from('monthly_bookings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (isMounted && !error) {
-          setMonthlyList(data || []);
-        }
-      });
-    return () => { isMounted = false; };
+  // Fetch monthly bookings
+  const fetchMonthlyBookings = useCallback(async () => {
+    setLoadingMonthly(true);
+    try {
+      const { data, error } = await supabase
+        .from('monthly_bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMonthlyList(data || []);
+    } catch (e) {
+      console.error('Error fetching monthly bookings:', e);
+    } finally {
+      setLoadingMonthly(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchMonthlyBookings();
+  }, [fetchMonthlyBookings]);
 
   // Filtered & sorted monthly list
   const filteredMonthlyList = useMemo(() => {
