@@ -1,5 +1,5 @@
 import { dayNamesShort, monthNamesFull } from './thaiDateHelper';
-import { cleanStallName, parseNumber } from './numberHelper';
+import { cleanStallName, parseNumber, formatPrice } from './numberHelper';
 
 /**
  * Generates thermal receipt HTML content for printing daily booking tickets.
