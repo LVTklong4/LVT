@@ -12,7 +12,7 @@ import {
 const StorageContext = createContext();
 
 export function StorageProvider({ children }) {
-  const { adminUser, showAlert } = useBooking();
+  const { adminUser, showAlert, fetchBookingsAndStorage } = useBooking();
 
   // UI state
   const [showStorageMgmtModal, setShowStorageMgmtModal] = useState(false);
@@ -155,6 +155,7 @@ export function StorageProvider({ children }) {
       }
 
       showAlert("บันทึกข้อมูลฝากของสำเร็จ", "สำเร็จ");
+      if (fetchBookingsAndStorage) fetchBookingsAndStorage();
       fetchAllStorage();
     } catch (e) {
       console.error(e);
@@ -225,6 +226,7 @@ export function StorageProvider({ children }) {
       });
 
       showAlert("ต่ออายุการฝากของสำเร็จ", "สำเร็จ");
+      if (fetchBookingsAndStorage) fetchBookingsAndStorage();
       fetchAllStorage();
     } catch (e) {
       console.error(e);
@@ -278,11 +280,14 @@ export function StorageProvider({ children }) {
         if (txnError) throw txnError;
       }
 
+      alert("บันทึกการเช็คเอาท์และสิ้นสุดการฝากเรียบร้อย");
       showAlert("บันทึกการชำระเงินและสิ้นสุดการฝากเรียบร้อย", "สำเร็จ");
       setShowStoragePrintModal(false);
+      if (fetchBookingsAndStorage) fetchBookingsAndStorage();
       fetchAllStorage();
     } catch (e) {
       console.error("Storage checkout error:", e);
+      alert("เกิดข้อผิดพลาดในการเช็คเอาท์: " + e.message);
       showAlert("เกิดข้อผิดพลาดในการเช็คเอาท์: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingStorage(false);
@@ -346,6 +351,7 @@ export function StorageProvider({ children }) {
         if (updErr) throw updErr;
 
         showAlert("ยกเลิกการเช็คเอาท์และคืนสถานะกล่องฝากของเป็นปกติเรียบร้อย", "สำเร็จ");
+        if (fetchBookingsAndStorage) fetchBookingsAndStorage();
         fetchAllStorage();
       } catch (e) {
         console.error(e);

@@ -416,6 +416,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                 type="text"
                 required
                 value={stallName}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setStallName(e.target.value)}
                 placeholder="เช่น TEMP-01, นอกผัง-1"
                 className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold bg-amber-50/30"
@@ -430,6 +431,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   type="text"
                   required
                   value={bookerName}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setBookerName(e.target.value)}
                   placeholder="ชื่อผู้ค้า หรือ เบอร์โทร"
                   className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
@@ -441,6 +443,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   type="text"
                   required
                   value={product}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setProduct(e.target.value)}
                   placeholder="เช่น เสื้อผ้า, อาหาร"
                   className="p-1.5 border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
@@ -456,6 +459,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                   type="number"
                   required
                   value={stallPrice}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setStallPrice(e.target.value)}
                   placeholder="0"
                   className="p-1.5 border border-amber-300 rounded text-xs text-right font-mono font-bold"
@@ -466,6 +470,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                 <input
                   type="number"
                   value={elecUnit}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setElecUnit(e.target.value)}
                   placeholder="0"
                   className="p-1.5 border border-amber-300 rounded text-xs text-right font-mono font-bold"
@@ -484,6 +489,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
               <label className="text-[10px] font-bold text-gray-700">หมายเหตุ</label>
               <textarea
                 value={note}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setNote(e.target.value)}
                 rows="1"
                 placeholder="รายละเอียดเพิ่มเติม..."
@@ -510,6 +516,7 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                     <input
                       type="number"
                       value={entry.amount}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const updated = [...paymentList];
                         updated[index].amount = e.target.value;
@@ -554,31 +561,9 @@ export default function OffGridBookingModal({ isOpen, onClose, selectedBooking, 
                         โอนจ่าย
                       </button>
                     </div>
-                    {paymentList.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = paymentList.filter((_, idx) => idx !== index);
-                          setPaymentList(updated);
-                        }}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
                   </div>
                 );
               })}
-
-              {!isFullyPaid && (
-                <button
-                  type="button"
-                  onClick={() => setPaymentList([...paymentList, { method: '', amount: '' }])}
-                  className="text-[10px] bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-dashed border-amber-400 py-1 rounded font-bold transition-all cursor-pointer"
-                >
-                  + เพิ่มช่องทางชำระเงินอื่น
-                </button>
-              )}
 
               {changeVal > 0 && (
                 <div className="text-right text-[10px] font-extrabold text-green-700 bg-green-50 border border-green-200 p-1 rounded">
