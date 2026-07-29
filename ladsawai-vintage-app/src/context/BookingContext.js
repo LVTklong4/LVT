@@ -905,8 +905,7 @@ export function BookingProvider({ children }) {
       setShowBookingModal(false);
       fetchBookingsAndStorage();
       if (autoPrint) {
-        setReceiptPreviewData({ bookingObj: bookingData, stallObj: selectedStall });
-        setShowReceiptPreviewModal(true);
+        handlePrintReceipt(bookingData, selectedStall);
       }
     } catch (e) {
       console.error(e);
@@ -1312,14 +1311,17 @@ export function BookingProvider({ children }) {
     });
 
     try {
-      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      const blobUrl = URL.createObjectURL(blob);
-      const printWindow = window.open(blobUrl, '_blank', 'width=600,height=800');
+      const printWindow = window.open('', '_blank', 'width=600,height=800');
       if (printWindow) {
-        printWindow.focus();
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+      } else {
+        alert('กรุณาอนุญาตให้ป๊อปอัปทำงานเพื่อสั่งพิมพ์ใบเสร็จ');
       }
     } catch (e) {
       console.error("Print window open error:", e);
+      showAlert("ไม่สามารถพิมพ์ใบเสร็จได้: " + e.message, "ข้อผิดพลาด", true);
     }
   };
 
