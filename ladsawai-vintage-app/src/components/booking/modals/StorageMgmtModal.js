@@ -18,6 +18,7 @@ export default function StorageMgmtModal() {
     handlePrintStorageReceipt,
     parseNumber
   } = useStorage();
+  const { showConfirm } = useBooking();
 
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [renewItem, setRenewItem] = useState(null);
