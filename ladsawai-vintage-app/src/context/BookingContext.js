@@ -4040,7 +4040,7 @@ export function BookingProvider({ children }) {
     setSyncingLegacy(true);
     try {
       const SHEET_ID_DAILY = '1R6bNYPRo6yjDtgoazddobauTgvQVQdxA1n67C10L-4I';
-      const url = `https://docs.google.com/spreadsheets/d/${SHED_ID_DAILY || SHEET_ID_DAILY}/gviz/tq?tqx=out:csv&sheet=Bookings`;
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID_DAILY}/gviz/tq?tqx=out:csv&sheet=Bookings`;
       
       const res = await fetch(url);
       if (!res.ok) throw new Error('ไม่สามารถเชื่อมต่อ Google Sheet รายวันได้');
