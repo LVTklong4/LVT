@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
+import { AuthAdminProvider } from '@/context/AuthAdminContext';
+import { MonthlyBookingProvider } from '@/context/MonthlyBookingContext';
 import { BookingProvider } from '@/context/BookingContext';
+import { StorageProvider } from '@/context/StorageContext';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import { RefreshCw } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -55,10 +58,16 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <BookingProvider>
-      <DashboardProvider>
-        <DashboardContent />
-      </DashboardProvider>
-    </BookingProvider>
+    <AuthAdminProvider>
+      <MonthlyBookingProvider>
+        <BookingProvider>
+          <StorageProvider>
+            <DashboardProvider>
+              <DashboardContent />
+            </DashboardProvider>
+          </StorageProvider>
+        </BookingProvider>
+      </MonthlyBookingProvider>
+    </AuthAdminProvider>
   );
 }
