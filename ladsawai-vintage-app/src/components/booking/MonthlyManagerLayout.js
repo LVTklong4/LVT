@@ -12,6 +12,7 @@ import BulkRenewModal from './modals/BulkRenewModal';
 import PreRenewalEditSubModal from './modals/PreRenewalEditSubModal';
 import InvoicePreviewModal from './modals/InvoicePreviewModal';
 import MonthlyPrintModal from './modals/MonthlyPrintModal';
+import SettingsMgmtModal from './modals/SettingsMgmtModal';
 import {
   monthNamesFull,
   formatBookingMonth,
@@ -144,6 +145,7 @@ export default function MonthlyManagerLayout() {
     stallFilterWed,
     showCancelled,
     setShowCancelled,
+    setShowSettingsMgmtModal,
     stalls,
     confirmInfo
   } = useBooking();
@@ -153,7 +155,17 @@ export default function MonthlyManagerLayout() {
         {/* Header bar */}
         <div className="bg-[#5D4037] text-white px-5 py-3 flex justify-between items-center shrink-0 shadow-md border-b-2 border-[#8B4513]">
           <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings Manager)</h3>
-          <span className="text-xs bg-[#3E2723] px-3 py-1 rounded-full font-bold text-amber-100 border border-amber-900/30">แอดมิน: {adminUser?.name || 'System'}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-[#3E2723] px-3 py-1 rounded-full font-bold text-amber-100 border border-amber-900/30">แอดมิน: {adminUser?.name || 'System'}</span>
+            <button
+              type="button"
+              onClick={() => setShowSettingsMgmtModal(true)}
+              className="p-1.5 rounded-full hover:bg-white/10 active:scale-95 text-amber-200 hover:text-white transition-all cursor-pointer"
+              title="ตั้งค่าระบบและเครื่องมือซิงค์ข้อมูล"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Top Toolbar Action Bar */}
@@ -655,11 +667,12 @@ export default function MonthlyManagerLayout() {
       <NewMonthlyModal />
       <EditMonthlyModal />
       <MonthlyPaymentModal />
-      <SlipPreviewModal />
       <BulkRenewModal />
       <PreRenewalEditSubModal />
       <InvoicePreviewModal />
       <MonthlyPrintModal />
+      <SlipPreviewModal />
+      <SettingsMgmtModal />
     </div>
   );
 }

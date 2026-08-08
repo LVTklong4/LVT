@@ -358,18 +358,27 @@ export default function StandardBookingLayout() {
 
             {/* Login / Profile control */}
             {adminUser ? (
-              <div className="relative">
-                <button 
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)} 
-                  className="flex items-center justify-center focus:outline-none cursor-pointer"
-                  title={`ผู้ใช้งาน: ${adminUser?.name || 'Admin'}`}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsMgmtModal(true)}
+                  className="p-1.5 rounded-full hover:bg-amber-100/60 active:scale-95 text-amber-900 transition-all cursor-pointer border border-amber-900/20 shadow-xs"
+                  title="ตั้งค่าระบบและเครื่องมือซิงค์ข้อมูล"
                 >
-                  <img 
-                    src="https://img2.pic.in.th/pic/Profile-Alpha_0.png"
-                    alt="Profile"
-                    className="w-8 h-8 rounded-full border-2 border-amber-800 hover:border-[#8B4513] transition-all object-cover shadow-md"
-                  />
+                  <Settings className="w-5 h-5 text-[#8B4513]" />
                 </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowProfileDropdown(!showProfileDropdown)} 
+                    className="flex items-center justify-center focus:outline-none cursor-pointer"
+                    title={`ผู้ใช้งาน: ${adminUser?.name || 'Admin'}`}
+                  >
+                    <img 
+                      src="https://img2.pic.in.th/pic/Profile-Alpha_0.png"
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full border-2 border-amber-800 hover:border-[#8B4513] transition-all object-cover shadow-md"
+                    />
+                  </button>
 
                 {showProfileDropdown && (
                   <>
@@ -464,6 +473,7 @@ export default function StandardBookingLayout() {
                     </div>
                   </>
                 )}
+                </div>
               </div>
             ) : (
               <button 
