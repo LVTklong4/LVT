@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BookingProvider } from '@/context/BookingContext';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import { FinanceProvider } from '@/context/FinanceContext';
 import { RefreshCw } from 'lucide-react';
@@ -63,11 +64,13 @@ function DashboardFinanceContent() {
 
 export default function DashboardFinancePage() {
   return (
-    <DashboardProvider>
-      <FinanceProvider>
-        <DashboardFinanceContent />
-      </FinanceProvider>
-    </DashboardProvider>
+    <BookingProvider>
+      <DashboardProvider>
+        <FinanceProvider>
+          <DashboardFinanceContent />
+        </FinanceProvider>
+      </DashboardProvider>
+    </BookingProvider>
   );
 }
 

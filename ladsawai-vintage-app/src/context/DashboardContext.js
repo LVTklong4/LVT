@@ -1,12 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const DashboardContext = createContext();
 
 export function DashboardProvider({ children }) {
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
     summary: { totalIncome: 0, totalExpense: 0, netProfit: 0, cashIn: 0, transferIn: 0, cashOut: 0, transferOut: 0 },
@@ -14,19 +14,8 @@ export function DashboardProvider({ children }) {
     analytics: { debtRisks: [], primeCustomers: [], bookingInsights: [], financeInsights: [], forecast: 0 }
   });
 
-  useEffect(() => {
-    // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    setSelectedDate(today);
-  }, []);
-
-  useEffect(() => {
-    if (selectedDate) {
-      calculateDashboard();
-    }
-  }, [selectedDate]);
-
-  const calculateDashboard = async () => {
+  const calculateDashboard = useCallback(async (targetDate) => {
+    const d = targetDate || selectedDate || new Date().toISOString().split('T')[0];
     setLoading(true);
     try {
       // 1. Get stalls mapping
@@ -303,7 +292,19 @@ export function DashboardProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    (async () => {
+      if (!isCancelled) {
+        await calculateDashboard(selectedDate);
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [calculateDashboard, selectedDate]);
 
   return (
     <DashboardContext.Provider value={{

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BookingProvider } from '@/context/BookingContext';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import { RefreshCw } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -54,8 +55,10 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <DashboardProvider>
-      <DashboardContent />
-    </DashboardProvider>
+    <BookingProvider>
+      <DashboardProvider>
+        <DashboardContent />
+      </DashboardProvider>
+    </BookingProvider>
   );
 }

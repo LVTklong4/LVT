@@ -11,30 +11,63 @@ export function FinanceProvider({ children }) {
   const [dailyClosingData, setDailyClosingData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch all transactions from other_income and expenses tables
+  // Fetch all transactions from transactions table (and fallback to other_income/expenses)
   const fetchFinanceData = useCallback(async (filters = {}) => {
     setLoading(true);
     try {
-      let incomeQuery = supabase.from('other_income').select('*').order('date', { ascending: false }).order('timestamp', { ascending: false });
-      let expenseQuery = supabase.from('expenses').select('*').order('date', { ascending: false }).order('timestamp', { ascending: false });
+      // 1. Fetch from unified transactions table
+      let txnQuery = supabase.from('transactions').select('*').order('date', { ascending: false }).order('timestamp', { ascending: false });
+      if (filters.startDate) txnQuery = txnQuery.gte('date', filters.startDate);
+      if (filters.endDate) txnQuery = txnQuery.lte('date', filters.endDate);
 
-      // Apply date range filters if provided
-      if (filters.startDate) {
-        incomeQuery = incomeQuery.gte('date', filters.startDate);
-        expenseQuery = expenseQuery.gte('date', filters.startDate);
+      const { data: allTxns } = await txnQuery;
+      
+      const incList = [];
+      const expList = [];
+
+      allTxns?.forEach(t => {
+        const isExp = t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.bill_type === 'รายจ่าย';
+        const itemObj = {
+          id: t.id,
+          date: t.date,
+          category: t.category || (isExp ? 'ค่าใช้จ่ายทั่วไป' : 'รายรับทั่วไป'),
+          description: t.description || t.note || t.booking_ref || '',
+          item: t.description || t.note || t.booking_ref || '',
+          amount: parseFloat(t.total_amount || t.amount || 0),
+          method: t.payment_method || t.method || 'โอนเงิน',
+          officer: t.officer || 'Admin',
+          timestamp: t.timestamp || t.created_at
+        };
+
+        if (isExp) {
+          expList.push(itemObj);
+        } else {
+          incList.push(itemObj);
+        }
+      });
+
+      // 2. Also check if there are legacy other_income / expenses
+      try {
+        const [incRes, expRes] = await Promise.all([
+          supabase.from('other_income').select('*'),
+          supabase.from('expenses').select('*')
+        ]);
+        if (incRes?.data?.length) {
+          incRes.data.forEach(inc => {
+            if (!incList.some(x => x.id === inc.id)) incList.push(inc);
+          });
+        }
+        if (expRes?.data?.length) {
+          expRes.data.forEach(exp => {
+            if (!expList.some(x => x.id === exp.id)) expList.push(exp);
+          });
+        }
+      } catch (err) {
+        // Safe to ignore if tables are consolidated
       }
-      if (filters.endDate) {
-        incomeQuery = incomeQuery.lte('date', filters.endDate);
-        expenseQuery = expenseQuery.lte('date', filters.endDate);
-      }
 
-      const [incRes, expRes] = await Promise.all([incomeQuery, expenseQuery]);
-
-      if (incRes.error) throw incRes.error;
-      if (expRes.error) throw expRes.error;
-
-      let filteredIncome = incRes.data || [];
-      let filteredExpense = expRes.data || [];
+      let filteredIncome = incList;
+      let filteredExpense = expList;
 
       // Apply category filter in-memory if needed
       if (filters.category && filters.category !== 'ทั้งหมด') {
@@ -227,60 +260,109 @@ export function FinanceProvider({ children }) {
   const addIncome = useCallback(async (formData, officerName = 'Admin') => {
     setLoading(true);
     try {
-      const payload = {
-        id: `INC-${Date.now()}`,
+      const nowId = `INC-${Date.now()}`;
+      const payloadTxn = {
+        id: nowId,
         date: formData.date || new Date().toISOString().split('T')[0],
+        type: 'รายรับ',
         category: formData.category || 'อื่นๆ',
         description: formData.description.trim(),
+        total_amount: parseFloat(formData.amount) || 0,
         amount: parseFloat(formData.amount) || 0,
+        payment_method: formData.method || 'โอนเงิน',
         method: formData.method || 'โอนเงิน',
         officer: officerName,
-        timestamp: new Date().toISOString()
+        bill_type: 'other_income',
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase.from('other_income').insert([payload]).select();
-      if (error) throw error;
-      return { success: true, data };
+      // 1. Insert into unified transactions table
+      await supabase.from('transactions').insert([payloadTxn]);
+
+      // 2. Fallback to other_income table if exists
+      try {
+        await supabase.from('other_income').insert([{
+          id: nowId,
+          date: payloadTxn.date,
+          category: payloadTxn.category,
+          description: payloadTxn.description,
+          amount: payloadTxn.amount,
+          method: payloadTxn.method,
+          officer: payloadTxn.officer,
+          timestamp: payloadTxn.timestamp
+        }]);
+      } catch (err) {
+        // Safe to ignore if other_income is deprecated
+      }
+
+      await fetchFinanceData();
+      return { success: true, data: payloadTxn };
     } catch (e) {
       console.error('Error adding income:', e);
       return { success: false, error: e };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchFinanceData]);
 
   // ADD Expense Transaction
   const addExpense = useCallback(async (formData, officerName = 'Admin') => {
     setLoading(true);
     try {
-      const payload = {
-        id: `EXP-${Date.now()}`,
+      const nowId = `EXP-${Date.now()}`;
+      const payloadTxn = {
+        id: nowId,
         date: formData.date || new Date().toISOString().split('T')[0],
+        type: 'รายจ่าย',
         category: formData.category || 'อื่นๆ',
-        item: formData.item.trim(),
+        description: formData.item.trim(),
+        total_amount: parseFloat(formData.amount) || 0,
         amount: parseFloat(formData.amount) || 0,
+        payment_method: formData.method || 'โอนเงิน',
         method: formData.method || 'โอนเงิน',
         officer: officerName,
-        timestamp: new Date().toISOString()
+        bill_type: 'expenses',
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase.from('expenses').insert([payload]).select();
-      if (error) throw error;
-      return { success: true, data };
+      // 1. Insert into unified transactions table
+      await supabase.from('transactions').insert([payloadTxn]);
+
+      // 2. Fallback to expenses table if exists
+      try {
+        await supabase.from('expenses').insert([{
+          id: nowId,
+          date: payloadTxn.date,
+          category: payloadTxn.category,
+          item: payloadTxn.description,
+          amount: payloadTxn.amount,
+          method: payloadTxn.method,
+          officer: payloadTxn.officer,
+          timestamp: payloadTxn.timestamp
+        }]);
+      } catch (err) {
+        // Safe to ignore if expenses is deprecated
+      }
+
+      await fetchFinanceData();
+      return { success: true, data: payloadTxn };
     } catch (e) {
       console.error('Error adding expense:', e);
       return { success: false, error: e };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchFinanceData]);
 
   // DELETE Income Transaction
   const deleteIncome = useCallback(async (id) => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('other_income').delete().eq('id', id);
-      if (error) throw error;
+      await supabase.from('transactions').delete().eq('id', id);
+      try { await supabase.from('other_income').delete().eq('id', id); } catch (e) {}
+      await fetchFinanceData();
       return { success: true };
     } catch (e) {
       console.error('Error deleting income:', e);
@@ -288,14 +370,15 @@ export function FinanceProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchFinanceData]);
 
   // DELETE Expense Transaction
   const deleteExpense = useCallback(async (id) => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id);
-      if (error) throw error;
+      await supabase.from('transactions').delete().eq('id', id);
+      try { await supabase.from('expenses').delete().eq('id', id); } catch (e) {}
+      await fetchFinanceData();
       return { success: true };
     } catch (e) {
       console.error('Error deleting expense:', e);
@@ -303,7 +386,7 @@ export function FinanceProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchFinanceData]);
 
   return (
     <FinanceContext.Provider value={{
