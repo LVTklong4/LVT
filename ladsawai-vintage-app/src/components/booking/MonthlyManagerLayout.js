@@ -155,17 +155,7 @@ export default function MonthlyManagerLayout() {
         {/* Header bar */}
         <div className="bg-[#5D4037] text-white px-5 py-3 flex justify-between items-center shrink-0 shadow-md border-b-2 border-[#8B4513]">
           <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings Manager)</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-xs bg-[#3E2723] px-3 py-1 rounded-full font-bold text-amber-100 border border-amber-900/30">แอดมิน: {adminUser?.name || 'System'}</span>
-            <button
-              type="button"
-              onClick={() => setShowSettingsMgmtModal(true)}
-              className="p-1.5 rounded-full hover:bg-white/10 active:scale-95 text-amber-200 hover:text-white transition-all cursor-pointer"
-              title="ตั้งค่าระบบและเครื่องมือซิงค์ข้อมูล"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          </div>
+          <span className="text-xs bg-[#3E2723] px-3 py-1 rounded-full font-bold text-amber-100 border border-amber-900/30">แอดมิน: {adminUser?.name || 'System'}</span>
         </div>
 
         {/* Top Toolbar Action Bar */}
@@ -186,16 +176,6 @@ export default function MonthlyManagerLayout() {
             >
               <RotateCcw className="w-4 h-4" />
               ต่อสัญญา
-            </button>
-            <button
-              type="button"
-              onClick={handleSyncFromLegacySheets}
-              disabled={syncingLegacy}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
-              title="ดึงข้อมูลสัญญาและประวัติชำระเงินล่าสุดจาก Google Sheet มาซิงค์เข้าสู่ระบบใหม่"
-            >
-              <RotateCcw className={`w-4 h-4 ${syncingLegacy ? 'animate-spin' : ''}`} />
-              {syncingLegacy ? 'กำลังดึงข้อมูล...' : 'ดึงข้อมูลระบบเก่า'}
             </button>
           </div>
 
