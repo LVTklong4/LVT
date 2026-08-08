@@ -140,6 +140,7 @@ export function BookingProvider({ children }) {
   const [monthlyPrintTxnNo, setMonthlyPrintTxnNo] = useState('');
   const [monthlyPrintPayments, setMonthlyPrintPayments] = useState([]);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [syncingLegacy, setSyncingLegacy] = useState(false);
 
   // New Monthly Booking Modal States
   const [showNewMonthlyModal, setShowNewMonthlyModal] = useState(false);
@@ -3798,9 +3799,14 @@ export function BookingProvider({ children }) {
         .eq('id', txn.id);
       if (delError) throw delError;
 
-      // 2. Calculate new paid amount
-      const currentPaid = parseNumber(activeMonthlyBooking.paid_amount || 0);
-      const newPaid = Math.max(0, currentPaid - parseNumber(txn.total_amount));
+      // 2. Calculate exact remaining paid amount from database
+      const { data: remainingTxns, error: txError } = await supabase
+        .from('transactions')
+        .select('total_amount')
+        .eq('booking_ref', activeMonthlyBooking.id);
+      if (txError) throw txError;
+
+      const newPaid = (remainingTxns || []).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0);
       const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
       const newStatus = newPaid >= (totalPrice - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
 
@@ -3809,12 +3815,13 @@ export function BookingProvider({ children }) {
         .from('monthly_bookings')
         .update({
           paid_amount: newPaid,
+          total_paid: newPaid,
           status: newStatus
         })
         .eq('id', activeMonthlyBooking.id);
       if (mbError) throw mbError;
 
-      showAlert("ลบรายการชำระเงินสำเร็จ", "สำเร็จ");
+      showAlert("ลบรายการชำระเงินสำเร็จ และปรับปรุงยอดคงเหลือเรียบร้อยแล้ว", "สำเร็จ");
 
       // 4. Refresh details
       fetchAllMonthly();
@@ -3824,6 +3831,7 @@ export function BookingProvider({ children }) {
       const updatedBooking = {
         ...activeMonthlyBooking,
         paid_amount: newPaid,
+        total_paid: newPaid,
         status: newStatus
       };
       setActiveMonthlyBooking(updatedBooking);
@@ -3833,6 +3841,188 @@ export function BookingProvider({ children }) {
       showAlert("เกิดข้อผิดพลาดในการลบรายการชำระเงิน: " + err.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingMonthly(false);
+    }
+  };
+
+  // 🔄 Smart Sync from Google Sheets (Deduplication + Auto Balance)
+  const handleSyncFromLegacySheets = async () => {
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันการดึงข้อมูลจากระบบเก่า',
+      message: 'ระบบจะทำการดึงข้อมูลสัญญาและประวัติการชำระเงินล่าสุดจาก Google Sheet มาซิงค์เข้าสู่ระบบใหม่ โดยจะตรวจสอบความซ้ำซ้อนและคำนวณยอดคงเหลือให้ตรงกับหน้างานจริงโดยอัตโนมัติ',
+      confirmText: 'เริ่มดึงข้อมูล',
+      cancelText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
+
+    setSyncingLegacy(true);
+    try {
+      const SHEET_IDS = {
+        MONTHLY: '1b6kBbOTfWqGHw9nyJikRCv7kvqml-7H-ZcgIMUtUniE',
+        FINANCE: '1Xp-QrcyR-f5AnRcfOO7nb-sLoneqK31zI1daQgCmNrU'
+      };
+
+      const fetchCsvText = async (sheetId) => {
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('ไม่สามารถเข้าถึง Google Sheet ได้');
+        return await res.text();
+      };
+
+      const parseCsvAdvanced = (text) => {
+        const p = [];
+        let row = [''];
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+          const next = text[i + 1];
+          if (c === '"') {
+            if (inQuotes && next === '"') {
+              row[row.length - 1] += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (c === ',' && !inQuotes) {
+            row.push('');
+          } else if ((c === '\r' || c === '\n') && !inQuotes) {
+            if (c === '\r' && next === '\n') i++;
+            p.push(row);
+            row = [''];
+          } else {
+            row[row.length - 1] += c;
+          }
+        }
+        if (row.length > 1 || row[0] !== '') p.push(row);
+        return p;
+      };
+
+      const normalizePhone = (phoneStr) => {
+        if (!phoneStr) return '';
+        let clean = String(phoneStr).trim().replace(/[^0-9]/g, '');
+        if (clean.length === 9 && !clean.startsWith('0')) return '0' + clean;
+        if (clean.length === 8 && !clean.startsWith('0')) return '0' + clean;
+        return clean || phoneStr;
+      };
+
+      // 1. Fetch & parse Monthly contracts
+      const monthlyText = await fetchCsvText(SHEET_IDS.MONTHLY);
+      const monthlyRows = parseCsvAdvanced(monthlyText);
+
+      const monthlyItems = [];
+      const augustContractIds = new Set();
+
+      for (let i = 1; i < monthlyRows.length; i++) {
+        const r = monthlyRows[i];
+        const id = r[0];
+        if (!id || id === 'Booking ID') continue;
+
+        const startDate = r[2] || '';
+        const bookingMonthRaw = r[13] || '';
+        const isAugust = bookingMonthRaw.includes('2026-08') || 
+                         bookingMonthRaw.includes('สิงหาคม') ||
+                         startDate.includes('2026-08') || 
+                         startDate.includes('08/2026') ||
+                         startDate.includes('/08/26');
+
+        if (!isAugust) continue;
+        augustContractIds.add(id);
+
+        const bookerName = r[3] || 'ไม่ระบุชื่อ';
+        const totalPrice = parseFloat(r[8]) || 0;
+        const paidAmount = parseFloat(r[9]) || 0;
+        const phoneFormatted = normalizePhone(r[14]);
+        const selectedDays = r[12] || '';
+        const stallDetailsJson = r[15] || '[]';
+        const customerType = r[16] || 'Standard';
+        const storageFee = parseFloat(r[17]) || 0;
+
+        monthlyItems.push({
+          id: id,
+          timestamp: new Date().toISOString(),
+          start_date: startDate,
+          booker_name: bookerName,
+          customer_name: bookerName,
+          stalls: r[4] || '',
+          product: r[5] || '',
+          status: r[6] || 'ค้างชำระ',
+          elec_unit: parseFloat(r[7]) || 0,
+          total_price: totalPrice,
+          grand_total: totalPrice,
+          paid_amount: paidAmount,
+          total_paid: paidAmount,
+          note: r[10] || '',
+          payment_method: r[11] || '',
+          selected_days: selectedDays,
+          booking_month: '2026-08',
+          phone: phoneFormatted,
+          stall_details: stallDetailsJson,
+          customer_type: customerType,
+          storage_fee: storageFee
+        });
+      }
+
+      // Upsert monthly contracts
+      if (monthlyItems.length > 0) {
+        await supabase.from('monthly_bookings').upsert(monthlyItems);
+      }
+
+      // 2. Fetch & parse Finance transactions
+      const financeText = await fetchCsvText(SHEET_IDS.FINANCE);
+      const financeRows = parseCsvAdvanced(financeText);
+
+      const txnItems = [];
+      for (let i = 1; i < financeRows.length; i++) {
+        const r = financeRows[i];
+        const id = r[0];
+        if (!id || id === 'Txn ID') continue;
+
+        const ref = r[1] || '';
+        const date = r[2] || '';
+        const isAugustDate = date.includes('2026-08') || date.includes('/08/2026') || date.includes('ส.ค.');
+
+        if (augustContractIds.has(ref) || isAugustDate) {
+          const totalAmount = parseFloat(r[4]) || 0;
+          const stallAmt = parseFloat(r[8]) || 0;
+          const elecAmt = parseFloat(r[9]) || 0;
+          const storageAmt = parseFloat(r[10]) || 0;
+          const note = r[6] || '';
+          const officer = r[7] || 'System';
+
+          txnItems.push({
+            id: id,
+            booking_ref: ref,
+            date: date,
+            category: r[3] || 'รายรับ',
+            total_amount: totalAmount,
+            method: r[5] || 'Cash',
+            note: note,
+            description: note,
+            officer: officer,
+            timestamp: new Date().toISOString(),
+            stall_amt: stallAmt,
+            elec_amt: elecAmt,
+            storage_amt: storageAmt,
+            bill_type: r[11] || '',
+            slip_url: r[12] || ''
+          });
+        }
+      }
+
+      // Upsert transactions
+      if (txnItems.length > 0) {
+        await supabase.from('transactions').upsert(txnItems);
+      }
+
+      // 3. Refresh and reload local state
+      await fetchAllMonthly();
+      await fetchBookingsAndStorage();
+
+      showAlert(`ดึงข้อมูลจากระบบเก่าสำเร็จเรียบร้อยแล้ว!\n• ซิงค์สัญญา: ${monthlyItems.length} รายการ\n• ซิงค์ธุรกรรม: ${txnItems.length} รายการ`, "ซิงค์สำเร็จ");
+    } catch (e) {
+      console.error('Error syncing legacy sheets:', e);
+      showAlert("เกิดข้อผิดพลาดในการดึงข้อมูลจากระบบเก่า: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setSyncingLegacy(false);
     }
   };
 
@@ -4320,6 +4510,8 @@ export function BookingProvider({ children }) {
     handleSaveAdminRole,
     handleSaveBooking,
     handleSaveEditedMonthlyBooking,
+    handleSyncFromLegacySheets,
+    syncingLegacy,
     handleSearch,
     handleSlipChange,
     handleSortToggle,

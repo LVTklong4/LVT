@@ -54,6 +54,8 @@ export default function MonthlyManagerLayout() {
     handlePrintMonthlyReceipt,
     handlePrintMonthlyReceiptDirect,
     handleSaveEditedMonthlyBooking,
+    handleSyncFromLegacySheets,
+    syncingLegacy,
     handleSlipChange,
     handleSortToggle,
     handleToggleNonRenewal,
@@ -172,6 +174,16 @@ export default function MonthlyManagerLayout() {
             >
               <RotateCcw className="w-4 h-4" />
               ต่อสัญญา
+            </button>
+            <button
+              type="button"
+              onClick={handleSyncFromLegacySheets}
+              disabled={syncingLegacy}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
+              title="ดึงข้อมูลสัญญาและประวัติชำระเงินล่าสุดจาก Google Sheet มาซิงค์เข้าสู่ระบบใหม่"
+            >
+              <RotateCcw className={`w-4 h-4 ${syncingLegacy ? 'animate-spin' : ''}`} />
+              {syncingLegacy ? 'กำลังดึงข้อมูล...' : 'ดึงข้อมูลระบบเก่า'}
             </button>
           </div>
 
