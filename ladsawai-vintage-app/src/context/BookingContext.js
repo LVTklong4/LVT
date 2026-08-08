@@ -4026,6 +4026,116 @@ export function BookingProvider({ children }) {
     }
   };
 
+  // 🔄 Smart Sync Daily Bookings for Selected Date from Google Sheets
+  const handleSyncDailyFromLegacy = async (targetDate) => {
+    const d = targetDate || selectedDate;
+    const isConfirmed = await showConfirm({
+      title: `ยืนยันการดึงข้อมูลรายวัน (${d})`,
+      message: `ระบบจะทำการดึงข้อมูลการจองรายวันของวันที่ ${d} จาก Google Sheet มาซิงค์เข้าสู่ผังตลาด โดยจะคงข้อมูลล่าสุดและปรับสถานะล็อคว่าง/ไม่ว่างให้ตรงกับหน้างานจริง`,
+      confirmText: 'เริ่มดึงข้อมูล',
+      cancelText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
+
+    setSyncingLegacy(true);
+    try {
+      const SHEET_ID_DAILY = '1R6bNYPRo6yjDtgoazddobauTgvQVQdxA1n67C10L-4I';
+      const url = `https://docs.google.com/spreadsheets/d/${SHED_ID_DAILY || SHEET_ID_DAILY}/gviz/tq?tqx=out:csv&sheet=Bookings`;
+      
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('ไม่สามารถเชื่อมต่อ Google Sheet รายวันได้');
+      const csvText = await res.text();
+
+      const parseCsvLines = (text) => {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const regex = /(?:^|,)(?:"([^"]*)"|([^,]*))/g;
+          const row = [];
+          let match;
+          while ((match = regex.exec(lines[i])) !== null) {
+            if (match.index === regex.lastIndex) regex.lastIndex++;
+            const val = match[1] !== undefined ? match[1] : match[2];
+            if (val !== undefined) row.push(val.trim());
+          }
+          if (row.length > 0) rows.push(row);
+        }
+        return rows;
+      };
+
+      const rows = parseCsvLines(csvText);
+      const itemsMap = new Map();
+      let rowIdx = 0;
+
+      for (const row of rows) {
+        const rawDate = row[1] || '';
+        const parts = rawDate.split('-');
+        let normalizedDate = rawDate;
+        if (parts.length === 3) {
+          normalizedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        }
+        if (normalizedDate !== d) continue;
+
+        rowIdx++;
+        const masterId = row[0] || '';
+        const stallName = row[2] || '';
+        const bookerName = row[3] || 'ไม่ระบุชื่อ';
+        const product = row[4] || '';
+        const type = row[5] || 'รายวัน';
+        const elecUnit = parseFloat(row[6]) || 0;
+        const elecPrice = parseFloat(row[7]) || 0;
+        const stallPrice = parseFloat(row[8]) || 0;
+        const totalPrice = parseFloat(row[9]) || 0;
+        const paymentMethod = row[10] || 'Cash';
+        const status = row[11] || 'ชำระแล้ว';
+        const note = row[12] || '';
+        const storageFee = parseFloat(row[15]) || 0;
+
+        const cleanStall = stallName.replace(/[^a-zA-Z0-9]/g, '');
+        const cleanDate = normalizedDate.replace(/-/g, '');
+        const uniqueId = `BK-${cleanDate}-${cleanStall || 'S'}-${rowIdx}`;
+
+        itemsMap.set(`${normalizedDate}_${stallName}`, {
+          id: uniqueId,
+          date: normalizedDate,
+          stall_name: stallName,
+          stall_id: stallName,
+          booker_name: bookerName,
+          customer_name: bookerName,
+          product: product,
+          type: type,
+          elec_unit: elecUnit,
+          elec_price: elecPrice,
+          stall_price: stallPrice,
+          total_price: totalPrice,
+          price: totalPrice,
+          payment_method: paymentMethod,
+          status: status,
+          note: note,
+          master_id: masterId,
+          storage_fee: storageFee
+        });
+      }
+
+      const dailyItems = Array.from(itemsMap.values());
+      if (dailyItems.length > 0) {
+        // Upsert daily items
+        for (let i = 0; i < dailyItems.length; i += 100) {
+          const chunk = dailyItems.slice(i, i + 100);
+          await supabase.from('bookings').upsert(chunk);
+        }
+      }
+
+      await fetchBookingsAndStorage();
+      showAlert(`ซิงค์ข้อมูลรายวันของวันที่ ${d} สำเร็จเรียบร้อยแล้ว!\n• อัปเดตข้อมูลแผงค้า: ${dailyItems.length} แผง`, "ซิงค์สำเร็จ");
+    } catch (e) {
+      console.error('Error syncing daily legacy:', e);
+      showAlert("เกิดข้อผิดพลาดในการซิงค์ข้อมูลรายวัน: " + e.message, "ข้อผิดพลาด", true);
+    } finally {
+      setSyncingLegacy(false);
+    }
+  };
+
   const handleOpenMonthlyPaymentModal = async () => {
     if (!activeMonthlyBooking) return;
     
@@ -4511,6 +4621,7 @@ export function BookingProvider({ children }) {
     handleSaveBooking,
     handleSaveEditedMonthlyBooking,
     handleSyncFromLegacySheets,
+    handleSyncDailyFromLegacy,
     syncingLegacy,
     handleSearch,
     handleSlipChange,

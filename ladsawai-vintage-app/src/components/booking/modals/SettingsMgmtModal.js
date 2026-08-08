@@ -2,11 +2,21 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Settings, Loader2, X } from 'lucide-react';
+import { Settings, Loader2, X, RotateCcw } from 'lucide-react';
 
 export default function SettingsMgmtModal() {
   const {
-    adminForm,    adminRolesList,    handleSaveAdminRole,    loadingSettings,    setAdminForm,    setShowSettingsMgmtModal,    showSettingsMgmtModal
+    adminForm,
+    adminRolesList,
+    handleSaveAdminRole,
+    loadingSettings,
+    setAdminForm,
+    setShowSettingsMgmtModal,
+    showSettingsMgmtModal,
+    handleSyncDailyFromLegacy,
+    handleSyncFromLegacySheets,
+    syncingLegacy,
+    selectedDate
   } = useBooking();
 
   if (!showSettingsMgmtModal) return null;
@@ -142,6 +152,40 @@ export default function SettingsMgmtModal() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+
+            {/* Transition Data Sync Tools (Bottom Section) */}
+            <div className="bg-amber-50/60 border-t border-amber-200 p-4 shrink-0 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex flex-col gap-0.5 text-left">
+                <span className="font-extrabold text-xs text-amber-900 flex items-center gap-1.5">
+                  🔄 เครื่องมือซิงค์ข้อมูลช่วงเปลี่ยนผ่าน (Transition Data Sync)
+                </span>
+                <span className="text-[11px] text-amber-800">
+                  ใช้สำหรับดึงข้อมูลล่าสุดจาก Google Sheets เดิมมาปรับปรุงเข้าสู่ระบบใหม่โดยไม่เกิดข้อมูลซ้ำซ้อน
+                </span>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSyncDailyFromLegacy(selectedDate)}
+                  disabled={syncingLegacy}
+                  className="flex-1 md:flex-initial px-3 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title={`ดึงข้อมูลการจองรายวันของวันที่ ${selectedDate} จากชีท Bookings`}
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${syncingLegacy ? 'animate-spin' : ''}`} />
+                  {syncingLegacy ? 'กำลังซิงค์...' : `ซิงค์ผังรายวัน (${selectedDate})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncFromLegacySheets}
+                  disabled={syncingLegacy}
+                  className="flex-1 md:flex-initial px-3 py-2 bg-purple-700 hover:bg-purple-800 active:scale-95 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="ดึงข้อมูลสัญญาและประวัติการเงินรายเดือนทั้งหมด"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${syncingLegacy ? 'animate-spin' : ''}`} />
+                  {syncingLegacy ? 'กำลังซิงค์...' : 'ซิงค์สัญญารายเดือนทั้งหมด'}
+                </button>
               </div>
             </div>
           </div>
