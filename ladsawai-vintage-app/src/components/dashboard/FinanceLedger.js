@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { useDashboard } from '@/context/DashboardContext';
 import { useBooking } from '@/context/BookingContext';
-import { Trash2, Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Loader2, RefreshCw, X, AlertCircle, Lock } from 'lucide-react';
+import { Trash2, Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Loader2, RefreshCw, X, AlertCircle, Lock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import DailyClosingModal from './DailyClosingModal';
 
 export default function FinanceLedger() {
@@ -141,6 +141,10 @@ export default function FinanceLedger() {
     }
   };
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Reset all filters
   const handleResetFilters = () => {
     setStartDate('');
@@ -148,6 +152,7 @@ export default function FinanceLedger() {
     setCategoryFilter('ทั้งหมด');
     setMethodFilter('ทั้งหมด');
     setSearchQuery('');
+    setCurrentPage(1);
   };
 
   // Category Options
@@ -161,6 +166,19 @@ export default function FinanceLedger() {
   // Calculations for display list
   const currentList = activeTab === 'income' ? incomeList : expenseList;
   const listTotalAmount = currentList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(currentList.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, currentList.length);
+  const paginatedList = currentList.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   return (
     <div className="bg-white border-2 border-[#8B4513]/30 rounded-xl p-5 shadow-sm flex flex-col gap-5">
@@ -494,7 +512,7 @@ export default function FinanceLedger() {
                         </td>
                       </tr>
                     ) : (
-                      currentList.map((item) => (
+                      paginatedList.map((item) => (
                         <tr key={item.id} className="hover:bg-amber-50/10">
                           <td className="p-3 whitespace-nowrap">{item.date}</td>
                           <td className="p-3">
@@ -531,6 +549,78 @@ export default function FinanceLedger() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Bar */}
+              {currentList.length > 0 && (
+                <div className="p-3 border-t border-gray-100 bg-gray-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  {/* Left: Entries Info & Page Size Selector */}
+                  <div className="flex items-center gap-2 text-gray-600 font-semibold text-[11px]">
+                    <span>แสดง {startIndex + 1} - {endIndex} จากทั้งหมด {currentList.length} รายการ</span>
+                    <span className="text-gray-300">|</span>
+                    <div className="flex items-center gap-1">
+                      <span>แถวต่อหน้า:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[11px] font-bold text-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Right: Page Navigation Buttons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(1)}
+                      disabled={safeCurrentPage === 1}
+                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      title="หน้าแรก"
+                    >
+                      <ChevronsLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(safeCurrentPage - 1)}
+                      disabled={safeCurrentPage === 1}
+                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      title="หน้าก่อนหน้า"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+
+                    <span className="px-2.5 py-1 text-[11px] font-bold text-gray-800 bg-amber-100/60 rounded-md border border-amber-300">
+                      หน้า {safeCurrentPage} / {totalPages}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(safeCurrentPage + 1)}
+                      disabled={safeCurrentPage === totalPages}
+                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      title="หน้าถัดไป"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={safeCurrentPage === totalPages}
+                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      title="หน้าสุดท้าย"
+                    >
+                      <ChevronsRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
