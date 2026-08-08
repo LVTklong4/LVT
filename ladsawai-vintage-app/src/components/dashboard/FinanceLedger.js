@@ -16,7 +16,8 @@ export default function FinanceLedger() {
     addIncome, 
     addExpense, 
     deleteIncome, 
-    deleteExpense 
+    deleteExpense,
+    isDateClosed
   } = useFinance();
 
   const { showConfirm } = useBooking();
@@ -71,6 +72,10 @@ export default function FinanceLedger() {
   // Form submission handlers
   const handleAddIncomeSubmit = async (e) => {
     e.preventDefault();
+    if (isDateClosed(incomeForm.date)) {
+      alert(`⚠️ วันที่ ${incomeForm.date} ได้ทำการปิดยอดประจำวันเรียบร้อยแล้ว ข้อมูลถูกล็อคไม่สามารถเพิ่มรายการได้`);
+      return;
+    }
     if (!incomeForm.amount || !incomeForm.description.trim()) {
       alert('กรุณากรอกข้อมูลจำนวนเงินและรายละเอียดให้ครบถ้วน');
       return;
@@ -94,6 +99,10 @@ export default function FinanceLedger() {
 
   const handleAddExpenseSubmit = async (e) => {
     e.preventDefault();
+    if (isDateClosed(expenseForm.date)) {
+      alert(`⚠️ วันที่ ${expenseForm.date} ได้ทำการปิดยอดประจำวันเรียบร้อยแล้ว ข้อมูลถูกล็อคไม่สามารถเพิ่มรายการได้`);
+      return;
+    }
     if (!expenseForm.amount || !expenseForm.item.trim()) {
       alert('กรุณากรอกข้อมูลจำนวนเงินและรายการรายจ่ายให้ครบถ้วน');
       return;
@@ -535,13 +544,46 @@ export default function FinanceLedger() {
                           <td className="p-3 text-center text-[10px] text-gray-500">{item.method}</td>
                           <td className="p-3 text-[10px] text-gray-500 whitespace-nowrap">{item.officer}</td>
                           <td className="p-3 text-center">
-                            <button
-                              onClick={() => handleDeleteItem(item.id, activeTab)}
-                              className="p-1 hover:bg-red-50 rounded text-red-500 transition-colors cursor-pointer"
-                              title="ลบรายการ"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {(() => {
+                              const isSystemTxn = Boolean(
+                                item.booking_ref || 
+                                item.bill_type === 'Bookings' || 
+                                item.bill_type === 'Monthly' || 
+                                item.category?.includes('รายเดือน') || 
+                                item.category?.includes('รายวัน') || 
+                                item.category?.includes('ส่วนลด') || 
+                                item.category?.includes('ค่าไฟ') || 
+                                item.category?.includes('ฝากของ') || 
+                                item.category?.includes('คลองถม')
+                              );
+                              const isClosed = isDateClosed(item.date);
+
+                              if (isSystemTxn) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded" title="รายการจากระบบจอง/สัญญาเช่า ไม่สามารถลบจากตารางนี้ได้">
+                                    <Lock className="w-2.5 h-2.5 text-gray-400" /> ระบบ
+                                  </span>
+                                );
+                              }
+
+                              if (isClosed) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-800 bg-amber-100/70 border border-amber-300 px-1.5 py-0.5 rounded" title="วันที่นี้ปิดยอดบัญชีแล้ว ข้อมูลถูกล็อคถาวร">
+                                    <Lock className="w-2.5 h-2.5 text-amber-800" /> ปิดยอด
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <button
+                                  onClick={() => handleDeleteItem(item.id, activeTab)}
+                                  className="p-1 hover:bg-red-50 rounded text-red-500 transition-colors cursor-pointer"
+                                  title="ลบรายการที่คีย์ผิด"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))

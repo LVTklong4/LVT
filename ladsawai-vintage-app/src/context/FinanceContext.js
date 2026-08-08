@@ -9,12 +9,33 @@ export function FinanceProvider({ children }) {
   const [incomeList, setIncomeList] = useState([]);
   const [expenseList, setExpenseList] = useState([]);
   const [dailyClosingData, setDailyClosingData] = useState(null);
+  const [closedDates, setClosedDates] = useState(new Set());
   const [loading, setLoading] = useState(false);
+
+  // Check if a date is closed/frozen
+  const isDateClosed = useCallback((targetDate) => {
+    if (!targetDate) return false;
+    return closedDates.has(targetDate);
+  }, [closedDates]);
 
   // Fetch all transactions from transactions table (and fallback to other_income/expenses)
   const fetchFinanceData = useCallback(async (filters = {}) => {
     setLoading(true);
     try {
+      // 0. Fetch closed dates
+      try {
+        const { data: closings } = await supabase.from('daily_closings').select('date, status');
+        if (closings && closings.length > 0) {
+          const cSet = new Set();
+          closings.forEach(c => {
+            if (c.status === 'CLOSED' || c.date) cSet.add(c.date);
+          });
+          setClosedDates(cSet);
+        }
+      } catch (err) {
+        console.warn('Could not fetch daily closings:', err);
+      }
+
       // 1. Fetch from unified transactions table
       let txnQuery = supabase.from('transactions').select('*').order('date', { ascending: false }).order('timestamp', { ascending: false });
       if (filters.startDate) txnQuery = txnQuery.gte('date', filters.startDate);
@@ -393,6 +414,8 @@ export function FinanceProvider({ children }) {
       incomeList,
       expenseList,
       dailyClosingData,
+      closedDates,
+      isDateClosed,
       loading,
       fetchFinanceData,
       fetchDailySummary,
