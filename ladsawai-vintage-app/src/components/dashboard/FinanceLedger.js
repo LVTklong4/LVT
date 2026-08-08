@@ -521,72 +521,91 @@ export default function FinanceLedger() {
                         </td>
                       </tr>
                     ) : (
-                      paginatedList.map((item) => (
-                        <tr key={item.id} className="hover:bg-amber-50/10">
-                          <td className="p-3 whitespace-nowrap">{item.date}</td>
-                          <td className="p-3">
-                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                              activeTab === 'income' 
+                      paginatedList.map((item) => {
+                        const isSystemOrigin = Boolean(
+                          item.booking_ref || 
+                          item.bill_type === 'Bookings' || 
+                          item.bill_type === 'Monthly' || 
+                          item.category?.includes('รายเดือน') || 
+                          item.category?.includes('รายวัน') || 
+                          item.category?.includes('ส่วนลด') || 
+                          item.category?.includes('ค่าไฟ') || 
+                          item.category?.includes('ฝากของ') || 
+                          item.category?.includes('คลองถม')
+                        );
+                        const isClosed = isDateClosed(item.date);
+                        
+                        let originLabel = '✍️ คีย์ผ่านสมุดบัญชี';
+                        let originBg = 'bg-gray-100 text-gray-700';
+                        if (item.booking_ref?.startsWith('BK-') || item.category?.includes('รายเดือน') || item.bill_type === 'Monthly') {
+                          originLabel = '📋 สัญญารายเดือน';
+                          originBg = 'bg-purple-100 text-purple-800 border-purple-200';
+                        } else if (item.category?.includes('คลองถม') || item.bill_type === 'klongthom') {
+                          originLabel = '🎪 คลองถม';
+                          originBg = 'bg-blue-100 text-blue-800 border-blue-200';
+                        } else if (isSystemOrigin) {
+                          originLabel = '🗓️ จองรายวัน';
+                          originBg = 'bg-amber-100 text-amber-900 border-amber-200';
+                        }
+
+                        return (
+                          <tr key={item.id} className="hover:bg-amber-50/10">
+                            <td className="p-3 whitespace-nowrap">{item.date}</td>
+                            <td className="p-3">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                activeTab === 'income' 
                                 ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
                                 : 'bg-red-100 text-red-900 border border-red-200'
+                              }`}>
+                                {item.category}
+                              </span>
+                            </td>
+                            <td className="p-3 max-w-[200px]">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-bold text-gray-800 break-words">
+                                  {activeTab === 'income' ? item.description : item.item}
+                                </span>
+                                <span className={`inline-block w-fit text-[9px] px-1.5 py-0.2 rounded border font-semibold ${originBg}`}>
+                                  {originLabel}
+                                </span>
+                              </div>
+                            </td>
+                            <td className={`p-3 text-right font-black ${
+                              activeTab === 'income' ? 'text-emerald-700' : 'text-red-700'
                             }`}>
-                              {item.category}
-                            </span>
-                          </td>
-                          <td className="p-3 max-w-[180px] break-words">
-                            {activeTab === 'income' ? item.description : item.item}
-                          </td>
-                          <td className={`p-3 text-right font-black ${
-                            activeTab === 'income' ? 'text-emerald-700' : 'text-red-700'
-                          }`}>
-                            {activeTab === 'income' ? '+' : '-'}{item.amount.toLocaleString()}.-
-                          </td>
-                          <td className="p-3 text-center text-[10px] text-gray-500">{item.method}</td>
-                          <td className="p-3 text-[10px] text-gray-500 whitespace-nowrap">{item.officer}</td>
-                          <td className="p-3 text-center">
-                            {(() => {
-                              const isSystemTxn = Boolean(
-                                item.booking_ref || 
-                                item.bill_type === 'Bookings' || 
-                                item.bill_type === 'Monthly' || 
-                                item.category?.includes('รายเดือน') || 
-                                item.category?.includes('รายวัน') || 
-                                item.category?.includes('ส่วนลด') || 
-                                item.category?.includes('ค่าไฟ') || 
-                                item.category?.includes('ฝากของ') || 
-                                item.category?.includes('คลองถม')
-                              );
-                              const isClosed = isDateClosed(item.date);
-
-                              if (isSystemTxn) {
-                                return (
-                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded" title="รายการจากระบบจอง/สัญญาเช่า ไม่สามารถลบจากตารางนี้ได้">
-                                    <Lock className="w-2.5 h-2.5 text-gray-400" /> ระบบ
-                                  </span>
-                                );
-                              }
-
-                              if (isClosed) {
-                                return (
-                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-800 bg-amber-100/70 border border-amber-300 px-1.5 py-0.5 rounded" title="วันที่นี้ปิดยอดบัญชีแล้ว ข้อมูลถูกล็อคถาวร">
-                                    <Lock className="w-2.5 h-2.5 text-amber-800" /> ปิดยอด
-                                  </span>
-                                );
-                              }
-
-                              return (
-                                <button
-                                  onClick={() => handleDeleteItem(item.id, activeTab)}
-                                  className="p-1 hover:bg-red-50 rounded text-red-500 transition-colors cursor-pointer"
-                                  title="ลบรายการที่คีย์ผิด"
+                              {activeTab === 'income' ? '+' : '-'}{item.amount.toLocaleString()}.-
+                            </td>
+                            <td className="p-3 text-center text-[10px] text-gray-500">{item.method}</td>
+                            <td className="p-3 text-[10px] text-gray-500 whitespace-nowrap">{item.officer}</td>
+                            <td className="p-3 text-center">
+                              {isSystemOrigin ? (
+                                <span 
+                                  className="inline-flex items-center gap-1 text-[9px] font-bold text-gray-400 bg-gray-100 border border-gray-200 px-2 py-1 rounded cursor-help" 
+                                  title="รายการนี้มาจากระบบจอง/สัญญาเช่า หากต้องการแก้ไขหรือยกเลิก กรุณาไปแก้ไขที่หน้าต้นทางของรายการนั้นๆ"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Lock className="w-2.5 h-2.5 text-gray-400" /> แก้ที่ต้นทาง
+                                </span>
+                              ) : isClosed ? (
+                                <span 
+                                  className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-1 rounded cursor-help" 
+                                  title="วันที่นี้ทำการปิดยอดบัญชีเรียบร้อยแล้ว ข้อมูลถูกล็อคถาวรไม่สามารถแก้ไขหรือลบได้"
+                                >
+                                  <Lock className="w-2.5 h-2.5 text-amber-800" /> ปิดยอดแล้ว
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteItem(item.id, activeTab)}
+                                  className="p-1.5 hover:bg-red-50 text-red-600 hover:text-red-800 rounded-lg transition-all active:scale-95 cursor-pointer border border-transparent hover:border-red-200"
+                                  title="ลบรายการที่คีย์ผ่านสมุดบัญชีนี้"
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
-                              );
-                            })()}
-                          </td>
-                        </tr>
-                      ))
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
