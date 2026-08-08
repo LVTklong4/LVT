@@ -4165,12 +4165,13 @@ export function BookingProvider({ children }) {
 
     // 2. Filter by Search Query
     if (monthlySearchQuery && monthlySearchQuery.trim() !== '') {
-      const q = monthlySearchQuery.toLowerCase();
+      const q = monthlySearchQuery.toLowerCase().trim();
       list = list.filter(item => {
-        const nameMatch = item.booker_name?.toLowerCase().includes(q);
+        const nameMatch = item.booker_name?.toLowerCase().includes(q) || item.customer_name?.toLowerCase().includes(q);
+        const productMatch = item.product?.toLowerCase().includes(q);
+        const stallsMatch = item.stalls?.toLowerCase().includes(q) || item.stall_name?.toLowerCase().includes(q);
         const phoneMatch = item.phone?.toLowerCase().includes(q);
-        const stallsMatch = item.stalls?.toLowerCase().includes(q);
-        return nameMatch || phoneMatch || stallsMatch;
+        return nameMatch || productMatch || stallsMatch || phoneMatch;
       });
     }
 

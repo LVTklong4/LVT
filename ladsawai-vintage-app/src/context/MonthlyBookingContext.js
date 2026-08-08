@@ -63,6 +63,9 @@ export function MonthlyBookingProvider({ children }) {
       const q = monthlySearchQuery.toLowerCase().trim();
       list = list.filter(item => 
         (item.booker_name && item.booker_name.toLowerCase().includes(q)) ||
+        (item.customer_name && item.customer_name.toLowerCase().includes(q)) ||
+        (item.product && item.product.toLowerCase().includes(q)) ||
+        (item.stalls && item.stalls.toLowerCase().includes(q)) ||
         (item.stall_name && item.stall_name.toLowerCase().includes(q)) ||
         (item.phone && item.phone.includes(q))
       );

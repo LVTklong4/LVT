@@ -148,8 +148,8 @@ export default function MonthlyMgmtModal() {
                               {formatBookingMonth(item.booking_month)}
                             </td>
                             <td className="p-2">
-                              <div className="font-bold text-gray-800">{item.booker_name}</div>
-                              <div className="text-[10px] text-gray-500">{item.phone || '-'}</div>
+                              <div className="font-bold text-gray-800">{item.booker_name || item.customer_name}</div>
+                              <div className="text-[10px] text-amber-900/90 font-bold">{item.product || '-'}</div>
                             </td>
                             <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
                             <td className="p-2 text-center font-semibold text-gray-800">
