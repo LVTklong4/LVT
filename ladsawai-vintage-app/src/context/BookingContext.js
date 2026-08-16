@@ -3844,15 +3844,77 @@ export function BookingProvider({ children }) {
     }
   };
 
-  // 🔄 Smart Sync from Google Sheets (Deduplication + Auto Balance)
-  const handleSyncFromLegacySheets = async () => {
-    const isConfirmed = await showConfirm({
-      title: 'ยืนยันการดึงข้อมูลจากระบบเก่า',
-      message: 'ระบบจะทำการดึงข้อมูลสัญญาและประวัติการชำระเงินล่าสุดจาก Google Sheet มาซิงค์เข้าสู่ระบบใหม่ โดยจะตรวจสอบความซ้ำซ้อนและคำนวณยอดคงเหลือให้ตรงกับหน้างานจริงโดยอัตโนมัติ',
-      confirmText: 'เริ่มดึงข้อมูล',
-      cancelText: 'ยกเลิก'
-    });
-    if (!isConfirmed) return;
+  // 🔄 Helper function to fetch CSV from Google Sheet
+  const fetchGoogleSheetCsv = async (sheetId, sheetName = null) => {
+    let url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+    if (sheetName) {
+      url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`ไม่สามารถเข้าถึง Google Sheet (${sheetName || 'Main'}) ได้`);
+    return await res.text();
+  };
+
+  // 🔄 Helper function to parse CSV lines safely
+  const parseCsvAdvancedSafely = (text) => {
+    const p = [];
+    let row = [''];
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+      if (c === '"') {
+        if (inQuotes && next === '"') {
+          row[row.length - 1] += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (c === ',' && !inQuotes) {
+        row.push('');
+      } else if ((c === '\r' || c === '\n') && !inQuotes) {
+        if (c === '\r' && next === '\n') i++;
+        p.push(row);
+        row = [''];
+      } else {
+        row[row.length - 1] += c;
+      }
+    }
+    if (row.length > 1 || row[0] !== '') p.push(row);
+    return p;
+  };
+
+  const normalizePhoneValue = (phoneStr) => {
+    if (!phoneStr) return '';
+    let clean = String(phoneStr).trim().replace(/[^0-9]/g, '');
+    if (clean.length === 9 && !clean.startsWith('0')) return '0' + clean;
+    if (clean.length === 8 && !clean.startsWith('0')) return '0' + clean;
+    return clean || phoneStr;
+  };
+
+  const normalizeDateIso = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.trim().split('-');
+    if (parts.length === 3) {
+      const y = parts[0];
+      const m = parts[1].padStart(2, '0');
+      const d = parts[2].padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return dateStr.trim();
+  };
+
+  // 🔄 1. Smart Sync Monthly Contracts & Finance Transactions (ALL MONTHS & ALL DATES)
+  const handleSyncFromLegacySheets = async (isSilent = false) => {
+    if (!isSilent) {
+      const isConfirmed = await showConfirm({
+        title: 'ยืนยันการดึงข้อมูลสัญญารายเดือน & บัญชีทั้งหมด',
+        message: 'ระบบจะทำการดึงข้อมูลสัญญาและประวัติการชำระเงิน "ทั้งหมดทุกเดือน" จาก Google Sheet มาซิงค์เข้าสู่ระบบใหม่โดยอัตโนมัติ',
+        confirmText: 'เริ่มดึงข้อมูล',
+        cancelText: 'ยกเลิก'
+      });
+      if (!isConfirmed) return { success: false, monthlyCount: 0, txnCount: 0 };
+    }
 
     setSyncingLegacy(true);
     try {
@@ -3861,82 +3923,33 @@ export function BookingProvider({ children }) {
         FINANCE: '1Xp-QrcyR-f5AnRcfOO7nb-sLoneqK31zI1daQgCmNrU'
       };
 
-      const fetchCsvText = async (sheetId) => {
-        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('ไม่สามารถเข้าถึง Google Sheet ได้');
-        return await res.text();
-      };
+      // 1. Fetch & parse Monthly contracts (ALL records)
+      const monthlyText = await fetchGoogleSheetCsv(SHEET_IDS.MONTHLY);
+      const monthlyRows = parseCsvAdvancedSafely(monthlyText);
 
-      const parseCsvAdvanced = (text) => {
-        const p = [];
-        let row = [''];
-        let inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-          const c = text[i];
-          const next = text[i + 1];
-          if (c === '"') {
-            if (inQuotes && next === '"') {
-              row[row.length - 1] += '"';
-              i++;
-            } else {
-              inQuotes = !inQuotes;
-            }
-          } else if (c === ',' && !inQuotes) {
-            row.push('');
-          } else if ((c === '\r' || c === '\n') && !inQuotes) {
-            if (c === '\r' && next === '\n') i++;
-            p.push(row);
-            row = [''];
-          } else {
-            row[row.length - 1] += c;
-          }
-        }
-        if (row.length > 1 || row[0] !== '') p.push(row);
-        return p;
-      };
-
-      const normalizePhone = (phoneStr) => {
-        if (!phoneStr) return '';
-        let clean = String(phoneStr).trim().replace(/[^0-9]/g, '');
-        if (clean.length === 9 && !clean.startsWith('0')) return '0' + clean;
-        if (clean.length === 8 && !clean.startsWith('0')) return '0' + clean;
-        return clean || phoneStr;
-      };
-
-      // 1. Fetch & parse Monthly contracts
-      const monthlyText = await fetchCsvText(SHEET_IDS.MONTHLY);
-      const monthlyRows = parseCsvAdvanced(monthlyText);
-
-      const monthlyItems = [];
-      const augustContractIds = new Set();
-
+      const monthlyMap = new Map();
       for (let i = 1; i < monthlyRows.length; i++) {
         const r = monthlyRows[i];
         const id = r[0];
         if (!id || id === 'Booking ID') continue;
 
         const startDate = r[2] || '';
-        const bookingMonthRaw = r[13] || '';
-        const isAugust = bookingMonthRaw.includes('2026-08') || 
-                         bookingMonthRaw.includes('สิงหาคม') ||
-                         startDate.includes('2026-08') || 
-                         startDate.includes('08/2026') ||
-                         startDate.includes('/08/26');
-
-        if (!isAugust) continue;
-        augustContractIds.add(id);
+        const bookingMonthRaw = r[13] || startDate.substring(0, 7) || '2026-08';
+        let normalizedMonth = '2026-08';
+        if (bookingMonthRaw.match(/^\d{4}-\d{2}/)) {
+          normalizedMonth = bookingMonthRaw.match(/^\d{4}-\d{2}/)[0];
+        }
 
         const bookerName = r[3] || 'ไม่ระบุชื่อ';
         const totalPrice = parseFloat(r[8]) || 0;
         const paidAmount = parseFloat(r[9]) || 0;
-        const phoneFormatted = normalizePhone(r[14]);
+        const phoneFormatted = normalizePhoneValue(r[14]);
         const selectedDays = r[12] || '';
         const stallDetailsJson = r[15] || '[]';
         const customerType = r[16] || 'Standard';
         const storageFee = parseFloat(r[17]) || 0;
 
-        monthlyItems.push({
+        monthlyMap.set(id, {
           id: id,
           timestamp: new Date().toISOString(),
           start_date: startDate,
@@ -3944,7 +3957,7 @@ export function BookingProvider({ children }) {
           customer_name: bookerName,
           stalls: r[4] || '',
           product: r[5] || '',
-          status: r[6] || 'ค้างชำระ',
+          status: r[6] || (paidAmount >= totalPrice && totalPrice > 0 ? 'ชำระแล้ว' : 'ค้างชำระ'),
           elec_unit: parseFloat(r[7]) || 0,
           total_price: totalPrice,
           grand_total: totalPrice,
@@ -3953,7 +3966,7 @@ export function BookingProvider({ children }) {
           note: r[10] || '',
           payment_method: r[11] || '',
           selected_days: selectedDays,
-          booking_month: '2026-08',
+          booking_month: normalizedMonth,
           phone: phoneFormatted,
           stall_details: stallDetailsJson,
           customer_type: customerType,
@@ -3961,16 +3974,18 @@ export function BookingProvider({ children }) {
         });
       }
 
-      // Upsert monthly contracts
-      if (monthlyItems.length > 0) {
-        await supabase.from('monthly_bookings').upsert(monthlyItems);
+      const monthlyItems = Array.from(monthlyMap.values());
+      // Upsert monthly contracts in chunks
+      for (let i = 0; i < monthlyItems.length; i += 100) {
+        const chunk = monthlyItems.slice(i, i + 100);
+        await supabase.from('monthly_bookings').upsert(chunk);
       }
 
-      // 2. Fetch & parse Finance transactions
-      const financeText = await fetchCsvText(SHEET_IDS.FINANCE);
-      const financeRows = parseCsvAdvanced(financeText);
+      // 2. Fetch & parse Finance transactions (ALL records)
+      const financeText = await fetchGoogleSheetCsv(SHEET_IDS.FINANCE);
+      const financeRows = parseCsvAdvancedSafely(financeText);
 
-      const txnItems = [];
+      const txnMap = new Map();
       for (let i = 1; i < financeRows.length; i++) {
         const r = financeRows[i];
         const id = r[0];
@@ -3978,105 +3993,90 @@ export function BookingProvider({ children }) {
 
         const ref = r[1] || '';
         const date = r[2] || '';
-        const isAugustDate = date.includes('2026-08') || date.includes('/08/2026') || date.includes('ส.ค.');
+        const totalAmount = parseFloat(r[4]) || 0;
+        const stallAmt = parseFloat(r[8]) || 0;
+        const elecAmt = parseFloat(r[9]) || 0;
+        const storageAmt = parseFloat(r[10]) || 0;
+        const note = r[6] || '';
+        const officer = r[7] || 'System';
 
-        if (augustContractIds.has(ref) || isAugustDate) {
-          const totalAmount = parseFloat(r[4]) || 0;
-          const stallAmt = parseFloat(r[8]) || 0;
-          const elecAmt = parseFloat(r[9]) || 0;
-          const storageAmt = parseFloat(r[10]) || 0;
-          const note = r[6] || '';
-          const officer = r[7] || 'System';
-
-          txnItems.push({
-            id: id,
-            booking_ref: ref,
-            date: date,
-            category: r[3] || 'รายรับ',
-            total_amount: totalAmount,
-            method: r[5] || 'Cash',
-            note: note,
-            description: note,
-            officer: officer,
-            timestamp: new Date().toISOString(),
-            stall_amt: stallAmt,
-            elec_amt: elecAmt,
-            storage_amt: storageAmt,
-            bill_type: r[11] || '',
-            slip_url: r[12] || ''
-          });
-        }
+        txnMap.set(id, {
+          id: id,
+          booking_ref: ref,
+          date: date,
+          category: r[3] || 'รายรับ',
+          total_amount: totalAmount,
+          method: r[5] || 'Cash',
+          note: note,
+          description: note,
+          officer: officer,
+          timestamp: new Date().toISOString(),
+          stall_amt: stallAmt,
+          elec_amt: elecAmt,
+          storage_amt: storageAmt,
+          bill_type: r[11] || '',
+          slip_url: r[12] || ''
+        });
       }
 
-      // Upsert transactions
-      if (txnItems.length > 0) {
-        await supabase.from('transactions').upsert(txnItems);
+      const txnItems = Array.from(txnMap.values());
+      // Upsert transactions in chunks
+      for (let i = 0; i < txnItems.length; i += 100) {
+        const chunk = txnItems.slice(i, i + 100);
+        await supabase.from('transactions').upsert(chunk);
       }
 
-      // 3. Refresh and reload local state
       await fetchAllMonthly();
       await fetchBookingsAndStorage();
 
-      showAlert(`ดึงข้อมูลจากระบบเก่าสำเร็จเรียบร้อยแล้ว!\n• ซิงค์สัญญา: ${monthlyItems.length} รายการ\n• ซิงค์ธุรกรรม: ${txnItems.length} รายการ`, "ซิงค์สำเร็จ");
+      if (!isSilent) {
+        showAlert(`ดึงข้อมูลสัญญารายเดือนและบัญชีสำเร็จเรียบร้อยแล้ว!\n• สัญญารายเดือนทั้งหมด: ${monthlyItems.length} รายการ\n• รายการธุรกรรมการเงินทั้งหมด: ${txnItems.length} รายการ`, "ซิงค์สำเร็จ");
+      }
+      return { success: true, monthlyCount: monthlyItems.length, txnCount: txnItems.length };
     } catch (e) {
       console.error('Error syncing legacy sheets:', e);
-      showAlert("เกิดข้อผิดพลาดในการดึงข้อมูลจากระบบเก่า: " + e.message, "ข้อผิดพลาด", true);
+      if (!isSilent) {
+        showAlert("เกิดข้อผิดพลาดในการดึงข้อมูลสัญญารายเดือน: " + e.message, "ข้อผิดพลาด", true);
+      }
+      return { success: false, error: e };
     } finally {
       setSyncingLegacy(false);
     }
   };
 
-  // 🔄 Smart Sync Daily Bookings for Selected Date from Google Sheets
-  const handleSyncDailyFromLegacy = async (targetDate) => {
-    const d = targetDate || selectedDate;
-    const isConfirmed = await showConfirm({
-      title: `ยืนยันการดึงข้อมูลรายวัน (${d})`,
-      message: `ระบบจะทำการดึงข้อมูลการจองรายวันของวันที่ ${d} จาก Google Sheet มาซิงค์เข้าสู่ผังตลาด โดยจะคงข้อมูลล่าสุดและปรับสถานะล็อคว่าง/ไม่ว่างให้ตรงกับหน้างานจริง`,
-      confirmText: 'เริ่มดึงข้อมูล',
-      cancelText: 'ยกเลิก'
-    });
-    if (!isConfirmed) return;
+  // 🔄 2. Smart Sync Daily Bookings for ALL DATES from Google Sheets
+  const handleSyncDailyFromLegacy = async (isSilent = false) => {
+    if (!isSilent) {
+      const isConfirmed = await showConfirm({
+        title: 'ยืนยันการดึงข้อมูลการจองรายวันทั้งหมด (All Dates)',
+        message: 'ระบบจะทำการดึงข้อมูลการจองรายวัน "ทั้งหมดทุกวัน" จาก Google Sheet มาแปลงและบันทึกเข้าสู่ระบบใหม่ โดยจะปรับสถานะผังตลาดและยอดเงินให้ตรงกับหน้างานจริง',
+        confirmText: 'เริ่มดึงข้อมูลทั้งหมด',
+        cancelText: 'ยกเลิก'
+      });
+      if (!isConfirmed) return { success: false, dailyCount: 0, dateCount: 0 };
+    }
 
     setSyncingLegacy(true);
     try {
       const SHEET_ID_DAILY = '1R6bNYPRo6yjDtgoazddobauTgvQVQdxA1n67C10L-4I';
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID_DAILY}/gviz/tq?tqx=out:csv&sheet=Bookings`;
-      
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('ไม่สามารถเชื่อมต่อ Google Sheet รายวันได้');
-      const csvText = await res.text();
+      const csvText = await fetchGoogleSheetCsv(SHEET_ID_DAILY, 'Bookings');
+      const rows = parseCsvAdvancedSafely(csvText);
 
-      const parseCsvLines = (text) => {
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        const rows = [];
-        for (let i = 1; i < lines.length; i++) {
-          const regex = /(?:^|,)(?:"([^"]*)"|([^,]*))/g;
-          const row = [];
-          let match;
-          while ((match = regex.exec(lines[i])) !== null) {
-            if (match.index === regex.lastIndex) regex.lastIndex++;
-            const val = match[1] !== undefined ? match[1] : match[2];
-            if (val !== undefined) row.push(val.trim());
-          }
-          if (row.length > 0) rows.push(row);
-        }
-        return rows;
-      };
-
-      const rows = parseCsvLines(csvText);
       const itemsMap = new Map();
+      const distinctDates = new Set();
       let rowIdx = 0;
 
-      for (const row of rows) {
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
         const rawDate = row[1] || '';
-        const parts = rawDate.split('-');
-        let normalizedDate = rawDate;
-        if (parts.length === 3) {
-          normalizedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-        }
-        if (normalizedDate !== d) continue;
+        if (!rawDate) continue;
 
+        const normalizedDate = normalizeDateIso(rawDate);
+        if (!normalizedDate) continue;
+
+        distinctDates.add(normalizedDate);
         rowIdx++;
+
         const masterId = row[0] || '';
         const stallName = row[2] || '';
         const bookerName = row[3] || 'ไม่ระบุชื่อ';
@@ -4095,6 +4095,7 @@ export function BookingProvider({ children }) {
         const cleanDate = normalizedDate.replace(/-/g, '');
         const uniqueId = `BK-${cleanDate}-${cleanStall || 'S'}-${rowIdx}`;
 
+        // Deduplicate by Date + Stall to keep the most relevant entry
         itemsMap.set(`${normalizedDate}_${stallName}`, {
           id: uniqueId,
           date: normalizedDate,
@@ -4119,7 +4120,7 @@ export function BookingProvider({ children }) {
 
       const dailyItems = Array.from(itemsMap.values());
       if (dailyItems.length > 0) {
-        // Upsert daily items
+        // Upsert all daily items in chunks of 100
         for (let i = 0; i < dailyItems.length; i += 100) {
           const chunk = dailyItems.slice(i, i + 100);
           await supabase.from('bookings').upsert(chunk);
@@ -4127,10 +4128,53 @@ export function BookingProvider({ children }) {
       }
 
       await fetchBookingsAndStorage();
-      showAlert(`ซิงค์ข้อมูลรายวันของวันที่ ${d} สำเร็จเรียบร้อยแล้ว!\n• อัปเดตข้อมูลแผงค้า: ${dailyItems.length} แผง`, "ซิงค์สำเร็จ");
+
+      if (!isSilent) {
+        showAlert(`ซิงค์ข้อมูลการจองรายวันทั้งหมดสำเร็จเรียบร้อยแล้ว!\n• นำเข้าการจองทั้งหมด: ${dailyItems.length} รายการ\n• ครอบคลุม: ${distinctDates.size} วัน`, "ซิงค์สำเร็จ");
+      }
+      return { success: true, dailyCount: dailyItems.length, dateCount: distinctDates.size };
     } catch (e) {
-      console.error('Error syncing daily legacy:', e);
-      showAlert("เกิดข้อผิดพลาดในการซิงค์ข้อมูลรายวัน: " + e.message, "ข้อผิดพลาด", true);
+      console.error('Error syncing all daily legacy:', e);
+      if (!isSilent) {
+        showAlert("เกิดข้อผิดพลาดในการซิงค์ข้อมูลรายวันทั้งหมด: " + e.message, "ข้อผิดพลาด", true);
+      }
+      return { success: false, error: e };
+    } finally {
+      setSyncingLegacy(false);
+    }
+  };
+
+  // 🚀 3. ONE-CLICK FULL SYNC: Import ALL Legacy Data (Daily + Monthly + Finance)
+  const handleSyncAllFromLegacy = async () => {
+    const isConfirmed = await showConfirm({
+      title: '🚀 ยืนยันการดึงและแปลงข้อมูลระบบเก่าทั้งหมด',
+      message: 'ระบบจะทำการดึงข้อมูล "ทั้งหมดทุกส่วน" จาก Google Sheets ได้แก่:\n1. ข้อมูลการจองรายวันทั้งหมดทุกวัน\n2. ข้อมูลสัญญารายเดือนทั้งหมด\n3. ประวัติธุรกรรมและการเงินทั้งหมด\n\nพร้อมแปลงโครงสร้างเข้าสู่ระบบใหม่อัตโนมัติในคลิกเดียว',
+      confirmText: 'เริ่มดึงข้อมูลทั้งหมดทันที',
+      cancelText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
+
+    setSyncingLegacy(true);
+    try {
+      // 1. Sync Monthly & Finance
+      const monthlyRes = await handleSyncFromLegacySheets(true);
+      // 2. Sync All Daily Bookings
+      const dailyRes = await handleSyncDailyFromLegacy(true);
+
+      // Refresh all state
+      await fetchAllMonthly();
+      await fetchBookingsAndStorage();
+
+      showAlert(
+        `🎉 ดึงและแปลงข้อมูลระบบเก่าทั้งหมดสำเร็จเรียบร้อยแล้ว!\n\n` +
+        `• 📅 การจองรายวันทั้งหมด: ${dailyRes.dailyCount || 0} แผง (${dailyRes.dateCount || 0} วัน)\n` +
+        `• 🏢 สัญญารายเดือนทั้งหมด: ${monthlyRes.monthlyCount || 0} สัญญา\n` +
+        `• 💳 รายการธุรกรรมการเงิน: ${monthlyRes.txnCount || 0} ธุรกรรม`,
+        "ดึงข้อมูลสำเร็จครบถ้วน"
+      );
+    } catch (e) {
+      console.error('Error in full legacy sync:', e);
+      showAlert("เกิดข้อผิดพลาดในการดึงข้อมูลทั้งหมด: " + e.message, "ข้อผิดพลาด", true);
     } finally {
       setSyncingLegacy(false);
     }
@@ -4622,6 +4666,7 @@ export function BookingProvider({ children }) {
     handleSaveEditedMonthlyBooking,
     handleSyncFromLegacySheets,
     handleSyncDailyFromLegacy,
+    handleSyncAllFromLegacy,
     syncingLegacy,
     handleSearch,
     handleSlipChange,
