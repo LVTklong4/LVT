@@ -158,21 +158,56 @@ export function FinanceProvider({ children }) {
       let cashOut = 0;
       let transferOut = 0;
 
+      // Detailed category breakdown (Cash vs Transfer)
+      const breakdown = {
+        dailyStall: { cash: 0, transfer: 0, total: 0 },
+        monthly: { cash: 0, transfer: 0, total: 0 },
+        klongthom: { cash: 0, transfer: 0, total: 0 },
+        storage: { cash: 0, transfer: 0, total: 0 },
+        otherIncome: { cash: 0, transfer: 0, total: 0 },
+        expenses: { cash: 0, transfer: 0, total: 0 }
+      };
+
       // 1. Transactions
       txns.forEach(t => {
-        const amt = parseFloat(t.total_amount) || 0;
-        const isCash = t.method === 'Cash' || t.method === 'เงินสด';
+        const amt = parseFloat(t.total_amount || t.amount) || 0;
+        const isExp = t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.bill_type === 'รายจ่าย';
+        const isCash = t.method === 'Cash' || t.method === 'เงินสด' || t.payment_method === 'Cash' || t.payment_method === 'เงินสด';
         
-        if (isCash) cashIn += amt; else transferIn += amt;
-
-        if (t.category?.includes('คลองถม')) {
-          klongthomIncome += amt;
-        } else if (t.category?.includes('ฝากของ')) {
-          storageIncome += amt;
-        } else if (t.booking_ref && (t.category?.includes('รายเดือน') || t.category?.includes('ส่วนลด'))) {
-          monthlyIncome += amt;
+        if (isExp) {
+          totalExpenses += amt;
+          if (isCash) {
+            cashOut += amt;
+            breakdown.expenses.cash += amt;
+          } else {
+            transferOut += amt;
+            breakdown.expenses.transfer += amt;
+          }
+          breakdown.expenses.total += amt;
         } else {
-          dailyStallIncome += amt;
+          if (isCash) cashIn += amt; else transferIn += amt;
+
+          if (t.category?.includes('คลองถม')) {
+            klongthomIncome += amt;
+            if (isCash) breakdown.klongthom.cash += amt; else breakdown.klongthom.transfer += amt;
+            breakdown.klongthom.total += amt;
+          } else if (t.category?.includes('ฝากของ')) {
+            storageIncome += amt;
+            if (isCash) breakdown.storage.cash += amt; else breakdown.storage.transfer += amt;
+            breakdown.storage.total += amt;
+          } else if (t.booking_ref && (t.category?.includes('รายเดือน') || t.category?.includes('ส่วนลด') || t.category?.includes('สัญญา'))) {
+            monthlyIncome += amt;
+            if (isCash) breakdown.monthly.cash += amt; else breakdown.monthly.transfer += amt;
+            breakdown.monthly.total += amt;
+          } else if (t.category?.includes('รายได้อื่นๆ') || t.category?.includes('รายรับอื่นๆ')) {
+            otherIncTotal += amt;
+            if (isCash) breakdown.otherIncome.cash += amt; else breakdown.otherIncome.transfer += amt;
+            breakdown.otherIncome.total += amt;
+          } else {
+            dailyStallIncome += amt;
+            if (isCash) breakdown.dailyStall.cash += amt; else breakdown.dailyStall.transfer += amt;
+            breakdown.dailyStall.total += amt;
+          }
         }
       });
 
@@ -184,24 +219,58 @@ export function FinanceProvider({ children }) {
           const hasTxn = txns.some(t => t.booking_ref === b.id);
           if (!hasTxn) {
             dailyStallIncome += amt;
-            if (b.payment_method === 'เงินสด' || b.payment_method === 'Cash') cashIn += amt; else transferIn += amt;
+            const isCash = b.payment_method === 'เงินสด' || b.payment_method === 'Cash';
+            if (isCash) {
+              cashIn += amt;
+              breakdown.dailyStall.cash += amt;
+            } else {
+              transferIn += amt;
+              breakdown.dailyStall.transfer += amt;
+            }
+            breakdown.dailyStall.total += amt;
           }
         }
       });
 
-      // 3. Other Income
+      // 3. Other Income (Legacy/Direct)
       otherIncome.forEach(inc => {
-        const amt = parseFloat(inc.amount) || 0;
-        otherIncTotal += amt;
-        if (inc.method === 'Cash' || inc.method === 'เงินสด') cashIn += amt; else transferIn += amt;
+        const hasTxn = txns.some(t => t.id === inc.id);
+        if (!hasTxn) {
+          const amt = parseFloat(inc.amount) || 0;
+          otherIncTotal += amt;
+          const isCash = inc.method === 'Cash' || inc.method === 'เงินสด';
+          if (isCash) {
+            cashIn += amt;
+            breakdown.otherIncome.cash += amt;
+          } else {
+            transferIn += amt;
+            breakdown.otherIncome.transfer += amt;
+          }
+          breakdown.otherIncome.total += amt;
+        }
       });
 
-      // 4. Expenses
+      // 4. Expenses (Legacy/Direct)
       expenses.forEach(exp => {
-        const amt = parseFloat(exp.amount) || 0;
-        totalExpenses += amt;
-        if (exp.method === 'Cash' || exp.method === 'เงินสด') cashOut += amt; else transferOut += amt;
+        const hasTxn = txns.some(t => t.id === exp.id);
+        if (!hasTxn) {
+          const amt = parseFloat(exp.amount) || 0;
+          totalExpenses += amt;
+          const isCash = exp.method === 'Cash' || exp.method === 'เงินสด';
+          if (isCash) {
+            cashOut += amt;
+            breakdown.expenses.cash += amt;
+          } else {
+            transferOut += amt;
+            breakdown.expenses.transfer += amt;
+          }
+          breakdown.expenses.total += amt;
+        }
       });
+
+      const totalIncomeCash = breakdown.dailyStall.cash + breakdown.monthly.cash + breakdown.klongthom.cash + breakdown.storage.cash + breakdown.otherIncome.cash;
+      const totalIncomeTransfer = breakdown.dailyStall.transfer + breakdown.monthly.transfer + breakdown.klongthom.transfer + breakdown.storage.transfer + breakdown.otherIncome.transfer;
+      const totalIncomeAll = totalIncomeCash + totalIncomeTransfer;
 
       const summary = {
         date: selectedDate,
@@ -210,14 +279,22 @@ export function FinanceProvider({ children }) {
         klongthomIncome,
         storageIncome,
         otherIncome: otherIncTotal,
-        totalIncome: dailyStallIncome + monthlyIncome + klongthomIncome + storageIncome + otherIncTotal,
+        totalIncome: totalIncomeAll,
         totalExpenses,
-        netProfit: (dailyStallIncome + monthlyIncome + klongthomIncome + storageIncome + otherIncTotal) - totalExpenses,
+        netProfit: totalIncomeAll - totalExpenses,
         cashIn,
         transferIn,
         cashOut,
         transferOut,
         expectedCashInDrawer: cashIn - cashOut, // before float
+        breakdown: {
+          ...breakdown,
+          totalIncome: {
+            cash: totalIncomeCash,
+            transfer: totalIncomeTransfer,
+            total: totalIncomeAll
+          }
+        },
         existingClosing
       };
 

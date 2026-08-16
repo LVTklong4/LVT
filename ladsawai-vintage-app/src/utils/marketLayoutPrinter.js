@@ -97,7 +97,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
               // Unpaid = Warm Amber/Orange (matching main map)
               cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
               productText = booking.product || 'ประจำ';
-              unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ประจำ'}`);
+              // Monthly unpaid stalls are excluded from the field ticket inspection bottom list
             }
           } else {
             // Monthly stall = Lavender / Soft Purple (matching main map)
@@ -256,7 +256,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
 
             <div>
               <div class="unpaid-section">
-                <strong style="color: #9a3412;">ค้างชำระ (รายวัน/ประจำ):</strong> ${unpaidText}
+                <strong style="color: #9a3412;">ล็อคค้างชำระ (เฉพาะรายวันสำหรับตรวจตั๋ว):</strong> ${unpaidText}
               </div>
 
               <div class="footer-row">
