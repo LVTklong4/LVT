@@ -36,6 +36,18 @@ export default function PreRenewalEditSubModal() {
               </div>
 
               <div className="p-4 overflow-y-auto flex flex-col gap-3.5">
+                {/* Booker Name */}
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="font-bold text-gray-700">ชื่อผู้ค้า / ผู้เช่า <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={bulkRenewEditingItem.booker_name || ''}
+                    onChange={(e) => setBulkRenewEditingItem({ ...bulkRenewEditingItem, booker_name: e.target.value })}
+                    className="p-2 border border-purple-200 rounded-lg bg-white font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-xs"
+                    placeholder="ระบุชื่อผู้ค้า"
+                  />
+                </div>
+
                 {/* Customer Type */}
                 <div className="flex flex-col gap-1">
                   <label className="font-bold text-gray-700">ประเภทลูกค้า</label>
@@ -384,6 +396,8 @@ export default function PreRenewalEditSubModal() {
                     setBulkRenewEditData({
                       ...bulkRenewEditData,
                       [bulkRenewEditingItem.id]: {
+                        booker_name: bulkRenewEditingItem.booker_name,
+                        customer_name: bulkRenewEditingItem.booker_name,
                         customer_type: bulkRenewEditingItem.customer_type,
                         product: bulkRenewEditingItem.product,
                         phone: bulkRenewEditingItem.phone,
@@ -397,7 +411,7 @@ export default function PreRenewalEditSubModal() {
                     });
                     setBulkRenewEditingItem(null);
                   }}
-                  className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded font-bold cursor-pointer"
+                  className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg font-bold cursor-pointer transition-all shadow-xs"
                 >
                   บันทึกแก้ไข
                 </button>

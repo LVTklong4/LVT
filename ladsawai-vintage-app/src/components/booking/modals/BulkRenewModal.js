@@ -408,10 +408,50 @@ export default function BulkRenewModal() {
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            let editStailsJSON = item.stall_details;
+                                            // Helper to normalize selected days string (Thai/English -> Wed, Sat, Sun)
+                                            const rawDaysStr = String(dispDays || '').toLowerCase();
+                                            const orderedDays = [];
+                                            if (rawDaysStr.includes('wed') || rawDaysStr.includes('พุธ')) orderedDays.push('Wed');
+                                            if (rawDaysStr.includes('sat') || rawDaysStr.includes('เสาร์')) orderedDays.push('Sat');
+                                            if (rawDaysStr.includes('sun') || rawDaysStr.includes('อาทิตย์')) orderedDays.push('Sun');
+                                            const normalizedDaysStr = orderedDays.length > 0 ? orderedDays.join(', ') : 'Wed, Sat, Sun';
+
+                                            const activeDayNums = [];
+                                            if (normalizedDaysStr.includes('Wed')) activeDayNums.push(3);
+                                            if (normalizedDaysStr.includes('Sat')) activeDayNums.push(6);
+                                            if (normalizedDaysStr.includes('Sun')) activeDayNums.push(0);
+
+                                            // Resolve raw stall details array
+                                            let resolvedRawStalls = [];
+                                            const stallDetailsSource = customEdit.stall_details || item.stall_details;
+                                            try {
+                                              if (stallDetailsSource && typeof stallDetailsSource === 'string' && stallDetailsSource.trim() !== '' && stallDetailsSource !== '[]') {
+                                                const parsed = JSON.parse(stallDetailsSource);
+                                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                                  resolvedRawStalls = parsed.map(st => ({
+                                                    name: st.name || st.stall || '',
+                                                    days: (Array.isArray(st.days) && st.days.length > 0) ? st.days : activeDayNums
+                                                  })).filter(st => st.name);
+                                                }
+                                              }
+                                            } catch (e) {}
+
+                                            // Fallback from stalls string if empty
+                                            if (resolvedRawStalls.length === 0 && (dispStalls || item.stalls)) {
+                                              const rawStallNames = String(dispStalls || item.stalls || '')
+                                                .split(',')
+                                                .map(s => s.replace(/[\[\]]/g, '').trim())
+                                                .filter(Boolean);
+
+                                              resolvedRawStalls = rawStallNames.map(sName => ({
+                                                name: sName,
+                                                days: activeDayNums.length > 0 ? [...activeDayNums] : [3, 6, 0]
+                                              }));
+                                            }
+
                                             setBulkRenewEditingItem({
                                               id: item.id,
-                                              booker_name: item.booker_name,
+                                              booker_name: dispBookerName,
                                               customer_type: dispType,
                                               product: dispProduct,
                                               phone: dispPhone,
@@ -419,9 +459,9 @@ export default function BulkRenewModal() {
                                               storage_fee: String(dispStorage),
                                               elec_unit: String(dispElec),
                                               total_price: String(customEdit.total_price !== undefined ? customEdit.total_price : item.total_price || '0'),
-                                              selected_days: dispDays,
+                                              selected_days: normalizedDaysStr,
                                               stall_details: dispStalls,
-                                              raw_stall_details: JSON.parse(editStailsJSON || '[]')
+                                              raw_stall_details: resolvedRawStalls
                                             });
                                           }}
                                           className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 rounded text-[10px] font-bold cursor-pointer transition-colors"

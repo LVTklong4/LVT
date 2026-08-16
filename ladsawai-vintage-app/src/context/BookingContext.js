@@ -3518,6 +3518,7 @@ export function BookingProvider({ children }) {
 
         // Apply edits if pre-edited
         const customEdit = bulkRenewEditData[oldId] || {};
+        const bookerName = customEdit.booker_name !== undefined ? customEdit.booker_name : item.booker_name;
         const customerType = customEdit.customer_type || item.customer_type || 'Standard';
         const product = customEdit.product !== undefined ? customEdit.product : item.product || '';
         const phone = customEdit.phone !== undefined ? customEdit.phone : item.phone || '';
@@ -3583,7 +3584,8 @@ export function BookingProvider({ children }) {
                 id: uniqueDailyId,
                 date: dateStr,
                 stall_name: stallName,
-                booker_name: item.booker_name,
+                booker_name: bookerName,
+                customer_name: bookerName,
                 product: product,
                 type: 'รายเดือน',
                 elec_unit: elecUnitVal,
@@ -3629,7 +3631,8 @@ export function BookingProvider({ children }) {
           id: newBookingId,
           timestamp: new Date().toISOString(),
           start_date: nextStartDateStr,
-          booker_name: item.booker_name,
+          booker_name: bookerName,
+          customer_name: bookerName,
           stalls: stallsString,
           product: product,
           status: monthlyStatus,
