@@ -161,7 +161,7 @@ export default function RegisterPage() {
           {userProfile ? (
             <div className="w-20 h-20 rounded-full border-4 border-[#8B4513] overflow-hidden bg-[#E0C097] mb-3 shadow-inner">
               <img 
-                src={userProfile.pictureUrl || "https://img2.pic.in.th/pic/Profile-Alpha_0.png"} 
+                src={userProfile.pictureUrl || "/logo.svg"} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
               />

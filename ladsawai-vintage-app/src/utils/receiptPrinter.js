@@ -167,7 +167,7 @@ export function generateReceiptHTML({
       </head>
       <body>
         <div class="center">
-          <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+          <img class="logo" src="/logo.svg" alt="Logo" />
           <div class="title">ตลาดลาดสวายวินเทจ</div>
           <div class="subtitle">Ladsawai Vintage Market</div>
           <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>

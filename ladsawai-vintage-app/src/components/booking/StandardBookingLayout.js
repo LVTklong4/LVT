@@ -180,7 +180,7 @@ export default function StandardBookingLayout() {
           
           {/* Logo & title */}
           <div className="flex items-center gap-2">
-            <img src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" className="h-10 w-10 object-contain drop-shadow-sm" />
+            <img src="/logo.svg" alt="Logo" className="h-10 w-10 object-contain drop-shadow-sm" />
             <div>
               <h1 className="text-lg font-bold text-gray-800 leading-none">ตลาดนัดลาดสวายวินเทจ</h1>
               <p className="text-[10px] text-gray-500 font-medium">Ladsawai Vintage Market System (LVMS)</p>
@@ -365,9 +365,9 @@ export default function StandardBookingLayout() {
                   title={`ผู้ใช้งาน: ${adminUser?.name || 'Admin'}`}
                 >
                   <img 
-                    src="https://img2.pic.in.th/pic/Profile-Alpha_0.png"
+                    src={adminUser?.picture || "/logo.svg"}
                     alt="Profile"
-                    className="w-8 h-8 rounded-full border-2 border-amber-800 hover:border-[#8B4513] transition-all object-cover shadow-md"
+                    className="w-8 h-8 rounded-full border-2 border-amber-800 hover:border-[#8B4513] transition-all object-cover shadow-md bg-white"
                   />
                 </button>
 
@@ -741,7 +741,7 @@ export default function StandardBookingLayout() {
                   
                   <div className="flex flex-col items-center mb-3">
                     <img 
-                      src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" 
+                      src="/logo.svg" 
                       alt="LVT Logo" 
                       className="w-16 h-16 object-contain mb-1"
                     />

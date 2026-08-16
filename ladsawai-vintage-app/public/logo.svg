@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="lvtBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="50%" stop-color="#047857" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="lvtShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Outer Emblem Circle -->
+  <circle cx="100" cy="100" r="92" fill="url(#lvtBgGrad)" stroke="url(#goldGrad)" stroke-width="5" filter="url(#lvtShadow)" />
+  <circle cx="100" cy="100" r="84" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" stroke-dasharray="4,2" />
+
+  <!-- Market Canopy / Vintage Roof Icon -->
+  <path d="M 60 78 L 100 48 L 140 78 Z" fill="url(#goldGrad)" />
+  <path d="M 60 78 Q 70 88 80 78 Q 90 88 100 78 Q 110 88 120 78 Q 130 88 140 78 L 140 84 Q 130 94 120 84 Q 110 94 100 84 Q 90 94 80 84 Q 70 94 60 84 Z" fill="#ffffff" opacity="0.9" />
+
+  <!-- Main Letters LVT -->
+  <text x="100" y="124" font-family="'Sarabun', 'Arial Black', sans-serif" font-size="34" font-weight="900" fill="url(#goldGrad)" text-anchor="middle" letter-spacing="3">LVT</text>
+
+  <!-- Subtitle Ribbon Text -->
+  <rect x="36" y="136" width="128" height="22" rx="11" fill="#022c22" stroke="url(#goldGrad)" stroke-width="1.5" />
+  <text x="100" y="151" font-family="'Sarabun', sans-serif" font-size="10.5" font-weight="800" fill="#fef3c7" text-anchor="middle" letter-spacing="0.5">ตลาดลาดสวายวินเทจ</text>
+
+  <!-- Stars -->
+  <path d="M 52 108 L 54 112 L 58 112 L 55 114 L 56 118 L 52 115 L 48 118 L 49 114 L 46 112 L 50 112 Z" fill="url(#goldGrad)" />
+  <path d="M 148 108 L 150 112 L 154 112 L 151 114 L 152 118 L 148 115 L 144 118 L 145 114 L 142 112 L 146 112 Z" fill="url(#goldGrad)" />
+</svg>

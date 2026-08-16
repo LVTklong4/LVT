@@ -171,7 +171,7 @@ export const printOffGridReceipt = (bookingObj, adminUser, showAlert) => {
       </head>
       <body>
         <div class="center">
-          <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+          <img class="logo" src="/logo.svg" alt="Logo" />
           <div class="title">ตลาดลาดสวายวินเทจ</div>
           <div class="subtitle">Ladsawai Vintage Market</div>
           <div class="subtitle">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน (นอกผัง)</div>

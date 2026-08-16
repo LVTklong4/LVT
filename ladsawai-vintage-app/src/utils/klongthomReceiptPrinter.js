@@ -55,7 +55,7 @@ export const printBatchKlongThomTickets = (params, adminUser, showAlert) => {
       ticketsHTML.push(`
         <div class="ticket">
           <div class="center">
-            <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+            <img class="logo" src="/logo.svg" alt="Logo" />
             <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
             
             <div class="thick-divider"></div>
@@ -118,7 +118,7 @@ export const printBatchKlongThomTickets = (params, adminUser, showAlert) => {
           <!-- PART 2: หางตั๋ว (RECEIPT) -->
           <div class="receipt-part">
             <div class="center">
-              <img class="logo" src="https://img2.pic.in.th/pic/Profile-Alpha_0.png" alt="Logo" />
+              <img class="logo" src="/logo.svg" alt="Logo" />
               <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
               
               <div class="thick-divider"></div>
