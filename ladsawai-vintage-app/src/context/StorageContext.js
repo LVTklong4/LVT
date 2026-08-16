@@ -533,7 +533,7 @@ export function StorageProvider({ children }) {
         </head>
         <body>
           <div class="center">
-            <img class="logo" src="/logo.svg" alt="Logo" />
+            <img class="logo" src="/logo.png" alt="Logo" />
             <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
             <div class="subtitle">เลขที่ 52/34 หมู่ 5</div>
             <div class="subtitle">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>

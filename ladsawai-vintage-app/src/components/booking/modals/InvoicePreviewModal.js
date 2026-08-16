@@ -237,7 +237,7 @@ export default function InvoicePreviewModal() {
         </head>
         <body>
           <div class="center">
-            <img src="/logo.svg" class="logo" />
+            <img src="/logo.png" class="logo" />
             <div class="title">ตลาดนัดลาดสวายวินเทจ</div>
             <div class="subtitle">ใบแจ้งยอดชำระเงิน (Invoice)</div>
           </div>
@@ -338,7 +338,7 @@ export default function InvoicePreviewModal() {
               <div id="lvt-invoice-print-area" className="p-6 bg-[#FFFDF9] text-left flex flex-col gap-4">
                 {/* Header Info */}
                 <div className="flex flex-col items-center text-center gap-1">
-                  <img src="/logo.svg" alt="Logo" className="h-14 w-14 object-contain" />
+                  <img src="/logo.png" alt="Logo" className="h-16 w-16 object-contain drop-shadow-sm" />
                   <h2 className="font-extrabold text-base text-gray-900 mt-1">ตลาดนัดลาดสวายวินเทจ</h2>
                   <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-0.5 rounded-full border border-purple-200">
                     ใบแจ้งยอดชำระเงิน (Invoice)
