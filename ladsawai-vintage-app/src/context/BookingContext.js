@@ -3904,6 +3904,62 @@ export function BookingProvider({ children }) {
     return dateStr.trim();
   };
 
+  const parseMonthToIso = (monthStr, startDateStr) => {
+    const thaiMonthMap = {
+      'มกราคม': '01', 'ม.ค.': '01',
+      'กุมภาพันธ์': '02', 'ก.พ.': '02',
+      'มีนาคม': '03', 'มี.ค.': '03',
+      'เมษายน': '04', 'เม.ย.': '04',
+      'พฤษภาคม': '05', 'พ.ค.': '05',
+      'มิถุนายน': '06', 'มิ.ย.': '06',
+      'กรกฎาคม': '07', 'ก.ค.': '07',
+      'สิงหาคม': '08', 'ส.ค.': '08',
+      'กันยายน': '09', 'ก.ย.': '09',
+      'ตุลาคม': '10', 'ต.ค.': '10',
+      'พฤศจิกายน': '11', 'พ.ย.': '11',
+      'ธันวาคม': '12', 'ธ.ค.': '12'
+    };
+
+    const raw = String(monthStr || '').trim();
+
+    for (const [thMonth, monthNum] of Object.entries(thaiMonthMap)) {
+      if (raw.includes(thMonth)) {
+        const yearMatch = raw.match(/\b(25\d{2}|20\d{2})\b/);
+        let year = '2026';
+        if (yearMatch) {
+          const yNum = parseInt(yearMatch[1], 10);
+          year = yNum > 2400 ? String(yNum - 543) : String(yNum);
+        } else if (startDateStr) {
+          const sMatch = startDateStr.match(/\b(25\d{2}|20\d{2})\b/);
+          if (sMatch) {
+            const yNum = parseInt(sMatch[1], 10);
+            year = yNum > 2400 ? String(yNum - 543) : String(yNum);
+          }
+        }
+        return `${year}-${monthNum}`;
+      }
+    }
+
+    const isoMatch = raw.match(/(\d{4})-(\d{2})/);
+    if (isoMatch) {
+      const yNum = parseInt(isoMatch[1], 10);
+      const year = yNum > 2400 ? String(yNum - 543) : String(yNum);
+      return `${year}-${isoMatch[2]}`;
+    }
+
+    if (startDateStr) {
+      const sParts = startDateStr.split('-');
+      if (sParts.length >= 2) {
+        let yNum = parseInt(sParts[0], 10);
+        let year = yNum > 2400 ? String(yNum - 543) : String(yNum);
+        let m = sParts[1].padStart(2, '0');
+        return `${year}-${m}`;
+      }
+    }
+
+    return '2026-08';
+  };
+
   // 🔄 1. Smart Sync Monthly Contracts & Finance Transactions (ALL MONTHS & ALL DATES)
   const handleSyncFromLegacySheets = async (isSilent = false) => {
     if (!isSilent) {
@@ -3934,11 +3990,8 @@ export function BookingProvider({ children }) {
         if (!id || id === 'Booking ID') continue;
 
         const startDate = r[2] || '';
-        const bookingMonthRaw = r[13] || startDate.substring(0, 7) || '2026-08';
-        let normalizedMonth = '2026-08';
-        if (bookingMonthRaw.match(/^\d{4}-\d{2}/)) {
-          normalizedMonth = bookingMonthRaw.match(/^\d{4}-\d{2}/)[0];
-        }
+        const bookingMonthRaw = r[13] || '';
+        const normalizedMonth = parseMonthToIso(bookingMonthRaw, startDate);
 
         const bookerName = r[3] || 'ไม่ระบุชื่อ';
         const totalPrice = parseFloat(r[8]) || 0;
