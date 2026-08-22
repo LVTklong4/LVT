@@ -272,18 +272,30 @@ export default function MonthlyMgmtModal() {
                                   โน้ต: {txn.note}
                                 </div>
                               )}
-                              {txn.slip_url && (
-                                <div className="mt-1.5 flex items-center justify-between bg-blue-50/50 p-1.5 rounded border border-blue-100/50 text-[10px]">
-                                  <span className="text-blue-900 font-bold flex items-center gap-1">📎 มีหลักฐานการโอนเงิน (สลิป)</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setSlipPreviewUrl(txn.slip_url)}
-                                    className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer transition-all active:scale-95 text-[9px]"
-                                  >
-                                    ดูรูปภาพสลิป
-                                  </button>
-                                </div>
-                              )}
+                              {(() => {
+                                const isCashOrDiscount = txn.method === 'เงินสด' || txn.method === 'Cash' || txn.method === 'ส่วนลด';
+                                const hasValidSlip = !isCashOrDiscount && txn.slip_url && typeof txn.slip_url === 'string' && (
+                                  txn.slip_url.startsWith('http://') || 
+                                  txn.slip_url.startsWith('https://') || 
+                                  txn.slip_url.startsWith('data:image/') || 
+                                  txn.slip_url.startsWith('blob:')
+                                );
+
+                                if (!hasValidSlip) return null;
+
+                                return (
+                                  <div className="mt-1.5 flex items-center justify-between bg-blue-50/50 p-1.5 rounded border border-blue-100/50 text-[10px]">
+                                    <span className="text-blue-900 font-bold flex items-center gap-1">📎 มีหลักฐานการโอนเงิน (สลิป)</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSlipPreviewUrl(txn.slip_url)}
+                                      className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer transition-all active:scale-95 text-[9px]"
+                                    >
+                                      ดูรูปภาพสลิป
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                               <div className="text-[9px] text-gray-400 text-right mt-0.5">ผู้ทำรายการ: {txn.officer || '-'}</div>
                             </div>
                           ))}

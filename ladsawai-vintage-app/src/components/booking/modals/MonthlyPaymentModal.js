@@ -104,7 +104,14 @@ export default function MonthlyPaymentModal() {
                         <button
                           key={m.value}
                           type="button"
-                          onClick={() => setMonthlyPaymentForm({ ...monthlyPaymentForm, method: m.value })}
+                          onClick={() => {
+                            if (m.value !== 'โอนจ่าย') {
+                              setSlipPreviewUrl(null);
+                              setMonthlyPaymentForm({ ...monthlyPaymentForm, method: m.value, slip_base64: null });
+                            } else {
+                              setMonthlyPaymentForm({ ...monthlyPaymentForm, method: m.value });
+                            }
+                          }}
                           className={`flex items-center justify-center gap-1.5 py-2 border rounded-lg transition-all text-xs font-bold cursor-pointer ${
                             isActive ? m.activeClass + ' border-2 shadow-xs' : m.inactiveClass
                           }`}

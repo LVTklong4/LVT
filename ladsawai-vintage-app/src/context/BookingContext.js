@@ -4494,7 +4494,8 @@ export function BookingProvider({ children }) {
       if (!isConfirmed) return;
     }
 
-    setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '' });
+    setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '', slip_base64: null });
+    setSlipPreviewUrl(null);
     setShowMonthlyPaymentModal(true);
   };
 
