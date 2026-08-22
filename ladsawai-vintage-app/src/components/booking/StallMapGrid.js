@@ -8,10 +8,13 @@ export default function StallMapGrid() {
   const {
     stalls,
     bookings,
+    monthlyList,
     loading,
     selectedDate,
     highlightedStall,
-    handleStallClick
+    handleStallClick,
+    formatBookingMonth,
+    getBookingMonthStr
   } = useBooking();
 
   const maxCol = 20;
@@ -93,6 +96,17 @@ export default function StallMapGrid() {
 
                 const isFood = stall.type.includes('อาหาร') || stall.name.startsWith('F');
 
+                const isRegularBooking = booking && (
+                  booking.type === 'ประจำ' || 
+                  booking.type === 'Regular' || 
+                  (booking.master_id && (monthlyList || []).some(m => m.id === booking.master_id && m.customer_type === 'Regular')) ||
+                  (monthlyList || []).some(m => {
+                    const mMonth = formatBookingMonth ? formatBookingMonth(m.booking_month) : m.booking_month;
+                    const bMonth = getBookingMonthStr && formatBookingMonth ? formatBookingMonth(getBookingMonthStr(booking.date || selectedDate)) : '';
+                    return mMonth === bMonth && (m.stalls || '').includes(stall.name) && m.customer_type === 'Regular';
+                  })
+                );
+
                 if (stall.type === 'ทางเดิน') {
                   statusClass = "bg-walkway border-gray-600 opacity-60";
                 } else if (stall.type === 'อื่นๆ') {
@@ -102,7 +116,7 @@ export default function StallMapGrid() {
                     // ล็อคลา = ว่าง ปล่อยเช่ารายวันได้
                     statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                     statusText = priceText;
-                  } else if (booking.type === 'ประจำ' || booking.type === 'Regular') {
+                  } else if (isRegularBooking) {
                     // ล็อคประจำ (Regular) = สีส้มลายทาง พร้อมแสดงชื่อสินค้า
                     statusClass = "bg-unpaid text-amber-900";
                     statusText = booking.product || "ประจำ";
