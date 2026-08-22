@@ -97,53 +97,32 @@ export default function StallMapGrid() {
                   statusClass = "bg-walkway border-gray-600 opacity-60";
                 } else if (stall.type === 'อื่นๆ') {
                   statusClass = "bg-other-stall opacity-70";
-                } else if (stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
-                  if (booking) {
-                    if (booking.status === 'ลา') {
-                      statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
-                      statusText = priceText;
-                    } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-                      statusClass = "bg-occupied text-red-900";
-                      statusText = booking.product || "จองแล้ว";
-                    } else if (booking.status === 'ค้างชำระ' && booking.type === 'ประจำ') {
-                      statusClass = "bg-unpaid text-amber-900";
-                      statusText = booking.product || "ประจำ";
-                    } else if (booking.type === 'ประจำ') {
-                      statusClass = "bg-unpaid text-amber-900";
-                      statusText = booking.product || "ประจำ";
-                    } else {
-                      statusClass = "bg-monthly-stall";
-                      statusText = booking.product || "รายเดือน";
-                    }
-                  } else {
-                    statusClass = "bg-monthly-stall";
-                    statusText = "รายเดือน";
-                  }
-                } else {
-                  if (booking) {
-                    if (booking.status === 'ลา') {
-                      statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
-                      statusText = priceText;
-                    } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-                      statusClass = "bg-occupied text-red-900";
-                      statusText = booking.product || "จองแล้ว";
-                    } else if (booking.status === 'ค้างชำระ' && booking.type === 'ประจำ') {
-                      statusClass = "bg-unpaid text-amber-900";
-                      statusText = booking.product || "ประจำ";
-                    } else if (booking.type === 'ประจำ') {
-                      statusClass = "bg-unpaid text-amber-900";
-                      statusText = booking.product || "ประจำ";
-                    } else if (booking.type === 'รายเดือน') {
-                      statusClass = "bg-monthly-stall";
-                      statusText = booking.product || "รายเดือน";
-                    } else {
-                      statusClass = "bg-unpaid text-amber-900";
-                      statusText = booking.product || "จองแล้ว";
-                    }
-                  } else {
+                } else if (booking) {
+                  if (booking.status === 'ลา') {
+                    // ล็อคลา = ว่าง ปล่อยเช่ารายวันได้
                     statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                     statusText = priceText;
+                  } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
+                    // รายเดือนทั้งหมด (ทั้งชำระแล้วและค้างชำระ) = สีม่วงอ่อนเสมอ
+                    statusClass = "bg-monthly-stall";
+                    statusText = booking.product || "รายเดือน";
+                  } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
+                    // รายวันชำระแล้ว = สีแดง
+                    statusClass = "bg-occupied text-red-900";
+                    statusText = booking.product || "จองแล้ว";
+                  } else {
+                    // รายวันค้างชำระ = สีส้ม
+                    statusClass = "bg-unpaid text-amber-900";
+                    statusText = booking.product || "ค้างชำระ";
                   }
+                } else if (stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
+                  // ล็อคประเภทรายเดือน = สีม่วงอ่อน
+                  statusClass = "bg-monthly-stall";
+                  statusText = "รายเดือน";
+                } else {
+                  // ล็อครายวันว่าง = สีเขียว/ฟ้า
+                  statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
+                  statusText = priceText;
                 }
 
                 const isClickable = stall.type !== 'ทางเดิน' && stall.type !== 'อื่นๆ';

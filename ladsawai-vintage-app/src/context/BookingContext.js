@@ -448,36 +448,20 @@ export function BookingProvider({ children }) {
     if (day === 6) price = stall.price_sat;
     if (day === 0) price = stall.price_sun;
 
-    if (stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
-      if (booking) {
-        if (booking.status === 'ลา') {
-          return { isVacant: true, label: 'ว่าง (ปล่อยเช่ารายวัน)', price, product: '' };
-        } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-          return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'จองแล้ว' };
-        } else if (booking.status === 'ค้างชำระ' && booking.type === 'ประจำ') {
-          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || 'ประจำ' };
-        } else if (booking.type === 'ประจำ') {
-          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || 'ประจำ' };
-        } else {
-          return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'ร้านค้าประจำ' };
-        }
+    if (booking) {
+      if (booking.status === 'ลา') {
+        return { isVacant: true, label: 'ว่าง (ปล่อยเช่ารายวัน)', price, product: '' };
+      } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
+        return { isVacant: false, label: 'ไม่ว่าง (รายเดือน)', product: booking.product || 'รายเดือน' };
+      } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
+        return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'จองแล้ว' };
       } else {
-        return { isVacant: false, label: 'ไม่ว่าง (ร้านค้าประจำ)', product: 'ร้านค้าประจำ' };
+        return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || 'ค้างชำระ' };
       }
+    } else if (stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
+      return { isVacant: false, label: 'ไม่ว่าง (รายเดือน)', product: 'รายเดือน' };
     } else {
-      // Daily stall
-      if (booking) {
-        if (booking.status === 'ลา') {
-          return { isVacant: true, label: 'ว่าง', price, product: '' };
-        } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-          return { isVacant: false, label: 'ไม่ว่าง', product: booking.product || 'จองแล้ว' };
-        } else {
-          // Unpaid
-          return { isVacant: false, label: 'ไม่ว่าง (ค้างชำระ)', product: booking.product || (booking.type === 'ประจำ' ? 'ประจำ' : 'ค้างชำระ') };
-        }
-      } else {
-        return { isVacant: true, label: 'ว่าง', price, product: '' };
-      }
+      return { isVacant: true, label: 'ว่าง', price, product: '' };
     }
   };
 
