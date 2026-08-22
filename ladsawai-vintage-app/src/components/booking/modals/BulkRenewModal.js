@@ -108,17 +108,43 @@ export default function BulkRenewModal() {
                     );
                   }
 
-                  // 2. Count contracts per customer name in this source month
-                  const bookerCountMap = {};
+                  // Smart Identity Key Helper: Name + Phone (if phone exists) OR Name + Product (if no phone)
+                  const getCustomerIdentityKey = (item) => {
+                    if (!item) return '';
+                    const name = (item.booker_name || '').trim().toLowerCase();
+                    const phone = String(item.phone || '').replace(/[\s-]/g, '').trim();
+                    const product = (item.product || '').trim().toLowerCase();
+
+                    // If generic/empty name, avoid grouping as duplicate
+                    if (!name || name === 'ไม่ระบุชื่อ' || name === 'ร้านค้าประจำ' || name === '-') {
+                      return `UNIQUE_${item.id || Math.random()}`;
+                    }
+
+                    // 1. If has valid phone (>= 8 digits) -> Name + Phone
+                    if (phone && phone !== '-' && phone !== '0' && phone.length >= 8) {
+                      return `${name}__PHONE__${phone}`;
+                    }
+
+                    // 2. If NO phone -> Name + Product (to distinguish different sellers with same name)
+                    if (product && product !== '-') {
+                      return `${name}__PROD__${product}`;
+                    }
+
+                    // 3. Fallback: Name only
+                    return `${name}__NAMEONLY`;
+                  };
+
+                  // 2. Count contracts per customer identity in this source month
+                  const identityCountMap = {};
                   sourceBookings.forEach(item => {
-                    const name = (item.booker_name || '').trim();
-                    if (name) {
-                      bookerCountMap[name] = (bookerCountMap[name] || 0) + 1;
+                    const key = getCustomerIdentityKey(item);
+                    if (!key.startsWith('UNIQUE_')) {
+                      identityCountMap[key] = (identityCountMap[key] || 0) + 1;
                     }
                   });
 
-                  const duplicateCustomerNames = new Set(
-                    Object.keys(bookerCountMap).filter(name => bookerCountMap[name] > 1)
+                  const duplicateIdentityKeys = new Set(
+                    Object.keys(identityCountMap).filter(key => identityCountMap[key] > 1)
                   );
 
                   // 3. Filter by search query
@@ -141,8 +167,8 @@ export default function BulkRenewModal() {
                   // 4. Filter by duplicates only
                   if (filterDuplicatesOnly) {
                     sourceBookings = sourceBookings.filter(item => {
-                      const name = (item.booker_name || '').trim();
-                      return duplicateCustomerNames.has(name);
+                      const key = getCustomerIdentityKey(item);
+                      return duplicateIdentityKeys.has(key);
                     });
                   }
 
@@ -155,7 +181,11 @@ export default function BulkRenewModal() {
                   });
 
                   const isAlreadyRenewed = (item) => {
-                    return monthlyList.some(mb => mb.booker_name === item.booker_name && formatBookingMonth(mb.booking_month) === targetMonth);
+                    const itemKey = getCustomerIdentityKey(item);
+                    return monthlyList.some(mb => {
+                      if (formatBookingMonth(mb.booking_month) !== targetMonth) return false;
+                      return getCustomerIdentityKey(mb) === itemKey;
+                    });
                   };
 
                   const nonRenewedBookings = sourceBookings.filter(item => !isAlreadyRenewed(item));
@@ -170,7 +200,7 @@ export default function BulkRenewModal() {
                             <span>🔍 ผลการกรอง: แสดง {sourceBookings.length} รายการ</span>
                             {filterDuplicatesOnly && (
                               <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded text-[10px]">
-                                เฉพาะลูกค้าที่มีหลายสัญญา ({duplicateCustomerNames.size} คน)
+                                เฉพาะลูกค้าที่มีหลายสัญญา ({duplicateIdentityKeys.size} คน)
                               </span>
                             )}
                             {searchQuery && (
@@ -228,7 +258,7 @@ export default function BulkRenewModal() {
                                   </span>
                                 </button>
 
-                                {duplicateCustomerNames.size > 0 && (
+                                {duplicateIdentityKeys.size > 0 && (
                                   <button
                                     type="button"
                                     onClick={() => setFilterDuplicatesOnly(prev => !prev)}
@@ -237,10 +267,10 @@ export default function BulkRenewModal() {
                                         ? 'bg-amber-500 text-white border-amber-600 ring-1 ring-amber-400' 
                                         : 'bg-amber-100/90 text-amber-900 border-amber-300 hover:bg-amber-200'
                                     }`}
-                                    title="คลิกเพื่อกรองดูเฉพาะลูกค้าที่มีสัญญามากกว่า 1 ชุด (ขอเพิ่มล็อคกลางคัน)"
+                                    title="คลิกเพื่อกรองดูเฉพาะลูกค้าที่มีสัญญามากกว่า 1 ชุด (ระบุจากชื่อ+เบอร์ หรือ ชื่อ+สินค้า)"
                                   >
                                     <AlertTriangle className="w-3 h-3 text-amber-700" />
-                                    <span>พบซ้ำ {duplicateCustomerNames.size} คน</span>
+                                    <span>พบซ้ำ {duplicateIdentityKeys.size} คน</span>
                                   </button>
                                 )}
                               </div>
@@ -265,8 +295,8 @@ export default function BulkRenewModal() {
                               const renewed = isAlreadyRenewed(item);
                               const isChecked = bulkRenewCheckedIds.includes(item.id);
                               const customEdit = bulkRenewEditData[item.id] || {};
-                              const trimmedName = (item.booker_name || '').trim();
-                              const contractCount = bookerCountMap[trimmedName] || 1;
+                              const itemKey = getCustomerIdentityKey(item);
+                              const contractCount = identityCountMap[itemKey] || 1;
                               const isDuplicate = contractCount > 1;
                               
                               // Resolve display properties with custom edits
