@@ -78,57 +78,43 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
         let cellBg = 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;'; // default vacant cloth
         let productText = '';
 
+        const isMonthly = booking?.type === 'รายเดือน' || stall.type === 'รายเดือน' || String(stall.type || '').includes('รายเดือน');
+
         if (stall.type === 'ทางเดิน') {
           cellBg = 'background-color: #94a3b8; border: 1px solid #64748b; opacity: 0.7;';
         } else if (stall.type === 'อื่นๆ') {
           cellBg = 'background-color: #cbd5e1; border: 1px solid #94a3b8;';
-        } else if (stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
-          if (booking) {
-            if (booking.status === 'ลา') {
-              cellBg = isFood 
-                ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
-                : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
-              productText = 'ว่าง (ลา)';
-            } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-              // Paid = Soft Red (matching main map)
-              cellBg = 'background-color: #ffcdd2; border: 1px solid #e57373; color: #b71c1c;';
-              productText = booking.product || 'จองแล้ว';
-            } else {
-              // Unpaid = Warm Amber/Orange (matching main map)
-              cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
-              productText = booking.product || 'ประจำ';
-              // Monthly unpaid stalls are excluded from the field ticket inspection bottom list
-            }
-          } else {
-            // Monthly stall = Lavender / Soft Purple (matching main map)
-            cellBg = 'background-color: #d1c4e9; border: 1px solid #b39ddb; color: #4a148c;';
-            productText = 'รายเดือน';
-          }
-        } else {
-          // Daily Stall
-          if (booking) {
-            if (booking.status === 'ลา') {
-              cellBg = isFood 
-                ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
-                : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
-              productText = 'ว่าง (ลา)';
-            } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
-              // Paid = Soft Red (matching main map)
-              cellBg = 'background-color: #ffcdd2; border: 1px solid #e57373; color: #b71c1c;';
-              productText = booking.product || booking.booker_name || 'จองแล้ว';
-            } else {
-              // Unpaid = Warm Amber/Orange (matching main map)
-              cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
-              productText = booking.product || booking.booker_name || 'ค้างชำระ';
-              unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ค้างชำระ'}`);
-            }
-          } else {
-            // Vacant stall (Food = Green, Cloth = Blue)
+        } else if (booking) {
+          if (booking.status === 'ลา') {
+            // ล็อคลา = ว่าง ปล่อยเช่ารายวันได้
             cellBg = isFood 
               ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
               : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
-            productText = '';
+            productText = 'ว่าง (ลา)';
+          } else if (isMonthly) {
+            // รายเดือนทั้งหมด = สีม่วงอ่อนเสมอ (ไม่นำเข้าลิสต์ค้างชำระด้านล่าง)
+            cellBg = 'background-color: #d1c4e9; border: 1px solid #b39ddb; color: #4a148c;';
+            productText = booking.product || 'รายเดือน';
+          } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
+            // รายวันชำระแล้ว = สีแดง
+            cellBg = 'background-color: #ffcdd2; border: 1px solid #e57373; color: #b71c1c;';
+            productText = booking.product || booking.booker_name || 'จองแล้ว';
+          } else {
+            // รายวันค้างชำระ = สีส้ม (เฉพาะรายวันเท่านั้นที่นำเข้าลิสต์ด้านล่างสำหรับตรวจตั๋ว)
+            cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
+            productText = booking.product || booking.booker_name || 'ค้างชำระ';
+            unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ค้างชำระ'}`);
           }
+        } else if (isMonthly) {
+          // ล็อคประเภทรายเดือน = สีม่วงอ่อน
+          cellBg = 'background-color: #d1c4e9; border: 1px solid #b39ddb; color: #4a148c;';
+          productText = 'รายเดือน';
+        } else {
+          // ล็อครายวันว่าง = สีเขียว/ฟ้า
+          cellBg = isFood 
+            ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
+            : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
+          productText = '';
         }
 
         cellsHTML += `
