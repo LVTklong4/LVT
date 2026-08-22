@@ -4114,12 +4114,26 @@ export function BookingProvider({ children }) {
 
     setSyncingLegacy(true);
     try {
-      // 1. Fetch valid active monthly contract IDs from Supabase
-      const { data: validMonthlyRows, error: mbFetchErr } = await supabase
-        .from('monthly_bookings')
-        .select('id');
-      if (mbFetchErr) throw mbFetchErr;
-      const validMonthlyIds = new Set((validMonthlyRows || []).map(r => String(r.id).trim()));
+      // 1. Fetch ALL valid active monthly contract IDs from Supabase (with pagination)
+      let allMonthlyIds = [];
+      let fromIdx = 0;
+      const pageSize = 1000;
+      let hasMoreMb = true;
+      while (hasMoreMb) {
+        const { data: pageData, error: mbFetchErr } = await supabase
+          .from('monthly_bookings')
+          .select('id')
+          .range(fromIdx, fromIdx + pageSize - 1);
+        if (mbFetchErr) throw mbFetchErr;
+        if (pageData && pageData.length > 0) {
+          allMonthlyIds.push(...pageData.map(r => String(r.id).trim()));
+          fromIdx += pageSize;
+          if (pageData.length < pageSize) hasMoreMb = false;
+        } else {
+          hasMoreMb = false;
+        }
+      }
+      const validMonthlyIds = new Set(allMonthlyIds);
 
       const SHEET_ID_DAILY = '1R6bNYPRo6yjDtgoazddobauTgvQVQdxA1n67C10L-4I';
       const csvText = await fetchGoogleSheetCsv(SHEET_ID_DAILY, 'Bookings');
@@ -4307,12 +4321,26 @@ export function BookingProvider({ children }) {
   const fetchAllMonthly = async () => {
     setLoadingMonthly(true);
     try {
-      const { data, error } = await supabase
-        .from('monthly_bookings')
-        .select('*')
-        .order('timestamp', { ascending: false });
-      if (error) throw error;
-      setMonthlyList(data || []);
+      let allMbList = [];
+      let from = 0;
+      const step = 1000;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('monthly_bookings')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .range(from, from + step - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allMbList.push(...data);
+          from += step;
+          if (data.length < step) hasMore = false;
+        } else {
+          hasMore = false;
+        }
+      }
+      setMonthlyList(allMbList);
     } catch (e) {
       console.error(e);
       showAlert("ดึงข้อมูลรายเดือนไม่สำเร็จ", "ข้อผิดพลาด", true);
