@@ -4114,6 +4114,13 @@ export function BookingProvider({ children }) {
 
     setSyncingLegacy(true);
     try {
+      // 1. Fetch valid active monthly contract IDs from Supabase
+      const { data: validMonthlyRows, error: mbFetchErr } = await supabase
+        .from('monthly_bookings')
+        .select('id');
+      if (mbFetchErr) throw mbFetchErr;
+      const validMonthlyIds = new Set((validMonthlyRows || []).map(r => String(r.id).trim()));
+
       const SHEET_ID_DAILY = '1R6bNYPRo6yjDtgoazddobauTgvQVQdxA1n67C10L-4I';
       const csvText = await fetchGoogleSheetCsv(SHEET_ID_DAILY, 'Bookings');
       const rows = parseCsvAdvancedSafely(csvText);
@@ -4121,6 +4128,7 @@ export function BookingProvider({ children }) {
       const itemsMap = new Map();
       const distinctDates = new Set();
       let rowIdx = 0;
+      let skippedOrphanCount = 0;
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
@@ -4130,14 +4138,11 @@ export function BookingProvider({ children }) {
         const normalizedDate = normalizeDateIso(rawDate);
         if (!normalizedDate) continue;
 
-        distinctDates.add(normalizedDate);
-        rowIdx++;
-
-        const masterId = row[0] || '';
+        const masterId = String(row[0] || '').trim();
         const stallName = row[2] || '';
         const bookerName = row[3] || 'ไม่ระบุชื่อ';
         const product = row[4] || '';
-        const type = row[5] || 'รายวัน';
+        const type = (row[5] || 'รายวัน').trim();
         const elecUnit = parseFloat(row[6]) || 0;
         const elecPrice = parseFloat(row[7]) || 0;
         const stallPrice = parseFloat(row[8]) || 0;
@@ -4146,6 +4151,19 @@ export function BookingProvider({ children }) {
         const status = row[11] || 'ชำระแล้ว';
         const note = row[12] || '';
         const storageFee = parseFloat(row[15]) || 0;
+
+        // Strategy 1: Master ID Validation (Discard Orphaned Daily Records)
+        const isMonthlyType = type === 'รายเดือน' || type.toLowerCase().includes('monthly');
+        if (isMonthlyType || (masterId && masterId.startsWith('BK-'))) {
+          // If the master contract doesn't exist in monthly_bookings, discard this orphan row
+          if (masterId && !validMonthlyIds.has(masterId)) {
+            skippedOrphanCount++;
+            continue;
+          }
+        }
+
+        distinctDates.add(normalizedDate);
+        rowIdx++;
 
         const cleanStall = stallName.replace(/[^a-zA-Z0-9]/g, '');
         const cleanDate = normalizedDate.replace(/-/g, '');
@@ -4186,9 +4204,20 @@ export function BookingProvider({ children }) {
       await fetchBookingsAndStorage();
 
       if (!isSilent) {
-        showAlert(`ซิงค์ข้อมูลการจองรายวันทั้งหมดสำเร็จเรียบร้อยแล้ว!\n• นำเข้าการจองทั้งหมด: ${dailyItems.length} รายการ\n• ครอบคลุม: ${distinctDates.size} วัน`, "ซิงค์สำเร็จ");
+        showAlert(
+          `ซิงค์ข้อมูลการจองรายวันทั้งหมดสำเร็จเรียบร้อยแล้ว!\n` +
+          `• นำเข้าการจองที่ถูกต้อง: ${dailyItems.length} รายการ\n` +
+          `• กรองรายการกำพร้า/ซ้ำซ้อนทิ้ง: ${skippedOrphanCount} รายการ\n` +
+          `• ครอบคลุม: ${distinctDates.size} วัน`, 
+          "ซิงค์สำเร็จ"
+        );
       }
-      return { success: true, dailyCount: dailyItems.length, dateCount: distinctDates.size };
+      return { 
+        success: true, 
+        dailyCount: dailyItems.length, 
+        dateCount: distinctDates.size,
+        skippedOrphanCount 
+      };
     } catch (e) {
       console.error('Error syncing all daily legacy:', e);
       if (!isSilent) {
@@ -4224,6 +4253,7 @@ export function BookingProvider({ children }) {
       showAlert(
         `🎉 ดึงและแปลงข้อมูลระบบเก่าทั้งหมดสำเร็จเรียบร้อยแล้ว!\n\n` +
         `• 📅 การจองรายวันทั้งหมด: ${dailyRes.dailyCount || 0} แผง (${dailyRes.dateCount || 0} วัน)\n` +
+        `• 🧹 กรองรายการกำพร้า/ซ้ำซ้อนทิ้ง: ${dailyRes.skippedOrphanCount || 0} รายการ\n` +
         `• 🏢 สัญญารายเดือนทั้งหมด: ${monthlyRes.monthlyCount || 0} สัญญา\n` +
         `• 💳 รายการธุรกรรมการเงิน: ${monthlyRes.txnCount || 0} ธุรกรรม`,
         "ดึงข้อมูลสำเร็จครบถ้วน"
