@@ -102,8 +102,12 @@ export default function StallMapGrid() {
                     // ล็อคลา = ว่าง ปล่อยเช่ารายวันได้
                     statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                     statusText = priceText;
-                  } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
-                    // รายเดือนทั้งหมด (ทั้งชำระแล้วและค้างชำระ) = สีม่วงอ่อนเสมอ
+                  } else if (booking.type === 'ประจำ' || booking.type === 'Regular') {
+                    // ล็อคประจำ (Regular) = สีส้มลายทาง พร้อมแสดงชื่อสินค้า
+                    statusClass = "bg-unpaid text-amber-900";
+                    statusText = booking.product || "ประจำ";
+                  } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || String(stall.type || '').includes('รายเดือน')) {
+                    // รายเดือนสัญญาจริง (Standard, VIP, Room) = สีม่วงอ่อนเสมอ
                     statusClass = "bg-monthly-stall";
                     statusText = booking.product || "รายเดือน";
                   } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {

@@ -78,7 +78,8 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
         let cellBg = 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;'; // default vacant cloth
         let productText = '';
 
-        const isMonthly = booking?.type === 'รายเดือน' || stall.type === 'รายเดือน' || String(stall.type || '').includes('รายเดือน');
+        const isRegular = booking?.type === 'ประจำ' || booking?.type === 'Regular';
+        const isMonthly = !isRegular && (booking?.type === 'รายเดือน' || stall.type === 'รายเดือน' || String(stall.type || '').includes('รายเดือน'));
 
         if (stall.type === 'ทางเดิน') {
           cellBg = 'background-color: #94a3b8; border: 1px solid #64748b; opacity: 0.7;';
@@ -91,8 +92,13 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
               ? 'background-color: #dcedc8; border: 1px solid #aed581; color: #1b5e20;' 
               : 'background-color: #b3e5fc; border: 1px solid #81d4fa; color: #01579b;';
             productText = 'ว่าง (ลา)';
+          } else if (isRegular) {
+            // ล็อคประจำ (Regular) = สีส้มลายทาง พร้อมแสดงชื่อสินค้า
+            cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
+            productText = booking.product || booking.booker_name || 'ประจำ';
+            unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ประจำ'}`);
           } else if (isMonthly) {
-            // รายเดือนทั้งหมด = สีม่วงอ่อนเสมอ (ไม่นำเข้าลิสต์ค้างชำระด้านล่าง)
+            // รายเดือนสัญญาจริง (Standard, VIP, Room) = สีม่วงอ่อนเสมอ (ไม่นำเข้าลิสต์ค้างชำระด้านล่าง)
             cellBg = 'background-color: #d1c4e9; border: 1px solid #b39ddb; color: #4a148c;';
             productText = booking.product || 'รายเดือน';
           } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {

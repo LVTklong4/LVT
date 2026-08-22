@@ -238,6 +238,27 @@ export function BookingProvider({ children }) {
     return occupied;
   };
 
+  const getCustomerIdentityKey = (item) => {
+    if (!item) return '';
+    const name = (item.booker_name || item.customer_name || '').trim().toLowerCase();
+    const phone = String(item.phone || '').replace(/[\s-]/g, '').trim();
+    const product = (item.product || '').trim().toLowerCase();
+
+    if (!name || name === 'ไม่ระบุชื่อ' || name === 'ร้านค้าประจำ' || name === '-') {
+      return `UNIQUE_${item.id || Math.random()}`;
+    }
+
+    if (phone && phone !== '-' && phone !== '0' && phone.length >= 8) {
+      return `${name}__PHONE__${phone}`;
+    }
+
+    if (product && product !== '-') {
+      return `${name}__PROD__${product}`;
+    }
+
+    return `${name}__NAMEONLY`;
+  };
+
   const getBookingCustomerType = (booking) => {
     if (!booking) return 'Standard';
     if (booking.master_id) {
@@ -451,6 +472,8 @@ export function BookingProvider({ children }) {
     if (booking) {
       if (booking.status === 'ลา') {
         return { isVacant: true, label: 'ว่าง (ปล่อยเช่ารายวัน)', price, product: '' };
+      } else if (booking.type === 'ประจำ' || booking.type === 'Regular') {
+        return { isVacant: false, label: 'ไม่ว่าง (ประจำ)', product: booking.product || 'ประจำ' };
       } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
         return { isVacant: false, label: 'ไม่ว่าง (รายเดือน)', product: booking.product || 'รายเดือน' };
       } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
@@ -3322,16 +3345,22 @@ export function BookingProvider({ children }) {
 
     setLoadingMonthly(true);
     try {
-      // 1. Safety check: Check if already exists in next month
-      const { data: existing, error: existError } = await supabase
+      // 1. Safety check: Check if already exists in next month with same identity and stalls
+      const activeKey = getCustomerIdentityKey(activeMonthlyBooking);
+      const targetMonthFormatted = formatBookingMonth(nextBookingMonthStr);
+
+      const { data: allMonthlyData, error: existError } = await supabase
         .from('monthly_bookings')
-        .select('id')
-        .eq('booker_name', activeMonthlyBooking.booker_name)
-        .eq('booking_month', nextBookingMonthStr)
-        .limit(1);
+        .select('*');
       if (existError) throw existError;
-      if (existing && existing.length > 0) {
-        showAlert(`ผู้เช่า "${activeMonthlyBooking.booker_name}" ได้ต่อสัญญารอบเดือน ${nextMonthFormatted} ไว้แล้ว`, "แจ้งเตือน", true);
+
+      const isAlreadyExists = (allMonthlyData || []).some(cand => {
+        if (formatBookingMonth(cand.booking_month) !== targetMonthFormatted) return false;
+        return getCustomerIdentityKey(cand) === activeKey && cand.stalls === activeMonthlyBooking.stalls;
+      });
+
+      if (isAlreadyExists) {
+        showAlert(`ผู้เช่า "${activeMonthlyBooking.booker_name}" (${activeMonthlyBooking.product || 'ไม่มีสินค้า'}, ล็อค ${activeMonthlyBooking.stalls}) ได้ต่อสัญญารอบเดือน ${nextMonthFormatted} ไว้แล้ว`, "แจ้งเตือน", true);
         return;
       }
 
@@ -3347,6 +3376,9 @@ export function BookingProvider({ children }) {
         if (st.days) st.days.forEach(dayVal => allDays.add(dayVal));
       });
       const isFullPackage = allDays.has(0) && allDays.has(3) && allDays.has(6);
+
+      const isRegular = activeMonthlyBooking.customer_type === 'Regular';
+      const dailyType = isRegular ? 'ประจำ' : 'รายเดือน';
 
       for (let d = 1; d <= lastDay; d++) {
         const currentD = new Date(nextYear, nextMonthVal, d);
@@ -3372,7 +3404,7 @@ export function BookingProvider({ children }) {
               else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
               else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
             }
-            if (activeMonthlyBooking.customer_type === 'VIP' || activeMonthlyBooking.customer_type === 'Room') price = 0;
+            if (activeMonthlyBooking.customer_type === 'VIP' || activeMonthlyBooking.customer_type === 'Room' || isRegular) price = 0;
             
             const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             
@@ -3382,15 +3414,16 @@ export function BookingProvider({ children }) {
               date: dateStr,
               stall_name: stallName,
               booker_name: activeMonthlyBooking.booker_name,
+              customer_name: activeMonthlyBooking.booker_name,
               product: activeMonthlyBooking.product,
-              type: 'รายเดือน',
+              type: dailyType,
               elec_unit: parseNumber(activeMonthlyBooking.elec_unit || 0),
               elec_price: parseNumber(activeMonthlyBooking.elec_unit || 0) * 10,
               stall_price: price,
               total_price: price + (parseNumber(activeMonthlyBooking.elec_unit || 0) * 10),
               payment_method: 'Cash',
               status: 'ค้างชำระ',
-              note: 'ต่ออายุอัตโนมัติ',
+              note: isRegular ? 'ต่ออายุล็อคประจำ' : 'ต่ออายุอัตโนมัติ',
               storage_fee: parseNumber(activeMonthlyBooking.storage_fee || 0),
               master_id: newBookingId
             });
@@ -3567,7 +3600,9 @@ export function BookingProvider({ children }) {
                 else if (dayOfWeek === 6) price = sMaster.price_sat - satDiscount;
                 else if (dayOfWeek === 0) price = sMaster.price_sun - sunDiscount;
               }
-              if (customerType === 'VIP' || customerType === 'Room') price = 0;
+              const isRegular = customerType === 'Regular';
+              const dailyType = isRegular ? 'ประจำ' : 'รายเดือน';
+              if (customerType === 'VIP' || customerType === 'Room' || isRegular) price = 0;
               
               const dateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
               const uniqueDailyId = `${newBookingId}-${dateStr}-${stallName.replace(/[\[\]]/g, '')}`;
@@ -3579,14 +3614,14 @@ export function BookingProvider({ children }) {
                 booker_name: bookerName,
                 customer_name: bookerName,
                 product: product,
-                type: 'รายเดือน',
+                type: dailyType,
                 elec_unit: elecUnitVal,
                 elec_price: elecUnitVal * 10,
                 stall_price: price,
                 total_price: price + (elecUnitVal * 10),
                 payment_method: 'Cash',
                 status: 'ค้างชำระ',
-                note: 'ต่ออายุอัตโนมัติ (กลุ่ม)',
+                note: isRegular ? 'ต่ออายุล็อคประจำ (กลุ่ม)' : 'ต่ออายุอัตโนมัติ (กลุ่ม)',
                 storage_fee: storageFeeVal,
                 master_id: newBookingId
               });
