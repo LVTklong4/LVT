@@ -58,24 +58,28 @@ export function AuthAdminProvider({ children }) {
   // Securely verify admin status via Supabase DB table
   const verifyAndSetAdmin = async (email) => {
     try {
+      const cleanEmail = String(email || '').trim().toLowerCase();
       const { data: admin, error } = await supabase
         .from('admin_roles')
         .select('*')
-        .eq('email', email)
+        .ilike('email', cleanEmail)
         .eq('status', 'เปิด')
         .maybeSingle();
 
       if (admin) {
         setAdminUser(admin);
         localStorage.setItem('lvt_admin_session', JSON.stringify(admin));
+        return { success: true, admin };
       } else {
         await supabase.auth.signOut();
         setAdminUser(null);
         localStorage.removeItem('lvt_admin_session');
+        return { success: false, error: 'อีเมลนี้ไม่มีสิทธิ์เข้าใช้งานระบบ โปรดติดต่อผู้ดูแลหลัก' };
       }
     } catch (e) {
       console.error('Admin verification error:', e);
       setAdminUser(null);
+      return { success: false, error: e.message };
     }
   };
 
