@@ -20,7 +20,7 @@ export function AuthAdminProvider({ children }) {
     const checkUserSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email) {
-        await verifyAndSetAdmin(session.user.email);
+        await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
       } else {
         const savedSession = localStorage.getItem('lvt_admin_session');
         if (savedSession) {
@@ -37,7 +37,7 @@ export function AuthAdminProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user?.email) {
-        await verifyAndSetAdmin(session.user.email);
+        await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
       } else if (event === 'SIGNED_OUT') {
         const savedSession = localStorage.getItem('lvt_admin_session');
         if (savedSession) {
@@ -56,7 +56,7 @@ export function AuthAdminProvider({ children }) {
   }, []);
 
   // Securely verify admin status via Supabase DB table
-  const verifyAndSetAdmin = async (email) => {
+  const verifyAndSetAdmin = async (email, googleUserMetadata = null) => {
     try {
       const cleanEmail = String(email || '').trim().toLowerCase();
       const { data: admin, error } = await supabase
@@ -67,13 +67,26 @@ export function AuthAdminProvider({ children }) {
         .maybeSingle();
 
       if (admin) {
-        setAdminUser(admin);
-        localStorage.setItem('lvt_admin_session', JSON.stringify(admin));
-        return { success: true, admin };
+        const enrichedAdmin = {
+          ...admin,
+          picture: googleUserMetadata?.avatar_url || googleUserMetadata?.picture || admin.picture || null
+        };
+        setAdminUser(enrichedAdmin);
+        localStorage.setItem('lvt_admin_session', JSON.stringify(enrichedAdmin));
+
+        // Clean access_token from URL Hash for clean UX
+        if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+
+        return { success: true, admin: enrichedAdmin };
       } else {
         await supabase.auth.signOut();
         setAdminUser(null);
         localStorage.removeItem('lvt_admin_session');
+        if (typeof window !== 'undefined' && window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
         return { success: false, error: 'อีเมลนี้ไม่มีสิทธิ์เข้าใช้งานระบบ โปรดติดต่อผู้ดูแลหลัก' };
       }
     } catch (e) {
