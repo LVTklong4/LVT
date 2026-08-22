@@ -141,6 +141,14 @@ export function BookingProvider({ children }) {
   const [monthlyPrintPayments, setMonthlyPrintPayments] = useState([]);
   const [showCancelled, setShowCancelled] = useState(false);
   const [syncingLegacy, setSyncingLegacy] = useState(false);
+  const [archiveWebhookUrl, setArchiveWebhookUrl] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lvt_archive_webhook_url') || '';
+    }
+    return '';
+  });
+  const [archivingMonth, setArchivingMonth] = useState(false);
+  const [archiveSelectedMonth, setArchiveSelectedMonth] = useState('2026-07');
 
   // New Monthly Booking Modal States
   const [showNewMonthlyModal, setShowNewMonthlyModal] = useState(false);
@@ -4280,6 +4288,142 @@ export function BookingProvider({ children }) {
     }
   };
 
+  // 📦 4. GOOGLE DRIVE / SHEETS ARCHIVING ENGINE
+  const handleArchiveMonthToGoogleSheets = async (targetMonth, purgeAfterArchive = false) => {
+    if (!targetMonth) {
+      showAlert("กรุณาเลือกรอบเดือนที่ต้องการจัดเก็บประวัติ", "แจ้งเตือน", true);
+      return;
+    }
+
+    const webhookUrl = (archiveWebhookUrl || localStorage.getItem('lvt_archive_webhook_url') || '').trim();
+    if (!webhookUrl) {
+      showAlert(
+        "ยังไม่ได้ตั้งค่า Google Apps Script Webhook URL\nกรุณานำ URL ที่ได้จากการ Deploy สคริปต์มาใส่ในช่องตั้งค่า Webhook URL ก่อนครับ",
+        "ต้องระบุ Webhook URL",
+        true
+      );
+      return;
+    }
+
+    const monthThai = formatBookingMonth(targetMonth);
+    const isConfirmed = await showConfirm({
+      title: `📦 ยืนยันการสำรองข้อมูลรอบเดือน ${monthThai}`,
+      message: `ระบบจะทำการรวบรวมข้อมูลรอบเดือน ${monthThai} ได้แก่:\n1. การจองรายวันทั้งหมดในเดือนนี้\n2. สัญญารายเดือนทั้งหมด\n3. ประวัติธุรกรรมการเงินทั้งหมด\n\nและส่งไปสร้าง Google Sheet ใน Google Drive โฟลเดอร์ LVT Archive อัตโนมัติ${purgeAfterArchive ? '\n\n⚠️ เมื่อสำรองเสร็จ จะทำการลบข้อมูลการจองรายวันของเดือนนี้ออกจากฐานข้อมูลสดเพื่อประหยัดพื้นที่' : ''}`,
+      confirmText: purgeAfterArchive ? 'ยืนยันและล้างข้อมูลสด' : 'เริ่มสำรองข้อมูล',
+      cancelText: 'ยกเลิก',
+      isDanger: purgeAfterArchive
+    });
+    if (!isConfirmed) return;
+
+    setArchivingMonth(true);
+    try {
+      // 1. Fetch Daily Bookings for target month (with pagination)
+      const [yearStr, monthNumStr] = targetMonth.split('-');
+      const lastDayNum = new Date(parseInt(yearStr), parseInt(monthNumStr), 0).getDate();
+      const startDateIso = `${targetMonth}-01`;
+      const endDateIso = `${targetMonth}-${String(lastDayNum).padStart(2, '0')}`;
+
+      let monthDailyBookings = [];
+      let fromB = 0;
+      let hasMoreB = true;
+      while (hasMoreB) {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .gte('date', startDateIso)
+          .lte('date', endDateIso)
+          .order('date', { ascending: true })
+          .range(fromB, fromB + 999);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          monthDailyBookings.push(...data);
+          fromB += 1000;
+          if (data.length < 1000) hasMoreB = false;
+        } else {
+          hasMoreB = false;
+        }
+      }
+
+      // 2. Fetch Monthly Bookings for target month
+      const { data: monthMonthlyBookings, error: mmbErr } = await supabase
+        .from('monthly_bookings')
+        .select('*')
+        .eq('booking_month', targetMonth);
+      if (mmbErr) throw mmbErr;
+
+      // 3. Fetch Transactions for target month
+      const { data: monthTxns, error: mtxErr } = await supabase
+        .from('transactions')
+        .select('*')
+        .gte('date', startDateIso)
+        .lte('date', endDateIso)
+        .order('date', { ascending: true });
+      if (mtxErr) throw mtxErr;
+
+      if (monthDailyBookings.length === 0 && (!monthMonthlyBookings || monthMonthlyBookings.length === 0) && (!monthTxns || monthTxns.length === 0)) {
+        showAlert(`ไม่พบข้อมูลในรอบเดือน ${monthThai} ที่จะทำการจัดเก็บ`, "ไม่พบข้อมูล", true);
+        return;
+      }
+
+      // 4. Send Payload to Google Apps Script Webhook
+      const payload = {
+        folderId: '1kmBElcZAAX0UbQ61cI3fbgbJHHzi6eXu',
+        monthStr: targetMonth,
+        monthThai: monthThai,
+        dailyBookings: monthDailyBookings,
+        monthlyBookings: monthMonthlyBookings || [],
+        transactions: monthTxns || []
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Google Apps Script ส่งข้อผิดพลาดกลับมา');
+      }
+
+      // 5. If purge is requested, clean up daily bookings from Supabase
+      let purgedCount = 0;
+      if (purgeAfterArchive) {
+        const { error: delErr, count: delCount } = await supabase
+          .from('bookings')
+          .delete({ count: 'exact' })
+          .gte('date', startDateIso)
+          .lte('date', endDateIso);
+        if (delErr) throw delErr;
+        purgedCount = delCount || monthDailyBookings.length;
+        await fetchBookingsAndStorage();
+      }
+
+      showAlert(
+        `🎉 จัดเก็บประวัติรอบเดือน ${monthThai} เข้า Google Drive สำเร็จ!\n\n` +
+        `• 📄 ชื่อไฟล์: ${result.fileName}\n` +
+        `• 📅 การจองรายวัน: ${monthDailyBookings.length} รายการ\n` +
+        `• 🏢 สัญญารายเดือน: ${(monthMonthlyBookings || []).length} สัญญา\n` +
+        `• 💳 ธุรกรรมการเงิน: ${(monthTxns || []).length} ธุรกรรม\n` +
+        (purgeAfterArchive ? `• 🧹 ล้างข้อมูลรายวันออกจากฐานข้อมูลสด: ${purgedCount} รายการ` : ''),
+        "สำรองข้อมูลสำเร็จ"
+      );
+
+      // Open Google Sheet if URL returned
+      if (result.fileUrl && typeof window !== 'undefined') {
+        window.open(result.fileUrl, '_blank');
+      }
+
+      return { success: true, result };
+    } catch (err) {
+      console.error('Error archiving month to Google Sheets:', err);
+      showAlert("เกิดข้อผิดพลาดในการจัดเก็บข้อมูลเข้า Google Drive: " + err.message, "ข้อผิดพลาด", true);
+      return { success: false, error: err };
+    } finally {
+      setArchivingMonth(false);
+    }
+  };
+
   const handleOpenMonthlyPaymentModal = async () => {
     if (!activeMonthlyBooking) return;
     
@@ -4782,6 +4926,12 @@ export function BookingProvider({ children }) {
     handleSyncDailyFromLegacy,
     handleSyncAllFromLegacy,
     syncingLegacy,
+    archiveWebhookUrl,
+    setArchiveWebhookUrl,
+    archivingMonth,
+    archiveSelectedMonth,
+    setArchiveSelectedMonth,
+    handleArchiveMonthToGoogleSheets,
     handleSearch,
     handleSlipChange,
     handleSortToggle,

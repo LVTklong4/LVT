@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Settings, Loader2, X, RotateCcw } from 'lucide-react';
+import { Settings, Loader2, X, RotateCcw, CloudUpload, ExternalLink, Trash2, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export default function SettingsMgmtModal() {
   const {
@@ -17,7 +17,14 @@ export default function SettingsMgmtModal() {
     handleSyncFromLegacySheets,
     handleSyncAllFromLegacy,
     syncingLegacy,
-    selectedDate
+    selectedDate,
+    archiveWebhookUrl,
+    setArchiveWebhookUrl,
+    archivingMonth,
+    archiveSelectedMonth,
+    setArchiveSelectedMonth,
+    handleArchiveMonthToGoogleSheets,
+    showAlert
   } = useBooking();
 
   if (!showSettingsMgmtModal) return null;
@@ -152,6 +159,110 @@ export default function SettingsMgmtModal() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Google Drive / Sheets Archiving Section */}
+            <div className="bg-blue-50/70 border-t-2 border-blue-300 p-4 shrink-0 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col gap-0.5 text-left">
+                  <span className="font-black text-xs text-blue-950 flex items-center gap-1.5">
+                    📦 จัดเก็บประวัติข้อมูลเข้า Google Sheets (Google Drive Archive)
+                  </span>
+                  <span className="text-[11px] text-blue-900 font-medium">
+                    สร้างไฟล์ Google Sheets สรุปข้อมูลการจอง รายเดือน และบัญชีแยกตามเดือน ส่งตรงเข้าโฟลเดอร์ Google Drive อัตโนมัติ
+                  </span>
+                </div>
+                <a
+                  href="https://drive.google.com/drive/folders/1kmBElcZAAX0UbQ61cI3fbgbJHHzi6eXu"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-300 hover:bg-blue-100/60 text-blue-900 rounded-lg text-xs font-bold shadow-2xs transition-all w-fit cursor-pointer"
+                >
+                  <span>📂 เปิดโฟลเดอร์ Google Drive</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-700" />
+                </a>
+              </div>
+
+              {/* Webhook Configuration & Archive Actions Bar */}
+              <div className="bg-white p-3 rounded-lg border border-blue-200 flex flex-col md:flex-row items-center gap-3 justify-between">
+                <div className="flex-1 flex flex-col sm:flex-row items-center gap-2 w-full">
+                  <div className="w-full sm:w-auto shrink-0 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-gray-700 shrink-0">เลือกรอบเดือน:</span>
+                    <select
+                      value={archiveSelectedMonth}
+                      onChange={(e) => setArchiveSelectedMonth(e.target.value)}
+                      className="p-1.5 border border-blue-300 rounded bg-blue-50/50 text-xs font-bold text-blue-950 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="2026-01">มกราคม 2569 (2026-01)</option>
+                      <option value="2026-02">กุมภาพันธ์ 2569 (2026-02)</option>
+                      <option value="2026-03">มีนาคม 2569 (2026-03)</option>
+                      <option value="2026-04">เมษายน 2569 (2026-04)</option>
+                      <option value="2026-05">พฤษภาคม 2569 (2026-05)</option>
+                      <option value="2026-06">มิถุนายน 2569 (2026-06)</option>
+                      <option value="2026-07">กรกฎาคม 2569 (2026-07)</option>
+                      <option value="2026-08">สิงหาคม 2569 (2026-08)</option>
+                      <option value="2026-09">กันยายน 2569 (2026-09)</option>
+                      <option value="2026-10">ตุลาคม 2569 (2026-10)</option>
+                      <option value="2026-11">พฤศจิกายน 2569 (2026-11)</option>
+                      <option value="2026-12">ธันวาคม 2569 (2026-12)</option>
+                    </select>
+                  </div>
+
+                  <div className="w-full flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="วาง Google Apps Script Webhook URL ที่นี่..."
+                      value={archiveWebhookUrl}
+                      onChange={(e) => {
+                        setArchiveWebhookUrl(e.target.value);
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('lvt_archive_webhook_url', e.target.value);
+                        }
+                      }}
+                      className="flex-1 p-1.5 border border-gray-300 rounded text-xs font-mono text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('lvt_archive_webhook_url', archiveWebhookUrl);
+                          showAlert('บันทึก Webhook URL สำเร็จ', 'สำเร็จ');
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-stone-700 hover:bg-stone-800 text-white rounded text-xs font-bold shrink-0 cursor-pointer shadow-xs"
+                      title="บันทึก Webhook URL"
+                    >
+                      บันทึก URL
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+                  {/* Backup Only */}
+                  <button
+                    type="button"
+                    onClick={() => handleArchiveMonthToGoogleSheets(archiveSelectedMonth, false)}
+                    disabled={archivingMonth}
+                    className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-800 active:scale-95 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="สำรองข้อมูลรอบเดือนที่เลือกไปเก็บใน Google Drive Sheet"
+                  >
+                    {archivingMonth ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CloudUpload className="w-3.5 h-3.5" />}
+                    <span>{archivingMonth ? 'กำลังสำรอง...' : '📤 สำรองเข้า Google Sheet'}</span>
+                  </button>
+
+                  {/* Backup and Purge from Supabase */}
+                  <button
+                    type="button"
+                    onClick={() => handleArchiveMonthToGoogleSheets(archiveSelectedMonth, true)}
+                    disabled={archivingMonth}
+                    className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 active:scale-95 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="สำรองข้อมูลเข้า Google Drive และล้างข้อมูลรายวันของเดือนนี้ออกจากฐานข้อมูลสด"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>สำรอง & ล้างฐานข้อมูลสด</span>
+                  </button>
                 </div>
               </div>
             </div>
