@@ -3510,6 +3510,13 @@ export function BookingProvider({ children }) {
       let successCount = 0;
       let skippedCount = 0;
 
+      const { data: latestMonthlyList, error: existError } = await supabase
+        .from('monthly_bookings')
+        .select('id, booker_name, phone, product, stalls, booking_month');
+      if (existError) throw existError;
+
+      const dynamicMonthlyList = [...(latestMonthlyList || [])];
+
       for (const oldId of bulkRenewCheckedIds) {
         const item = monthlyList.find(b => b.id === oldId);
         if (!item) continue;
@@ -3528,15 +3535,16 @@ export function BookingProvider({ children }) {
         const nextBookingMonthStr = nextDateThai.toString();
         const nextMonthFormatted = formatBookingMonth(nextBookingMonthStr);
 
-        // Safety check if already exists in next month
-        const { data: existing, error: existError } = await supabase
-          .from('monthly_bookings')
-          .select('id')
-          .eq('booker_name', item.booker_name)
-          .eq('booking_month', nextBookingMonthStr)
-          .limit(1);
-        if (existError) throw existError;
-        if (existing && existing.length > 0) {
+        // Safety check if already exists in next month with same identity and stalls
+        const itemKey = getCustomerIdentityKey(item);
+        const targetMonthFormatted = formatBookingMonth(nextBookingMonthStr);
+
+        const isAlreadyExists = dynamicMonthlyList.some(mb => {
+          if (formatBookingMonth(mb.booking_month) !== targetMonthFormatted) return false;
+          return getCustomerIdentityKey(mb) === itemKey && mb.stalls === item.stalls;
+        });
+
+        if (isAlreadyExists) {
           skippedCount++;
           continue;
         }
@@ -3682,6 +3690,7 @@ export function BookingProvider({ children }) {
           .insert([monthlyData]);
         if (mbError) throw mbError;
 
+        dynamicMonthlyList.push(monthlyData);
         successCount++;
       }
 
