@@ -258,7 +258,7 @@ export default function BulkRenewModal() {
                                   </span>
                                 </button>
 
-                                {duplicateIdentityKeys.size > 0 && (
+                                {duplicateIdentityKeys.size > 0 ? (
                                   <button
                                     type="button"
                                     onClick={() => setFilterDuplicatesOnly(prev => !prev)}
@@ -272,6 +272,13 @@ export default function BulkRenewModal() {
                                     <AlertTriangle className="w-3 h-3 text-amber-700" />
                                     <span>พบซ้ำ {duplicateIdentityKeys.size} คน</span>
                                   </button>
+                                ) : (
+                                  <span 
+                                    className="px-2 py-0.5 rounded text-[9.5px] font-bold text-gray-500 bg-gray-100/90 border border-gray-200 flex items-center gap-1"
+                                    title="ไม่พบลูกค้าที่มีหลายสัญญาในเดือนนี้"
+                                  >
+                                    <span className="text-emerald-600 font-bold">✓</span> ไม่พบสัญญาซ้ำ
+                                  </span>
                                 )}
                               </div>
                             </th>
