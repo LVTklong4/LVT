@@ -4172,13 +4172,21 @@ export function BookingProvider({ children }) {
         const paymentMethod = row[10] || 'Cash';
         const status = row[11] || 'ชำระแล้ว';
         const note = row[12] || '';
+        const masterRefId = String(row[14] || '').trim();
         const storageFee = parseFloat(row[15]) || 0;
 
-        // Strategy 1: Master ID Validation (Discard Orphaned Daily Records)
-        const isMonthlyType = type === 'รายเดือน' || type.toLowerCase().includes('monthly');
-        if (isMonthlyType || (masterId && masterId.startsWith('BK-'))) {
+        let cleanType = type;
+        if (!cleanType.includes('รายวัน') && !cleanType.includes('รายเดือน')) {
+          cleanType = 'รายวัน';
+        }
+
+        const isMonthlyType = cleanType === 'รายเดือน' || cleanType.toLowerCase().includes('monthly');
+        const masterContractId = isMonthlyType ? masterId : masterRefId;
+
+        // Strategy 1: Master ID Validation (Discard Orphaned Monthly Records)
+        if (isMonthlyType) {
           // If the master contract doesn't exist in monthly_bookings, discard this orphan row
-          if (masterId && !validMonthlyIds.has(masterId)) {
+          if (masterContractId && !validMonthlyIds.has(masterContractId)) {
             skippedOrphanCount++;
             continue;
           }
@@ -4200,7 +4208,7 @@ export function BookingProvider({ children }) {
           booker_name: bookerName,
           customer_name: bookerName,
           product: product,
-          type: type,
+          type: cleanType,
           elec_unit: elecUnit,
           elec_price: elecPrice,
           stall_price: stallPrice,
@@ -4209,7 +4217,7 @@ export function BookingProvider({ children }) {
           payment_method: paymentMethod,
           status: status,
           note: note,
-          master_id: masterId,
+          master_id: masterContractId || null,
           storage_fee: storageFee
         });
       }
