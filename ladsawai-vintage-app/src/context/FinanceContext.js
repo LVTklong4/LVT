@@ -67,26 +67,6 @@ export function FinanceProvider({ children }) {
         }
       });
 
-      // 2. Also check if there are legacy other_income / expenses
-      try {
-        const [incRes, expRes] = await Promise.all([
-          supabase.from('other_income').select('*'),
-          supabase.from('expenses').select('*')
-        ]);
-        if (incRes?.data?.length) {
-          incRes.data.forEach(inc => {
-            if (!incList.some(x => x.id === inc.id)) incList.push(inc);
-          });
-        }
-        if (expRes?.data?.length) {
-          expRes.data.forEach(exp => {
-            if (!expList.some(x => x.id === exp.id)) expList.push(exp);
-          });
-        }
-      } catch (err) {
-        // Safe to ignore if tables are consolidated
-      }
-
       let filteredIncome = incList;
       let filteredExpense = expList;
 
@@ -131,18 +111,14 @@ export function FinanceProvider({ children }) {
     const selectedDate = targetDate || new Date().toISOString().split('T')[0];
     setLoading(true);
     try {
-      const [bookingsRes, txnsRes, incRes, expRes, closingRes] = await Promise.all([
+      const [bookingsRes, txnsRes, closingRes] = await Promise.all([
         supabase.from('bookings').select('*').eq('date', selectedDate),
         supabase.from('transactions').select('*').eq('date', selectedDate),
-        supabase.from('other_income').select('*').eq('date', selectedDate),
-        supabase.from('expenses').select('*').eq('date', selectedDate),
         supabase.from('daily_closings').select('*').eq('date', selectedDate).maybeSingle()
       ]);
 
       const bookings = bookingsRes.data || [];
       const txns = txnsRes.data || [];
-      const otherIncome = incRes.data || [];
-      const expenses = expRes.data || [];
       const existingClosing = closingRes.data || null;
 
       // Summary Breakdown
@@ -375,24 +351,8 @@ export function FinanceProvider({ children }) {
         created_at: new Date().toISOString()
       };
 
-      // 1. Insert into unified transactions table
+      // Insert into unified transactions table
       await supabase.from('transactions').insert([payloadTxn]);
-
-      // 2. Fallback to other_income table if exists
-      try {
-        await supabase.from('other_income').insert([{
-          id: nowId,
-          date: payloadTxn.date,
-          category: payloadTxn.category,
-          description: payloadTxn.description,
-          amount: payloadTxn.amount,
-          method: payloadTxn.method,
-          officer: payloadTxn.officer,
-          timestamp: payloadTxn.timestamp
-        }]);
-      } catch (err) {
-        // Safe to ignore if other_income is deprecated
-      }
 
       await fetchFinanceData();
       return { success: true, data: payloadTxn };
@@ -425,24 +385,8 @@ export function FinanceProvider({ children }) {
         created_at: new Date().toISOString()
       };
 
-      // 1. Insert into unified transactions table
+      // Insert into unified transactions table
       await supabase.from('transactions').insert([payloadTxn]);
-
-      // 2. Fallback to expenses table if exists
-      try {
-        await supabase.from('expenses').insert([{
-          id: nowId,
-          date: payloadTxn.date,
-          category: payloadTxn.category,
-          item: payloadTxn.description,
-          amount: payloadTxn.amount,
-          method: payloadTxn.method,
-          officer: payloadTxn.officer,
-          timestamp: payloadTxn.timestamp
-        }]);
-      } catch (err) {
-        // Safe to ignore if expenses is deprecated
-      }
 
       await fetchFinanceData();
       return { success: true, data: payloadTxn };
@@ -459,7 +403,6 @@ export function FinanceProvider({ children }) {
     setLoading(true);
     try {
       await supabase.from('transactions').delete().eq('id', id);
-      try { await supabase.from('other_income').delete().eq('id', id); } catch (e) {}
       await fetchFinanceData();
       return { success: true };
     } catch (e) {
@@ -475,7 +418,6 @@ export function FinanceProvider({ children }) {
     setLoading(true);
     try {
       await supabase.from('transactions').delete().eq('id', id);
-      try { await supabase.from('expenses').delete().eq('id', id); } catch (e) {}
       await fetchFinanceData();
       return { success: true };
     } catch (e) {
