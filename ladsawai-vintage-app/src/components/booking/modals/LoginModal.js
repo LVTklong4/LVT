@@ -2,20 +2,15 @@
 
 import React, { useState } from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { X, ShieldCheck, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { X, ShieldCheck, Lock } from 'lucide-react';
 
 export default function LoginModal() {
   const {
-    adminList,
     handleGoogleLogin,
-    handleLogin,
-    selectedAdminEmail,
-    setSelectedAdminEmail,
     setShowLoginModal,
     showLoginModal
   } = useBooking();
 
-  const [showBypass, setShowBypass] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
 
   if (!showLoginModal) return null;
@@ -72,41 +67,6 @@ export default function LoginModal() {
           <div className="bg-amber-50/70 border border-amber-200/80 rounded-lg p-2.5 flex items-start gap-2 text-[11px] text-amber-900 font-medium leading-normal">
             <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
             <span>เฉพาะอีเมล Gmail ที่ลงทะเบียนในตารางสิทธิ์แอดมินเท่านั้นที่จะสามารถเข้าใช้งานได้</span>
-          </div>
-
-          {/* Dev Bypass Section (Collapsible) */}
-          <div className="border-t border-gray-100 pt-3 mt-1">
-            <button
-              type="button"
-              onClick={() => setShowBypass(!showBypass)}
-              className="w-full flex items-center justify-between text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer py-1 select-none"
-            >
-              <span>⚙️ ตัวเลือกระบบทดสอบ (Dev Bypass)</span>
-              {showBypass ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
-            {showBypass && (
-              <div className="mt-2.5 p-3 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-2.5 animate-fade-in">
-                <label className="text-[11px] font-bold text-gray-600">เลือกชื่อผู้ใช้ทดสอบในระบบ</label>
-                <select
-                  value={selectedAdminEmail}
-                  onChange={(e) => setSelectedAdminEmail(e.target.value)}
-                  className="p-2 border border-gray-300 rounded-lg bg-white text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold"
-                >
-                  <option value="">-- โปรดเลือกผู้ใช้งาน --</option>
-                  {adminList.map(a => (
-                    <option key={a.email} value={a.email}>{a.name} ({a.role})</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleLogin}
-                  className="w-full py-2 bg-stone-700 hover:bg-stone-800 text-white rounded-lg font-bold text-xs transition-all shadow-xs cursor-pointer"
-                >
-                  เข้าสู่ระบบ (Bypass Mode)
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
