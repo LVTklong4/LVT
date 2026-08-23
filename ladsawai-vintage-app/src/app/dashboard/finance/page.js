@@ -15,6 +15,8 @@ import PrimeCustomers from '@/components/dashboard/PrimeCustomers';
 import FinanceInsights from '@/components/dashboard/FinanceInsights';
 import FinanceLedger from '@/components/dashboard/FinanceLedger';
 
+import DashboardAuthGuard from '@/components/dashboard/DashboardAuthGuard';
+
 function DashboardFinanceContent() {
   const { loading } = useDashboard();
 
@@ -68,17 +70,19 @@ function DashboardFinanceContent() {
 export default function DashboardFinancePage() {
   return (
     <AuthAdminProvider>
-      <MonthlyBookingProvider>
-        <BookingProvider>
-          <StorageProvider>
-            <DashboardProvider>
-              <FinanceProvider>
-                <DashboardFinanceContent />
-              </FinanceProvider>
-            </DashboardProvider>
-          </StorageProvider>
-        </BookingProvider>
-      </MonthlyBookingProvider>
+      <DashboardAuthGuard>
+        <MonthlyBookingProvider>
+          <BookingProvider>
+            <StorageProvider>
+              <DashboardProvider>
+                <FinanceProvider>
+                  <DashboardFinanceContent />
+                </FinanceProvider>
+              </DashboardProvider>
+            </StorageProvider>
+          </BookingProvider>
+        </MonthlyBookingProvider>
+      </DashboardAuthGuard>
     </AuthAdminProvider>
   );
 }

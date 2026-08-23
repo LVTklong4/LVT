@@ -12,6 +12,8 @@ import DashboardKpis from '@/components/dashboard/DashboardKpis';
 import ZoneStats from '@/components/dashboard/ZoneStats';
 import BookingInsights from '@/components/dashboard/BookingInsights';
 
+import DashboardAuthGuard from '@/components/dashboard/DashboardAuthGuard';
+
 function DashboardContent() {
   const { loading } = useDashboard();
 
@@ -59,15 +61,17 @@ function DashboardContent() {
 export default function DashboardPage() {
   return (
     <AuthAdminProvider>
-      <MonthlyBookingProvider>
-        <BookingProvider>
-          <StorageProvider>
-            <DashboardProvider>
-              <DashboardContent />
-            </DashboardProvider>
-          </StorageProvider>
-        </BookingProvider>
-      </MonthlyBookingProvider>
+      <DashboardAuthGuard>
+        <MonthlyBookingProvider>
+          <BookingProvider>
+            <StorageProvider>
+              <DashboardProvider>
+                <DashboardContent />
+              </DashboardProvider>
+            </StorageProvider>
+          </BookingProvider>
+        </MonthlyBookingProvider>
+      </DashboardAuthGuard>
     </AuthAdminProvider>
   );
 }

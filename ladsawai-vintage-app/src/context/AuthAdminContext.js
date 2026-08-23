@@ -10,6 +10,7 @@ export function AuthAdminProvider({ children }) {
   const [adminList, setAdminList] = useState([]);
   const [adminRolesList, setAdminRolesList] = useState([]);
   const [loadingSettings, setLoadingSettings] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
   const [selectedAdminEmail, setSelectedAdminEmail] = useState('');
   const [adminForm, setAdminForm] = useState({ name: '', role: 'Admin', status: 'เปิด' });
 
@@ -18,18 +19,22 @@ export function AuthAdminProvider({ children }) {
     fetchAdminRoles();
 
     const checkUserSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
-      } else {
-        const savedSession = localStorage.getItem('lvt_admin_session');
-        if (savedSession) {
-          try {
-            setAdminUser(JSON.parse(savedSession));
-            return;
-          } catch (e) {}
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
+        } else {
+          const savedSession = localStorage.getItem('lvt_admin_session');
+          if (savedSession) {
+            try {
+              setAdminUser(JSON.parse(savedSession));
+              return;
+            } catch (e) {}
+          }
+          setAdminUser(null);
         }
-        setAdminUser(null);
+      } finally {
+        setLoadingAuth(false);
       }
     };
 
@@ -39,15 +44,10 @@ export function AuthAdminProvider({ children }) {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user?.email) {
         await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
       } else if (event === 'SIGNED_OUT') {
-        const savedSession = localStorage.getItem('lvt_admin_session');
-        if (savedSession) {
-          try {
-            setAdminUser(JSON.parse(savedSession));
-            return;
-          } catch (e) {}
-        }
         setAdminUser(null);
+        localStorage.removeItem('lvt_admin_session');
       }
+      setLoadingAuth(false);
     });
 
     return () => {
@@ -198,6 +198,7 @@ export function AuthAdminProvider({ children }) {
       adminList,
       adminRolesList,
       loadingSettings,
+      loadingAuth,
       selectedAdminEmail,
       setSelectedAdminEmail,
       adminForm,
