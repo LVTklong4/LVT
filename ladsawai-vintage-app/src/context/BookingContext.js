@@ -313,6 +313,81 @@ export function BookingProvider({ children }) {
     }
   }, [selectedDate]);
 
+  // Supabase Realtime Subscription for active selectedDate and monthly_bookings
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    const channel = supabase
+      .channel(`realtime-bookings-${selectedDate}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            if (payload.new && payload.new.date === selectedDate) {
+              setBookings(prev => {
+                const exists = prev.some(b => b.id === payload.new.id);
+                if (exists) {
+                  return prev.map(b => b.id === payload.new.id ? payload.new : b);
+                }
+                return [...prev, payload.new];
+              });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            if (payload.new && payload.new.date === selectedDate) {
+              setBookings(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+            } else if (payload.old) {
+              setBookings(prev => prev.filter(b => b.id !== payload.old.id));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            if (payload.old) {
+              setBookings(prev => prev.filter(b => b.id !== payload.old.id));
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'monthly_bookings' },
+        () => {
+          fetchAllMonthly();
+          fetchBookingsAndStorage({ silent: true });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate]);
+
+  // Window Focus & Document Visibility Revalidation (Hybrid Realtime)
+  useEffect(() => {
+    let lastRevalidateTime = Date.now();
+
+    const handleRevalidate = () => {
+      const now = Date.now();
+      if (now - lastRevalidateTime > 3000) {
+        lastRevalidateTime = now;
+        fetchBookingsAndStorage({ silent: true });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleRevalidate();
+      }
+    };
+
+    window.addEventListener('focus', handleRevalidate);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleRevalidate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [selectedDate]);
+
   const initDates = () => {
     const today = new Date();
     // Check cutoff (e.g. 19:00)
@@ -410,11 +485,13 @@ export function BookingProvider({ children }) {
     }
   };
 
-  const fetchBookingsAndStorage = async () => {
-    setLoading(true);
+  const fetchBookingsAndStorage = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
-      // 1. Fetch Stalls structure & prices
-      await fetchStalls();
+      // 1. Fetch Stalls structure & prices (skip if already loaded and in silent mode)
+      if (!silent || stalls.length === 0) {
+        await fetchStalls();
+      }
 
       // 2. Fetch Bookings for selected date
       const { data: bookingsData, error: bError } = await supabase
@@ -425,9 +502,11 @@ export function BookingProvider({ children }) {
       setBookings(bookingsData || []);
     } catch (e) {
       console.error("Error fetching date data:", e);
-      showAlert("ดึงข้อมูลจองไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
+      if (!silent) {
+        showAlert("ดึงข้อมูลจองไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
