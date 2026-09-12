@@ -406,6 +406,15 @@ export default function StandardBookingLayout() {
                         >
                           <Banknote className="w-4 h-4 text-emerald-600 shrink-0" /> บันทึกรายรับ-รายจ่าย
                         </a>
+                        <a 
+                          href="/kiosk" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          onClick={() => setShowProfileDropdown(false)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-amber-900 font-bold flex items-center gap-2.5 transition-colors border-t border-amber-100/60"
+                        >
+                          <Store className="w-4 h-4 text-amber-700 shrink-0" /> 🖥️ จอแสดงผลลูกค้า (Kiosk)
+                        </a>
                         <button 
                           onClick={() => {
                             setShowProfileDropdown(false);
