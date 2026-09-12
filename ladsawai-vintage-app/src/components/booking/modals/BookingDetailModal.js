@@ -138,7 +138,7 @@ export default function BookingDetailModal({
                     const stallNameClean = cleanStallName(selectedStall.name);
                     const priceVal = statusInfo.price ? `${statusInfo.price} บาท` : 'ตามเรทผังตลาด';
 
-                    const lineMessage = `สวัสดีครับ สนใจจองล็อคตลาดนัดลาดสวายวินเทจ\n📍 ล็อคที่สนใจ: [${stallNameClean}]\n📅 วันที่: ${formattedDateStr}\n💰 ราคา: ${priceVal}\n🛒 สินค้าที่ต้องการขาย: \n\n(หากต้องการเพิ่มล็อค สามารถพิมพ์ชื่อล็อคต่อท้ายได้เลยครับ)`;
+                    const lineMessage = `สวัสดีครับ สนใจจองล็อคตลาดนัดลาดสวายวินเทจ\n📍 ล็อคที่สนใจ: ${stallNameClean}\n📅 วันที่: ${formattedDateStr}\n💰 ราคา: ${priceVal}\n🛒 สินค้าที่ต้องการขาย: \n\n(หากต้องการเพิ่มล็อค สามารถพิมพ์ชื่อล็อคต่อท้ายได้เลยครับ)`;
                     const lineDeepLink = `https://line.me/R/oaMessage/@ladsawaivintage/?${encodeURIComponent(lineMessage)}`;
 
                     const handleCopyMessage = () => {

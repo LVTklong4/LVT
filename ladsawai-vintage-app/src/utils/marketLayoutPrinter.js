@@ -96,7 +96,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
             // ล็อคประจำ (Regular) = สีส้มลายทาง พร้อมแสดงชื่อสินค้า
             cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
             productText = booking.product || booking.booker_name || 'ประจำ';
-            unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ประจำ'}`);
+            unpaidItems.push(`${displayName} - ${booking.product || booking.booker_name || 'ประจำ'}`);
           } else if (isMonthly) {
             // รายเดือนสัญญาจริง (Standard, VIP, Room) = สีม่วงอ่อนเสมอ (ไม่นำเข้าลิสต์ค้างชำระด้านล่าง)
             cellBg = 'background-color: #d1c4e9; border: 1px solid #b39ddb; color: #4a148c;';
@@ -109,7 +109,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
             // รายวันค้างชำระ = สีส้ม (เฉพาะรายวันเท่านั้นที่นำเข้าลิสต์ด้านล่างสำหรับตรวจตั๋ว)
             cellBg = 'background-color: #ffe0b2; border: 1.5px solid #ffb74d; color: #e65100;';
             productText = booking.product || booking.booker_name || 'ค้างชำระ';
-            unpaidItems.push(`[${displayName}] ${booking.product || booking.booker_name || 'ค้างชำระ'}`);
+            unpaidItems.push(`${displayName} - ${booking.product || booking.booker_name || 'ค้างชำระ'}`);
           }
         } else if (isMonthly) {
           // ล็อคประเภทรายเดือน = สีม่วงอ่อน
@@ -125,7 +125,7 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
 
         cellsHTML += `
           <div style="grid-row: ${r}; grid-column: ${c}; ${cellBg} border-radius: 2px; padding: 1px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 20px; overflow: hidden; text-align: center;">
-            <div style="font-size: 7.5pt; font-weight: 900; line-height: 1.1; white-space: nowrap;">[${displayName}]</div>
+            <div style="font-size: 7.5pt; font-weight: 900; line-height: 1.1; white-space: nowrap;">${displayName}</div>
             ${productText ? `<div style="font-size: 6.5pt; font-weight: 700; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px;">${productText}</div>` : ''}
           </div>
         `;

@@ -1022,7 +1022,7 @@ export function BookingProvider({ children }) {
     const stallNames = selectedStallsList.map(s => s.name).join(', ');
     const isConfirmed = await showConfirm({
       title: 'ยืนยันการลบการจอง',
-      message: `ยืนยันการลบการจองล็อค [${cleanStallName(stallNames)}] หรือไม่?`,
+      message: `ยืนยันการลบการจองล็อค ${cleanStallName(stallNames)} หรือไม่?`,
       confirmText: 'ลบการจอง',
       cancelText: 'ยกเลิก',
       isDanger: true
@@ -1079,7 +1079,7 @@ export function BookingProvider({ children }) {
 
     const isConfirmed = await showConfirm({
       title: 'ยืนยันการแจ้งลาหยุด',
-      message: `ยืนยันการแจ้ง "ลาหยุด" สำหรับล็อค [${displayStallNames}]${countText} ในวันที่ ${getModalDateFormat(selectedDate)} หรือไม่?\n(ระบบจะปล่อยล็อคว่างให้ร้านค้าอื่นจองรายวันได้)`,
+      message: `ยืนยันการแจ้ง "ลาหยุด" สำหรับล็อค ${displayStallNames}${countText} ในวันที่ ${getModalDateFormat(selectedDate)} หรือไม่?\n(ระบบจะปล่อยล็อคว่างให้ร้านค้าอื่นจองรายวันได้)`,
       confirmText: 'ยืนยันแจ้งลา',
       cancelText: 'ยกเลิก'
     });
