@@ -4120,13 +4120,26 @@ export function BookingProvider({ children }) {
         const customerType = r[16] || 'Standard';
         const storageFee = parseFloat(r[17]) || 0;
 
+        const rawStalls = r[4] || '';
+        const cleanStalls = rawStalls.replace(/[\[\]]/g, '').trim();
+
+        let cleanStallDetails = r[15] || '[]';
+        if (cleanStallDetails.includes('[')) {
+          try {
+            const parsed = JSON.parse(cleanStallDetails);
+            if (Array.isArray(parsed)) {
+              cleanStallDetails = JSON.stringify(parsed.map(x => ({ ...x, name: (x.name || '').replace(/[\[\]]/g, '').trim() })));
+            }
+          } catch (e) {}
+        }
+
         monthlyMap.set(id, {
           id: id,
           timestamp: new Date().toISOString(),
           start_date: startDate,
           booker_name: bookerName,
           customer_name: bookerName,
-          stalls: r[4] || '',
+          stalls: cleanStalls,
           product: r[5] || '',
           status: r[6] || (paidAmount >= totalPrice && totalPrice > 0 ? 'ชำระแล้ว' : 'ค้างชำระ'),
           elec_unit: parseFloat(r[7]) || 0,
@@ -4139,7 +4152,7 @@ export function BookingProvider({ children }) {
           selected_days: selectedDays,
           booking_month: normalizedMonth,
           phone: phoneFormatted,
-          stall_details: stallDetailsJson,
+          stall_details: cleanStallDetails,
           customer_type: customerType,
           storage_fee: storageFee
         });
@@ -4267,8 +4280,8 @@ export function BookingProvider({ children }) {
         const normalizedDate = normalizeDateIso(rawDate);
         if (!normalizedDate) continue;
 
-        const masterId = String(row[0] || '').trim();
-        const stallName = row[2] || '';
+        const rawStallName = row[2] || '';
+        const stallName = rawStallName.replace(/[\[\]]/g, '').trim();
         const bookerName = row[3] || 'ไม่ระบุชื่อ';
         const product = row[4] || '';
         const type = (row[5] || 'รายวัน').trim();

@@ -68,7 +68,7 @@ export default function BookingDetailModal({
         <div className="bg-[#FAEBD7] border-b-2 border-[#8B4513] text-[#4A3B32] px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-1.5">
             <Store className="w-5 h-5 text-[#8B4513]" />
-            <h3 className="font-extrabold text-sm md:text-base">ข้อมูลล็อค {selectedStall.name}</h3>
+            <h3 className="font-extrabold text-sm md:text-base">ข้อมูลล็อค {cleanStallName(selectedStall.name)}</h3>
           </div>
           <button onClick={() => setShowBookingModal(false)} className="text-gray-500 hover:text-[#8B4513]">
             <X className="w-5 h-5" />

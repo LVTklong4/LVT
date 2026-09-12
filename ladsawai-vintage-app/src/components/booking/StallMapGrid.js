@@ -75,7 +75,14 @@ export default function StallMapGrid() {
                   return <div key={`empty-${r}-${c}`} style={{ gridRow: r, gridColumn: c }} className="invisible" />;
                 }
 
-                const matchedBookings = bookings.filter(b => b.stall_name === stall.name || (b.stall_name && b.stall_name.split(',').map(s => s.trim()).includes(stall.name)));
+                const stallClean = (stall.name || '').replace(/[\[\]]/g, '').trim();
+                const matchedBookings = bookings.filter(b => {
+                  if (!b.stall_name) return false;
+                  const bClean = b.stall_name.replace(/[\[\]]/g, '').trim();
+                  if (bClean === stallClean) return true;
+                  const parts = b.stall_name.split(',').map(s => s.replace(/[\[\]]/g, '').trim());
+                  return parts.includes(stallClean);
+                });
                 const booking = matchedBookings.sort((a, b) => {
                   if (a.status === 'ลา' && b.status !== 'ลา') return 1;
                   if (a.status !== 'ลา' && b.status === 'ลา') return -1;
@@ -144,8 +151,8 @@ export default function StallMapGrid() {
                 }
 
                 const isClickable = stall.type !== 'ทางเดิน' && stall.type !== 'อื่นๆ';
-                const isHighlighted = highlightedStall === stall.name;
-                const displayName = stall.name.replace(/[\[\]]/g, '');
+                const isHighlighted = highlightedStall && highlightedStall.replace(/[\[\]]/g, '').trim() === stallClean;
+                const displayName = stallClean;
 
                 return (
                   <button
