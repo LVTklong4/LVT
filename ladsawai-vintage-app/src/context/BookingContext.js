@@ -777,28 +777,56 @@ export function BookingProvider({ children }) {
       setNote(booking.note || '');
       
       let groupBookings = [];
-      if (booking.type === 'ประจำ' && booking.master_id) {
-        groupBookings = bookings.filter(b => b.date === booking.date && b.master_id === booking.master_id);
+      if (booking.master_id) {
+        groupBookings = bookings.filter(b => b.date === booking.date && b.master_id === booking.master_id && b.status !== 'ลา');
+      } else if (booking.booker_name && booking.booker_name.trim() !== 'ไม่ระบุชื่อ' && booking.booker_name.trim() !== '') {
+        const sameCustomer = bookings.filter(b => 
+          b.date === booking.date && 
+          b.booker_name && 
+          b.booker_name.trim() === booking.booker_name.trim() &&
+          b.status !== 'ลา' &&
+          (!booking.product || !b.product || b.product.trim() === booking.product.trim())
+        );
+        if (sameCustomer.length > 1) {
+          groupBookings = sameCustomer;
+        }
       }
 
       if (groupBookings.length > 1) {
         // Group multiple stalls
         const allStallNames = groupBookings.map(b => b.stall_name);
-        const names = allStallNames.flatMap(nameStr => nameStr.split(',').map(s => s.trim()));
-        const matched = stalls.filter(s => names.includes(s.name));
+        const names = allStallNames.flatMap(nameStr => (nameStr || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim()));
+        const matched = stalls.filter(s => names.includes(s.name.replace(/[\[\]]/g, '').trim()));
         const matchedStalls = matched.length > 0 ? matched : [stall];
         setSelectedStallsList(matchedStalls);
 
         const totalStallPrice = groupBookings.reduce((sum, b) => sum + parseNumber(b.stall_price), 0);
         const defaultPrice = calculateDefaultStallPrice(matchedStalls, selectedDate);
         setStallPrice(totalStallPrice > 0 ? totalStallPrice : defaultPrice);
-        setElecUnit(groupBookings[0].elec_unit || 0);
-        setElecPrice(groupBookings[0].elec_price || 0);
+
+        const totalElecUnit = groupBookings.reduce((sum, b) => sum + parseNumber(b.elec_unit || 0), 0);
+        const totalElecPrice = groupBookings.reduce((sum, b) => sum + parseNumber(b.elec_price || 0), 0);
+        setElecUnit(totalElecUnit);
+        setElecPrice(totalElecPrice);
+
+        // Group total payment amount
+        const totalGroupPaid = groupBookings
+          .filter(b => b.status === 'ชำระแล้ว' || b.status === 'ไม่ว่าง')
+          .reduce((sum, b) => sum + parseNumber(b.total_price || 0), 0);
+
+        const primaryMethod = groupBookings.find(b => b.payment_method)?.payment_method || booking.payment_method || 'เงินสด';
+        const cleanMethod = primaryMethod.includes(':') ? primaryMethod.split(':')[0].trim() : primaryMethod;
+
+        setPaymentList([{
+          method: cleanMethod,
+          amount: totalGroupPaid > 0 ? totalGroupPaid : '',
+          isSaved: totalGroupPaid > 0
+        }]);
       } else {
         let matched = [stall];
         if (booking.stall_name) {
-          const names = booking.stall_name.split(',').map(s => s.trim());
-          const m = stalls.filter(s => names.includes(s.name));
+          const names = booking.stall_name.split(',').map(s => s.replace(/[\[\]]/g, '').trim());
+          const m = stalls.filter(s => names.includes(s.name.replace(/[\[\]]/g, '').trim()));
           if (m.length > 0) matched = m;
         }
         setSelectedStallsList(matched);
@@ -808,36 +836,36 @@ export function BookingProvider({ children }) {
         setStallPrice(savedStallPrice > 0 ? savedStallPrice : defaultPrice);
         setElecUnit(booking.elec_unit || 0);
         setElecPrice(booking.elec_price || 0);
-      }
 
-      const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
-      if (booking.payment_method) {
-        if (booking.payment_method.includes(':') || booking.payment_method.includes('+')) {
-          const splits = booking.payment_method.split('+').map(item => {
-            const parts = item.split(':');
-            const method = parts[0]?.trim() || '';
-            const amount = parts[1]?.trim() || '';
+        const isPaidStatus = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
+        if (booking.payment_method) {
+          if (booking.payment_method.includes(':') || booking.payment_method.includes('+')) {
+            const splits = booking.payment_method.split('+').map(item => {
+              const parts = item.split(':');
+              const method = parts[0]?.trim() || '';
+              const amount = parts[1]?.trim() || '';
+              const isSaved = !!(method && amount && parseNumber(amount) > 0);
+              return { 
+                method: isSaved ? method : '', 
+                amount: amount,
+                isSaved: isSaved
+              };
+            });
+            setPaymentList(splits);
+          } else {
+            const method = booking.payment_method.trim();
+            const isPaidBooking = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
+            const amount = isPaidBooking ? (booking.total_price || '') : '';
             const isSaved = !!(method && amount && parseNumber(amount) > 0);
-            return { 
+            setPaymentList([{ 
               method: isSaved ? method : '', 
               amount: amount,
               isSaved: isSaved
-            };
-          });
-          setPaymentList(splits);
+            }]);
+          }
         } else {
-          const method = booking.payment_method.trim();
-          const isPaidBooking = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
-          const amount = isPaidBooking ? (booking.total_price || '') : '';
-          const isSaved = !!(method && amount && parseNumber(amount) > 0);
-          setPaymentList([{ 
-            method: isSaved ? method : '', 
-            amount: amount,
-            isSaved: isSaved
-          }]);
+          setPaymentList([{ method: '', amount: '' }]);
         }
-      } else {
-        setPaymentList([{ method: '', amount: '' }]);
       }
     } else {
       setBookerName('');
@@ -944,8 +972,8 @@ export function BookingProvider({ children }) {
         bookingData.master_id = selectedBooking.master_id;
       }
 
-      // Delete other related bookings if grouping Regular customer bookings
-      if (selectedBooking && selectedBooking.type === 'ประจำ' && selectedBooking.master_id) {
+      // Delete other related bookings if grouping customer bookings
+      if (selectedBooking && selectedBooking.master_id) {
         const otherBookings = bookings.filter(b => b.date === selectedBooking.date && b.master_id === selectedBooking.master_id && b.id !== selectedBooking.id);
         const otherIds = otherBookings.map(b => b.id);
         if (otherIds.length > 0) {
@@ -1032,7 +1060,7 @@ export function BookingProvider({ children }) {
     setLoading(true);
     try {
       const idsToDelete = [selectedBooking.id];
-      if (selectedBooking.type === 'ประจำ' && selectedBooking.master_id) {
+      if (selectedBooking.master_id) {
         const otherBookings = bookings.filter(b => b.date === selectedBooking.date && b.master_id === selectedBooking.master_id && b.id !== selectedBooking.id);
         otherBookings.forEach(b => idsToDelete.push(b.id));
       }
