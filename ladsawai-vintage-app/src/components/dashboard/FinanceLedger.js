@@ -43,7 +43,7 @@ export default function FinanceLedger() {
     category: 'ค่าปรับ',
     description: '',
     amount: '',
-    method: 'โอนเงิน'
+    method: ''
   });
 
   const [expenseForm, setExpenseForm] = useState({
@@ -51,7 +51,7 @@ export default function FinanceLedger() {
     category: 'ค่าจ้างพนักงาน',
     item: '',
     amount: '',
-    method: 'โอนเงิน'
+    method: ''
   });
 
   // Fetch data on filter change
@@ -80,6 +80,10 @@ export default function FinanceLedger() {
       alert('กรุณากรอกข้อมูลจำนวนเงินและรายละเอียดให้ครบถ้วน');
       return;
     }
+    if (!incomeForm.method) {
+      alert('⚠️ กรุณาเลือกช่องทางการชำระเงิน (โอนเงิน หรือ เงินสด)');
+      return;
+    }
 
     const res = await addIncome(incomeForm, 'Admin');
     if (res.success) {
@@ -88,7 +92,7 @@ export default function FinanceLedger() {
         category: 'ค่าปรับ',
         description: '',
         amount: '',
-        method: 'โอนเงิน'
+        method: ''
       });
       loadData();
       calculateDashboard(); // refresh dashboard KPIs
@@ -107,6 +111,10 @@ export default function FinanceLedger() {
       alert('กรุณากรอกข้อมูลจำนวนเงินและรายการรายจ่ายให้ครบถ้วน');
       return;
     }
+    if (!expenseForm.method) {
+      alert('⚠️ กรุณาเลือกวิธีการจ่ายเงิน (โอนเงิน หรือ เงินสด)');
+      return;
+    }
 
     const res = await addExpense(expenseForm, 'Admin');
     if (res.success) {
@@ -115,7 +123,7 @@ export default function FinanceLedger() {
         category: 'ค่าจ้างพนักงาน',
         item: '',
         amount: '',
-        method: 'โอนเงิน'
+        method: ''
       });
       loadData();
       calculateDashboard(); // refresh dashboard KPIs
@@ -297,16 +305,42 @@ export default function FinanceLedger() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-700">ช่องทางการชำระเงิน</label>
-                <select 
-                  value={incomeForm.method} 
-                  onChange={(e) => setIncomeForm({ ...incomeForm, method: e.target.value })}
-                  className="p-2 border border-emerald-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                >
-                  <option value="โอนเงิน">โอนเงิน</option>
-                  <option value="เงินสด">เงินสด</option>
-                </select>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-gray-700">ช่องทางการชำระเงิน *</label>
+                  {!incomeForm.method && (
+                    <span className="text-[9px] text-amber-600 font-semibold animate-pulse">
+                      * กรุณาเลือก
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'โอนเงิน', label: 'โอนเงิน', icon: '📲' },
+                    { id: 'เงินสด', label: 'เงินสด', icon: '💵' }
+                  ].map((opt) => {
+                    const isSelected = incomeForm.method === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setIncomeForm({ ...incomeForm, method: opt.id })}
+                        className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all ${
+                          isSelected
+                            ? 'bg-emerald-50 border-emerald-600 text-emerald-900 ring-1 ring-emerald-600 shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-300'
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected ? 'border-emerald-600 bg-white' : 'border-gray-300'
+                        }`}>
+                          {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />}
+                        </span>
+                        <span>{opt.icon} {opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <button 
@@ -371,16 +405,42 @@ export default function FinanceLedger() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-700">วิธีการจ่ายเงิน</label>
-                <select 
-                  value={expenseForm.method} 
-                  onChange={(e) => setExpenseForm({ ...expenseForm, method: e.target.value })}
-                  className="p-2 border border-red-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
-                >
-                  <option value="โอนเงิน">โอนเงิน</option>
-                  <option value="เงินสด">เงินสด</option>
-                </select>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-gray-700">วิธีการจ่ายเงิน *</label>
+                  {!expenseForm.method && (
+                    <span className="text-[9px] text-amber-600 font-semibold animate-pulse">
+                      * กรุณาเลือก
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'โอนเงิน', label: 'โอนเงิน', icon: '📲' },
+                    { id: 'เงินสด', label: 'เงินสด', icon: '💵' }
+                  ].map((opt) => {
+                    const isSelected = expenseForm.method === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setExpenseForm({ ...expenseForm, method: opt.id })}
+                        className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all ${
+                          isSelected
+                            ? 'bg-red-50 border-red-600 text-red-900 ring-1 ring-red-600 shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-red-300'
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected ? 'border-red-600 bg-white' : 'border-gray-300'
+                        }`}>
+                          {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-red-600" />}
+                        </span>
+                        <span>{opt.icon} {opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <button 
