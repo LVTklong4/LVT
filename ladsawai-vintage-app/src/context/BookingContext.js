@@ -4301,7 +4301,7 @@ export function BookingProvider({ children }) {
         }
 
         const isMonthlyType = cleanType === 'รายเดือน' || cleanType.toLowerCase().includes('monthly');
-        const masterContractId = isMonthlyType ? masterId : masterRefId;
+        const masterContractId = masterRefId;
 
         // Strategy 1: Master ID Validation (Discard Orphaned Monthly Records)
         if (isMonthlyType) {
@@ -4315,9 +4315,9 @@ export function BookingProvider({ children }) {
         distinctDates.add(normalizedDate);
         rowIdx++;
 
-        const cleanStall = stallName.replace(/[^a-zA-Z0-9]/g, '');
+        const cleanStall = stallName.replace(/[\/\s]/g, '_');
         const cleanDate = normalizedDate.replace(/-/g, '');
-        const uniqueId = `BK-${cleanDate}-${cleanStall || 'S'}-${rowIdx}`;
+        const uniqueId = `BK-${cleanDate}-${cleanStall || 'S'}`;
 
         // Deduplicate by Date + Stall to keep the most relevant entry
         itemsMap.set(`${normalizedDate}_${stallName}`, {
@@ -4347,7 +4347,8 @@ export function BookingProvider({ children }) {
         // Upsert all daily items in chunks of 100
         for (let i = 0; i < dailyItems.length; i += 100) {
           const chunk = dailyItems.slice(i, i + 100);
-          await supabase.from('bookings').upsert(chunk);
+          const { error: upsertErr } = await supabase.from('bookings').upsert(chunk);
+          if (upsertErr) throw upsertErr;
         }
       }
 
@@ -4393,8 +4394,14 @@ export function BookingProvider({ children }) {
     try {
       // 1. Sync Monthly & Finance
       const monthlyRes = await handleSyncFromLegacySheets(true);
+      if (!monthlyRes.success && monthlyRes.error) {
+        throw new Error('การดึงสัญญารายเดือนล้มเหลว: ' + (monthlyRes.error.message || monthlyRes.error));
+      }
       // 2. Sync All Daily Bookings
       const dailyRes = await handleSyncDailyFromLegacy(true);
+      if (!dailyRes.success && dailyRes.error) {
+        throw new Error('การดึงการจองรายวันล้มเหลว: ' + (dailyRes.error.message || dailyRes.error));
+      }
 
       // Refresh all state
       await fetchAllMonthly();
