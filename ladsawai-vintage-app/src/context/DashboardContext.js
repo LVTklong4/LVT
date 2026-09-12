@@ -57,21 +57,7 @@ export function DashboardProvider({ children }) {
         .eq('date', selectedDate);
       if (txnErr) throw txnErr;
 
-      // 4. Get other income for selected date
-      const { data: otherIncome, error: incErr } = await supabase
-        .from('other_income')
-        .select('*')
-        .eq('date', selectedDate);
-      if (incErr) throw incErr;
-
-      // 5. Get expenses for selected date
-      const { data: expenses, error: expErr } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('date', selectedDate);
-      if (expErr) throw expErr;
-
-      // Compile financial summary
+      // Compile financial summary from unified transactions
       let totalIncome = 0;
       let totalExpense = 0;
       let cashIn = 0;
@@ -81,20 +67,16 @@ export function DashboardProvider({ children }) {
 
       txns?.forEach(t => {
         const amt = parseFloat(t.total_amount) || 0;
-        totalIncome += amt;
-        if (t.method === 'Cash' || t.method === 'เงินสด') cashIn += amt; else transferIn += amt;
-      });
+        const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
+        const isCash = t.method === 'Cash' || t.method === 'เงินสด';
 
-      otherIncome?.forEach(inc => {
-        const amt = parseFloat(inc.amount) || 0;
-        totalIncome += amt;
-        if (inc.method === 'Cash' || inc.method === 'เงินสด') cashIn += amt; else transferIn += amt;
-      });
-
-      expenses?.forEach(exp => {
-        const amt = parseFloat(exp.amount) || 0;
-        totalExpense += amt;
-        if (exp.method === 'Cash' || exp.method === 'เงินสด') cashOut += amt; else transferOut += amt;
+        if (isExp) {
+          totalExpense += amt;
+          if (isCash) cashOut += amt; else transferOut += amt;
+        } else {
+          totalIncome += amt;
+          if (isCash) cashIn += amt; else transferIn += amt;
+        }
       });
 
       // 6. Get all monthly bookings and transaction histories for advanced debt and prime customer analysis

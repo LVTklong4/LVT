@@ -47,7 +47,7 @@ export function FinanceProvider({ children }) {
       const expList = [];
 
       allTxns?.forEach(t => {
-        const isExp = t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.bill_type === 'รายจ่าย';
+        const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
         const itemObj = {
           id: t.id,
           date: t.date,
@@ -147,7 +147,7 @@ export function FinanceProvider({ children }) {
       // 1. Transactions
       txns.forEach(t => {
         const amt = parseFloat(t.total_amount || t.amount) || 0;
-        const isExp = t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.bill_type === 'รายจ่าย';
+        const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
         const isCash = t.method === 'Cash' || t.method === 'เงินสด' || t.payment_method === 'Cash' || t.payment_method === 'เงินสด';
         
         if (isExp) {
@@ -205,42 +205,6 @@ export function FinanceProvider({ children }) {
             }
             breakdown.dailyStall.total += amt;
           }
-        }
-      });
-
-      // 3. Other Income (Legacy/Direct)
-      otherIncome.forEach(inc => {
-        const hasTxn = txns.some(t => t.id === inc.id);
-        if (!hasTxn) {
-          const amt = parseFloat(inc.amount) || 0;
-          otherIncTotal += amt;
-          const isCash = inc.method === 'Cash' || inc.method === 'เงินสด';
-          if (isCash) {
-            cashIn += amt;
-            breakdown.otherIncome.cash += amt;
-          } else {
-            transferIn += amt;
-            breakdown.otherIncome.transfer += amt;
-          }
-          breakdown.otherIncome.total += amt;
-        }
-      });
-
-      // 4. Expenses (Legacy/Direct)
-      expenses.forEach(exp => {
-        const hasTxn = txns.some(t => t.id === exp.id);
-        if (!hasTxn) {
-          const amt = parseFloat(exp.amount) || 0;
-          totalExpenses += amt;
-          const isCash = exp.method === 'Cash' || exp.method === 'เงินสด';
-          if (isCash) {
-            cashOut += amt;
-            breakdown.expenses.cash += amt;
-          } else {
-            transferOut += amt;
-            breakdown.expenses.transfer += amt;
-          }
-          breakdown.expenses.total += amt;
         }
       });
 
@@ -338,21 +302,20 @@ export function FinanceProvider({ children }) {
       const payloadTxn = {
         id: nowId,
         date: formData.date || new Date().toISOString().split('T')[0],
-        type: 'รายรับ',
         category: formData.category || 'อื่นๆ',
-        description: formData.description.trim(),
+        description: formData.description?.trim() || '',
+        note: formData.description?.trim() || '',
         total_amount: parseFloat(formData.amount) || 0,
-        amount: parseFloat(formData.amount) || 0,
-        payment_method: formData.method || 'โอนเงิน',
         method: formData.method || 'โอนเงิน',
         officer: officerName,
-        bill_type: 'other_income',
+        bill_type: 'รายรับ',
         timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       };
 
       // Insert into unified transactions table
-      await supabase.from('transactions').insert([payloadTxn]);
+      const { error } = await supabase.from('transactions').insert([payloadTxn]);
+      if (error) throw error;
 
       await fetchFinanceData();
       return { success: true, data: payloadTxn };
@@ -372,21 +335,20 @@ export function FinanceProvider({ children }) {
       const payloadTxn = {
         id: nowId,
         date: formData.date || new Date().toISOString().split('T')[0],
-        type: 'รายจ่าย',
         category: formData.category || 'อื่นๆ',
-        description: formData.item.trim(),
+        description: formData.item?.trim() || '',
+        note: formData.item?.trim() || '',
         total_amount: parseFloat(formData.amount) || 0,
-        amount: parseFloat(formData.amount) || 0,
-        payment_method: formData.method || 'โอนเงิน',
         method: formData.method || 'โอนเงิน',
         officer: officerName,
-        bill_type: 'expenses',
+        bill_type: 'รายจ่าย',
         timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       };
 
       // Insert into unified transactions table
-      await supabase.from('transactions').insert([payloadTxn]);
+      const { error } = await supabase.from('transactions').insert([payloadTxn]);
+      if (error) throw error;
 
       await fetchFinanceData();
       return { success: true, data: payloadTxn };
@@ -402,7 +364,8 @@ export function FinanceProvider({ children }) {
   const deleteIncome = useCallback(async (id) => {
     setLoading(true);
     try {
-      await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if (error) throw error;
       await fetchFinanceData();
       return { success: true };
     } catch (e) {
@@ -417,7 +380,8 @@ export function FinanceProvider({ children }) {
   const deleteExpense = useCallback(async (id) => {
     setLoading(true);
     try {
-      await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if (error) throw error;
       await fetchFinanceData();
       return { success: true };
     } catch (e) {
