@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useBooking } from "@/context/BookingContext";
 import StallMapGrid from "@/components/booking/StallMapGrid";
-import BookingDetailModal from "@/components/booking/modals/BookingDetailModal";
+import KioskStallDetailModal from "@/components/booking/modals/KioskStallDetailModal";
 import { 
   CalendarDays, Search, RefreshCw, ChevronLeft, ChevronRight,
-  Sparkles, Leaf, ShoppingBag, Sun, MessageCircle, Info
+  Sparkles, Leaf, ShoppingBag, Sun, MessageCircle
 } from "lucide-react";
 
 export default function KioskBookingLayout() {
@@ -24,45 +24,11 @@ export default function KioskBookingLayout() {
     selectSearchResult,
     fetchBookingsAndStorage,
     loading,
-    // Booking modal props
     showBookingModal,
     setShowBookingModal,
     selectedStall,
     selectedBooking,
-    getStallStatus,
-    getBookingCustomerType,
-    stallPrice,
-    setStallPrice,
-    elecUnit,
-    setElecUnit,
-    elecPrice,
-    setElecPrice,
-    bookerName,
-    setBookerName,
-    product,
-    setProduct,
-    note,
-    setNote,
-    paymentList,
-    setPaymentList,
-    selectedStallsList,
-    setSelectedStallsList,
-    calculateDefaultStallPrice,
-    showAddStallSelect,
-    setShowAddStallSelect,
-    stallFilter,
-    setStallFilter,
-    addStallDropdownRef,
-    handleSaveBooking,
-    handleDeleteBooking,
-    handlePrintReceipt,
-    handleShowReceiptPreview,
-    handleMarkAbsent,
-    setShowMoveLockModal,
-    setShowAddUtilityModal,
-    setAddUtilityUnit,
-    setAddUtilityPrice,
-    setAddUtilityMethod
+    getStallStatus
   } = useBooking();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -311,7 +277,7 @@ export default function KioskBookingLayout() {
       {/* 3. Stall Map Grid (Centered Hero Content) */}
       <main className="flex-1 w-full overflow-x-auto p-2 sm:p-4 flex flex-col items-center justify-start my-auto">
         <div className="w-full flex justify-center pb-6">
-          <StallMapGrid />
+          <StallMapGrid hideLegend={true} />
         </div>
       </main>
 
@@ -323,49 +289,14 @@ export default function KioskBookingLayout() {
         </div>
       </footer>
 
-      {/* 5. Customer Booking Detail Modal */}
-      <BookingDetailModal
-        showBookingModal={showBookingModal}
-        setShowBookingModal={setShowBookingModal}
+      {/* 5. Dedicated Customer Kiosk Modal (100% Staff-Free) */}
+      <KioskStallDetailModal
+        showModal={showBookingModal}
+        setShowModal={setShowBookingModal}
         selectedStall={selectedStall}
         selectedBooking={selectedBooking}
         selectedDate={selectedDate}
         getStallStatus={getStallStatus}
-        getBookingCustomerType={getBookingCustomerType}
-        stallPrice={stallPrice}
-        setStallPrice={setStallPrice}
-        elecUnit={elecUnit}
-        setElecUnit={setElecUnit}
-        elecPrice={elecPrice}
-        setElecPrice={setElecPrice}
-        bookerName={bookerName}
-        setBookerName={setBookerName}
-        product={product}
-        setProduct={setProduct}
-        note={note}
-        setNote={setNote}
-        paymentList={paymentList}
-        setPaymentList={setPaymentList}
-        selectedStallsList={selectedStallsList}
-        setSelectedStallsList={setSelectedStallsList}
-        calculateDefaultStallPrice={calculateDefaultStallPrice}
-        showAddStallSelect={showAddStallSelect}
-        setShowAddStallSelect={setShowAddStallSelect}
-        stallFilter={stallFilter}
-        setStallFilter={setStallFilter}
-        addStallDropdownRef={addStallDropdownRef}
-        stalls={stalls}
-        bookings={bookings}
-        handleSaveBooking={handleSaveBooking}
-        handleDeleteBooking={handleDeleteBooking}
-        handlePrintReceipt={handlePrintReceipt}
-        handleShowReceiptPreview={handleShowReceiptPreview}
-        handleMarkAbsent={handleMarkAbsent}
-        setShowMoveLockModal={setShowMoveLockModal}
-        setShowAddUtilityModal={setShowAddUtilityModal}
-        setAddUtilityUnit={setAddUtilityUnit}
-        setAddUtilityPrice={setAddUtilityPrice}
-        setAddUtilityMethod={setAddUtilityMethod}
       />
 
     </div>

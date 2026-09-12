@@ -4,7 +4,7 @@ import React from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { Loader2 } from 'lucide-react';
 
-export default function StallMapGrid() {
+export default function StallMapGrid({ hideLegend = false }) {
   const {
     stalls,
     bookings,
@@ -21,17 +21,19 @@ export default function StallMapGrid() {
   const maxRow = 26;
 
   return (
-    <>
+    <div className="flex flex-col items-center w-full">
       {/* Colors Legend */}
-      <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-1.5 mb-2">
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] md:text-[10px] font-bold justify-center text-gray-700">
-          <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#DCEDC8] border border-[#AED581] rounded-sm"></span>อาหาร (ว่าง)</div>
-          <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#B3E5FC] border border-[#81D4FA] rounded-sm"></span>เสื้อผ้า (ว่าง)</div>
-          <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFE0B2] border border-[#FFB74D] rounded-sm"></span>ค้างชำระ</div>
-          <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFCDD2] border border-[#E57373] rounded-sm"></span>จองแล้ว</div>
-          <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#D1C4E9] border border-[#B39DDB] rounded-sm"></span>รายเดือน</div>
+      {!hideLegend && (
+        <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-1.5 mb-2 w-fit">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] md:text-[10px] font-bold justify-center text-gray-700">
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#DCEDC8] border border-[#AED581] rounded-sm"></span>อาหาร (ว่าง)</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#B3E5FC] border border-[#81D4FA] rounded-sm"></span>เสื้อผ้า (ว่าง)</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFE0B2] border border-[#FFB74D] rounded-sm"></span>ค้างชำระ</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFCDD2] border border-[#E57373] rounded-sm"></span>จองแล้ว</div>
+            <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#D1C4E9] border border-[#B39DDB] rounded-sm"></span>รายเดือน</div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* The Grid Map Container */}
       <div className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-4 overflow-x-auto min-h-[600px] custom-scrollbar w-fit mx-auto">
@@ -210,6 +212,6 @@ export default function StallMapGrid() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
