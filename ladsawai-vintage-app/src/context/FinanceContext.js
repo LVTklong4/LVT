@@ -145,6 +145,9 @@ export function FinanceProvider({ children }) {
       };
 
       // 1. Transactions
+      const expenseItems = [];
+      let transferTxnCount = 0;
+
       txns.forEach(t => {
         const amt = parseFloat(t.total_amount || t.amount) || 0;
         const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
@@ -152,6 +155,14 @@ export function FinanceProvider({ children }) {
         
         if (isExp) {
           totalExpenses += amt;
+          expenseItems.push({
+            id: t.id,
+            description: t.description || t.note || t.category || 'รายจ่าย',
+            category: t.category || 'ทั่วไป',
+            amount: amt,
+            method: isCash ? 'เงินสด' : 'โอนเงิน',
+            officer: t.officer || 'Admin'
+          });
           if (isCash) {
             cashOut += amt;
             breakdown.expenses.cash += amt;
@@ -161,7 +172,12 @@ export function FinanceProvider({ children }) {
           }
           breakdown.expenses.total += amt;
         } else {
-          if (isCash) cashIn += amt; else transferIn += amt;
+          if (isCash) {
+            cashIn += amt;
+          } else {
+            transferIn += amt;
+            transferTxnCount++;
+          }
 
           if (t.category?.includes('คลองถม')) {
             klongthomIncome += amt;
@@ -201,12 +217,20 @@ export function FinanceProvider({ children }) {
               breakdown.dailyStall.cash += amt;
             } else {
               transferIn += amt;
+              transferTxnCount++;
               breakdown.dailyStall.transfer += amt;
             }
             breakdown.dailyStall.total += amt;
           }
         }
       });
+
+      const bookedCount = bookings.filter(b => b.status === 'จ่ายแล้ว' || b.status === 'จองแล้ว' || (b.customer_name && b.customer_name.trim() !== '')).length;
+      const occupancy = {
+        totalStalls: 275,
+        booked: bookedCount,
+        available: Math.max(0, 275 - bookedCount)
+      };
 
       const totalIncomeCash = breakdown.dailyStall.cash + breakdown.monthly.cash + breakdown.klongthom.cash + breakdown.storage.cash + breakdown.otherIncome.cash;
       const totalIncomeTransfer = breakdown.dailyStall.transfer + breakdown.monthly.transfer + breakdown.klongthom.transfer + breakdown.storage.transfer + breakdown.otherIncome.transfer;
@@ -227,6 +251,9 @@ export function FinanceProvider({ children }) {
         cashOut,
         transferOut,
         expectedCashInDrawer: cashIn - cashOut, // before float
+        expenseItems,
+        occupancy,
+        transferTxnCount,
         breakdown: {
           ...breakdown,
           totalIncome: {
