@@ -133,16 +133,14 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
         
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-900 to-teal-800 text-white px-5 py-3.5 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-700/50 rounded-lg">
-              <Lock className="w-5 h-5 text-emerald-200" />
-            </div>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain bg-white/10 rounded-lg p-1 shrink-0" />
             <div>
               <h3 className="font-extrabold text-sm md:text-base leading-tight">
                 สรุปและบันทึกปิดยอดประจำวัน (Daily Closing & Remittance)
               </h3>
               <p className="text-[10px] md:text-xs text-emerald-200 font-bold mt-0.5">
-                กระทบยอดเงินสด เงินโอน คำนวณเงินทอน และตรวจสอบความถูกต้องทางการเงิน
+                กระทบยอดเงินสด เงินโอน คำนวณเงินทอน และออกใบนำส่งเงินประจำวัน
               </p>
             </div>
           </div>
@@ -580,14 +578,17 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
       <div className="hidden print:block fixed inset-0 bg-white text-black p-6 text-[11px] font-sans">
         {/* Header with Title & Metadata */}
         <div className="flex justify-between items-start border-b-2 border-black pb-2.5 mb-3">
-          <div>
-            <h1 className="text-base font-black uppercase tracking-wide">ตลาดนัดลาดสวายวินเทจ</h1>
-            <h2 className="text-xs font-bold text-gray-800">
-              ใบนำส่งเงินและสรุปการปิดยอดประจำวัน (Daily Cash Settlement & Remittance Form)
-            </h2>
-            <p className="text-[10px] text-gray-600 mt-0.5">
-              ระบบควบคุมการเงินและการตรวจนับเงินสดประจำวัน (Dual Control Remittance)
-            </p>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain shrink-0" />
+            <div>
+              <h1 className="text-base font-black uppercase tracking-wide leading-tight">ตลาดนัดลาดสวายวินเทจ</h1>
+              <h2 className="text-xs font-bold text-gray-800 leading-tight mt-0.5">
+                ใบนำส่งเงินและสรุปการปิดยอดประจำวัน (Daily Cash Settlement & Remittance Form)
+              </h2>
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                ระบบควบคุมการเงินและการตรวจนับเงินสดประจำวัน (Dual Control Remittance)
+              </p>
+            </div>
           </div>
           <div className="text-right text-[10px] leading-tight">
             <p><span className="font-bold">วันที่ปิดยอด:</span> <span className="font-black text-xs">{selectedDate}</span></p>
