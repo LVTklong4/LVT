@@ -145,7 +145,8 @@ export function MonthlyBookingProvider({ children }) {
     amount: '',
     method: '',
     note: '',
-    slip_base64: null
+    slip_base64: null,
+    slip_file: null
   });
   const [slipPreviewUrl, setSlipPreviewUrl] = useState(null);
   const [fullScreenSlipUrl, setFullScreenSlipUrl] = useState(null);
@@ -451,7 +452,8 @@ export function MonthlyBookingProvider({ children }) {
       amount: '',
       method: '',
       note: '',
-      slip_base64: null
+      slip_base64: null,
+      slip_file: null
     });
     setSlipPreviewUrl(null);
     setShowMonthlyPaymentModal(true);
@@ -661,7 +663,7 @@ export function MonthlyBookingProvider({ children }) {
       });
       showAlert("บันทึกการชำระเงินสำเร็จ", "สำเร็จ");
       setShowMonthlyPaymentModal(false);
-      setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '', slip_base64: null });
+      setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '', slip_base64: null, slip_file: null });
       setSlipPreviewUrl(null);
       setActiveMonthlyBooking(updatedBooking);
       fetchMonthlyBookings();
@@ -705,7 +707,7 @@ export function MonthlyBookingProvider({ children }) {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setMonthlyPaymentForm(prev => ({ ...prev, slip_base64: reader.result }));
+      setMonthlyPaymentForm(prev => ({ ...prev, slip_base64: reader.result, slip_file: file }));
     };
     reader.readAsDataURL(file);
 

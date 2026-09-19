@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { parseNumber } from '@/utils/numberHelper';
+import { uploadSlipToStorage } from '@/services/storageService';
 
 /**
  * Extracts recognized amount number from OCR text.
@@ -77,6 +78,27 @@ export async function submitMonthlyPayment({
   const txnDate = paymentForm.date || new Date().toISOString().split('T')[0];
 
   const txnId = `TXN-${Date.now()}`;
+
+  // Upload slip to Supabase Storage if method is transfer
+  let finalSlipUrl = null;
+  if (paymentForm.method === 'โอนจ่าย') {
+    const slipSource = paymentForm.slip_file || paymentForm.slip_base64;
+    if (slipSource) {
+      const uploadRes = await uploadSlipToStorage(supabase, slipSource, {
+        folder: 'monthly',
+        bookingId: activeMonthlyBooking.id,
+        txnId,
+        fileName: paymentForm.slip_file?.name || 'slip.jpg'
+      });
+      if (uploadRes.success && uploadRes.publicUrl) {
+        finalSlipUrl = uploadRes.publicUrl;
+      } else {
+        // Graceful fallback to base64 if storage upload fails or bucket is not ready
+        finalSlipUrl = paymentForm.slip_base64 || null;
+      }
+    }
+  }
+
   const txnData = {
     id: txnId,
     booking_ref: activeMonthlyBooking.id,
@@ -91,7 +113,7 @@ export async function submitMonthlyPayment({
     elec_amt: 0,
     storage_amt: 0,
     bill_type: 'General',
-    slip_url: paymentForm.method === 'โอนจ่าย' ? (paymentForm.slip_base64 || null) : null
+    slip_url: finalSlipUrl
   };
 
   const { error: txnError } = await supabase.from('transactions').insert(txnData);

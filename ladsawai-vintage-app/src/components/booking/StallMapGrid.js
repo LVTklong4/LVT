@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { Loader2 } from 'lucide-react';
 
@@ -19,6 +19,77 @@ export default function StallMapGrid({ hideLegend = false }) {
 
   const maxCol = 20;
   const maxRow = 26;
+
+  // 1. Pre-index stalls by row-col coordinates -> O(1) lookup
+  const stallPosMap = useMemo(() => {
+    const map = new Map();
+    if (!stalls) return map;
+    for (let i = 0; i < stalls.length; i++) {
+      const s = stalls[i];
+      map.set(`${s.row}-${s.col}`, s);
+    }
+    return map;
+  }, [stalls]);
+
+  // 2. Pre-index bookings by clean stall name -> O(1) lookup
+  const stallBookingMap = useMemo(() => {
+    const map = new Map();
+    if (!bookings) return map;
+    for (let i = 0; i < bookings.length; i++) {
+      const b = bookings[i];
+      if (!b.stall_name) continue;
+      const rawNames = b.stall_name.split(',');
+      for (let j = 0; j < rawNames.length; j++) {
+        const cleanName = rawNames[j].replace(/[\[\]]/g, '').trim();
+        if (!cleanName) continue;
+        const existing = map.get(cleanName);
+        if (!existing) {
+          map.set(cleanName, b);
+        } else if (existing.status === 'ลา' && b.status !== 'ลา') {
+          map.set(cleanName, b);
+        }
+      }
+    }
+    return map;
+  }, [bookings]);
+
+  // 3. Pre-index Regular contracts for O(1) membership checks
+  const regularMonthlyMasterIds = useMemo(() => {
+    const set = new Set();
+    if (!monthlyList) return set;
+    for (let i = 0; i < monthlyList.length; i++) {
+      const m = monthlyList[i];
+      if (m.customer_type === 'Regular') {
+        set.add(m.id);
+      }
+    }
+    return set;
+  }, [monthlyList]);
+
+  const regularMonthStalls = useMemo(() => {
+    const set = new Set();
+    if (!monthlyList || !selectedDate) return set;
+    const currentMonthStr = getBookingMonthStr && formatBookingMonth 
+      ? formatBookingMonth(getBookingMonthStr(selectedDate)) 
+      : '';
+    for (let i = 0; i < monthlyList.length; i++) {
+      const m = monthlyList[i];
+      if (m.customer_type !== 'Regular') continue;
+      const mMonth = formatBookingMonth ? formatBookingMonth(m.booking_month) : m.booking_month;
+      if (mMonth === currentMonthStr && m.stalls) {
+        m.stalls.split(',').forEach(st => {
+          const clean = st.replace(/[\[\]]/g, '').trim();
+          if (clean) set.add(clean);
+        });
+      }
+    }
+    return set;
+  }, [monthlyList, selectedDate, formatBookingMonth, getBookingMonthStr]);
+
+  // 4. Pre-calculate selected day of week once
+  const dayOfWeek = useMemo(() => {
+    return selectedDate ? new Date(selectedDate).getDay() : new Date().getDay();
+  }, [selectedDate]);
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -63,7 +134,7 @@ export default function StallMapGrid({ hideLegend = false }) {
               const r = rIdx + 1;
               return Array.from({ length: maxCol }).map((_, cIdx) => {
                 const c = cIdx + 1;
-                const stall = stalls.find(s => s.row === r && s.col === c);
+                const stall = stallPosMap.get(`${r}-${c}`);
                 
                 if (!stall) {
                   const isInsideGrocery = r >= 1 && r <= 3 && c >= 13 && c <= 15;
@@ -78,29 +149,16 @@ export default function StallMapGrid({ hideLegend = false }) {
                 }
 
                 const stallClean = (stall.name || '').replace(/[\[\]]/g, '').trim();
-                const matchedBookings = bookings.filter(b => {
-                  if (!b.stall_name) return false;
-                  const bClean = b.stall_name.replace(/[\[\]]/g, '').trim();
-                  if (bClean === stallClean) return true;
-                  const parts = b.stall_name.split(',').map(s => s.replace(/[\[\]]/g, '').trim());
-                  return parts.includes(stallClean);
-                });
-                const booking = matchedBookings.sort((a, b) => {
-                  if (a.status === 'ลา' && b.status !== 'ลา') return 1;
-                  if (a.status !== 'ลา' && b.status === 'ลา') return -1;
-                  return 0;
-                })[0];
+                const booking = stallBookingMap.get(stallClean);
                 
                 // Setup classes based on status
                 let statusClass = "bg-white";
                 let priceText = "";
                 let statusText = "";
 
-                const dateObj = new Date(selectedDate);
-                const day = dateObj.getDay();
                 let price = stall.price_wed;
-                if (day === 6) price = stall.price_sat;
-                if (day === 0) price = stall.price_sun;
+                if (dayOfWeek === 6) price = stall.price_sat;
+                if (dayOfWeek === 0) price = stall.price_sun;
                 priceText = `${price}.-`;
 
                 const isFood = stall.type.includes('อาหาร') || stall.name.startsWith('F');
@@ -108,12 +166,8 @@ export default function StallMapGrid({ hideLegend = false }) {
                 const isRegularBooking = booking && (
                   booking.type === 'ประจำ' || 
                   booking.type === 'Regular' || 
-                  (booking.master_id && (monthlyList || []).some(m => m.id === booking.master_id && m.customer_type === 'Regular')) ||
-                  (monthlyList || []).some(m => {
-                    const mMonth = formatBookingMonth ? formatBookingMonth(m.booking_month) : m.booking_month;
-                    const bMonth = getBookingMonthStr && formatBookingMonth ? formatBookingMonth(getBookingMonthStr(booking.date || selectedDate)) : '';
-                    return mMonth === bMonth && (m.stalls || '').includes(stall.name) && m.customer_type === 'Regular';
-                  })
+                  (booking.master_id && regularMonthlyMasterIds.has(booking.master_id)) ||
+                  regularMonthStalls.has(stallClean)
                 );
 
                 if (stall.type === 'ทางเดิน') {
