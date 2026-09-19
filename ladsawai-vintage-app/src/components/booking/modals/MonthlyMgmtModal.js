@@ -15,7 +15,7 @@ import SlipPreviewModal from './SlipPreviewModal';
 
 export default function MonthlyMgmtModal() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
+    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
   } = useMonthlyBooking();
 
   if (!showMonthlyMgmtModal) return null;
@@ -140,7 +140,7 @@ export default function MonthlyMgmtModal() {
                     </thead>
                     <tbody className="divide-y bg-white">
                       {filteredMonthlyList.map((item) => {
-                        const unpaidBalance = item.total_price - (item.paid_amount || 0);
+                        const unpaidBalance = parseNumber(item.total_price) - parseNumber(item.paid_amount || 0);
                         return (
                           <tr 
                             key={item.id} 
@@ -161,13 +161,13 @@ export default function MonthlyMgmtModal() {
                             </td>
                             <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
                             <td className="p-2 text-center font-semibold text-gray-800">
-                              {item.total_price.toLocaleString()}.-
+                              {parseNumber(item.total_price).toLocaleString()}.-
                             </td>
                             <td className="p-2 text-center font-semibold text-green-700">
-                              {(item.paid_amount || 0).toLocaleString()}.-
+                              {parseNumber(item.paid_amount || 0).toLocaleString()}.-
                             </td>
                             <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
-                              {unpaidBalance.toLocaleString()}.-
+                              {parseNumber(unpaidBalance).toLocaleString()}.-
                             </td>
                             <td className="p-2 text-left pl-3" onClick={(e) => e.stopPropagation()}>
                               <div className="flex gap-1 justify-start">
@@ -238,7 +238,7 @@ export default function MonthlyMgmtModal() {
                         ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls)}</span>
                       </div>
                       <div className="text-[10px] text-gray-500 mt-0.5">
-                        ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{activeMonthlyBooking.paid_amount || 0}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0))}.-</span>
+                        ยอดเช่า: <span className="font-semibold text-gray-700">{parseNumber(activeMonthlyBooking?.total_price).toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{parseNumber(activeMonthlyBooking?.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(parseNumber(activeMonthlyBooking?.total_price) - parseNumber(activeMonthlyBooking?.paid_amount || 0)).toLocaleString()}.-</span>
                       </div>
                     </div>
 

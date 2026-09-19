@@ -11,16 +11,17 @@ import StandardBookingLayout from '@/components/booking/StandardBookingLayout';
 import KlongThomBookingLayout from '@/components/booking/KlongThomBookingLayout';
 
 function BookingPageContent() {
-  const { isMonthlyPageOnly } = useBooking();
-  const [view] = React.useState(() => {
+  const [view, setView] = React.useState('');
+
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      return params.get('view') || '';
+      const v = params.get('view') || '';
+      if (v) setView(v);
     }
-    return '';
-  });
+  }, []);
 
-  if (isMonthlyPageOnly) {
+  if (view === 'monthly') {
     return <MonthlyManagerLayout />;
   }
 

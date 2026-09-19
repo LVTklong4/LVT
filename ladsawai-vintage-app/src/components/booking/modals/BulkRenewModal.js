@@ -436,8 +436,8 @@ export default function BulkRenewModal() {
                                   <td className="p-2 font-bold text-purple-950 font-mono">{cleanStallName(dispStalls)}</td>
                                   <td className="p-2 text-[10px]">{dispDays}</td>
                                   <td className="p-2 text-center font-mono font-bold">{dispElec} หน่วย</td>
-                                  <td className="p-2 text-center font-mono font-semibold">{dispStorage.toLocaleString()}.-</td>
-                                  <td className="p-2 text-center font-mono font-bold text-purple-900">{dispPrice.toLocaleString()}.-</td>
+                                  <td className="p-2 text-center font-mono font-semibold">{(parseNumber(dispStorage) || 0).toLocaleString()}.-</td>
+                                  <td className="p-2 text-center font-mono font-bold text-purple-900">{(parseNumber(dispPrice) || 0).toLocaleString()}.-</td>
                                   <td className="p-2 text-center">
                                     <div className="flex items-center justify-center gap-1.5">
                                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${statusColor}`}>{statusText}</span>

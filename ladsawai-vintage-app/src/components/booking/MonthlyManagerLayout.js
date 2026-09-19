@@ -280,7 +280,7 @@ export default function MonthlyManagerLayout() {
                 </thead>
                 <tbody className="divide-y bg-white">
                   {filteredMonthlyList.map((item) => {
-                    const unpaidBalance = item.total_price - (item.paid_amount || 0);
+                    const unpaidBalance = parseNumber(item.total_price) - parseNumber(item.paid_amount || 0);
                     return (
                       <tr 
                         key={item.id} 
@@ -315,13 +315,13 @@ export default function MonthlyManagerLayout() {
                         </td>
                         <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
                         <td className="p-2 text-center font-semibold text-gray-800">
-                          {item.total_price.toLocaleString()}.-
+                          {parseNumber(item.total_price).toLocaleString()}.-
                         </td>
                         <td className="p-2 text-center font-semibold text-green-700">
-                          {(item.paid_amount || 0).toLocaleString()}.-
+                          {parseNumber(item.paid_amount || 0).toLocaleString()}.-
                         </td>
                         <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
-                          {unpaidBalance.toLocaleString()}.-
+                          {parseNumber(unpaidBalance).toLocaleString()}.-
                         </td>
                         <td className="p-2 text-left pl-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-1 justify-start">
@@ -409,7 +409,7 @@ export default function MonthlyManagerLayout() {
                       </span>
                     ) : (
                       <>
-                        ยอดเช่า: <span className="font-semibold text-gray-700">{activeMonthlyBooking.total_price.toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{(activeMonthlyBooking.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(activeMonthlyBooking.total_price - (activeMonthlyBooking.paid_amount || 0)).toLocaleString()}.-</span>
+                        ยอดเช่า: <span className="font-semibold text-gray-700">{parseNumber(activeMonthlyBooking?.total_price).toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{parseNumber(activeMonthlyBooking?.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(parseNumber(activeMonthlyBooking?.total_price) - parseNumber(activeMonthlyBooking?.paid_amount || 0)).toLocaleString()}.-</span>
                       </>
                     )}
                   </div>

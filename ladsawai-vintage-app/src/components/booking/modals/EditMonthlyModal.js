@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 
 export default function EditMonthlyModal() {
   const {
-    cleanStallName,    handleUpdateMonthlyItem,    note,    selectedMonthlyItem,    setSelectedMonthlyItem,    stalls
+    cleanStallName,    handleUpdateMonthlyItem,    note,    parseNumber,    selectedMonthlyItem,    setSelectedMonthlyItem,    stalls
   } = useMonthlyBooking();
 
   if (!selectedMonthlyItem) return null;
@@ -28,7 +28,7 @@ export default function EditMonthlyModal() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] text-gray-500 font-bold">ค่าเช่าทั้งหมด</span>
-                    <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border text-center">{selectedMonthlyItem.total_price.toLocaleString()}.-</span>
+                    <span className="text-xs font-bold text-gray-800 bg-white p-2.5 rounded border text-center">{(parseNumber(selectedMonthlyItem?.total_price) || 0).toLocaleString()}.-</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-gray-700">ยอดที่จ่ายแล้ว (บาท)</label>

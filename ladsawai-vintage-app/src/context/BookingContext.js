@@ -165,15 +165,6 @@ export function BookingProvider({ children }) {
     initDates();
     // 2. Fetch Stallsผังตลาด
     fetchStalls();
-
-    // Check URL parameters to auto-open monthly management
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('view') === 'monthly') {
-        setIsMonthlyPageOnly(true);
-        setShowMonthlyMgmtModal(true);
-      }
-    }
   }, []);
 
   // Fetch bookings when date changes
