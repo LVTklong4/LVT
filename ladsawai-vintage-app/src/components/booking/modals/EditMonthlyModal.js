@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { X } from 'lucide-react';
 
 export default function EditMonthlyModal() {
   const {
     cleanStallName,    handleUpdateMonthlyItem,    note,    selectedMonthlyItem,    setSelectedMonthlyItem,    stalls
-  } = useBooking();
+  } = useMonthlyBooking();
 
   if (!selectedMonthlyItem) return null;
 

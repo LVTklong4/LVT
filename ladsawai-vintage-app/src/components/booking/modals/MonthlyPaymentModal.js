@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { CreditCard, Banknote, Tag } from 'lucide-react';
 
 export default function MonthlyPaymentModal() {
   const {
     activeMonthlyBooking,    handleMonthlyPaymentSubmit,    handleSlipChange,    monthlyPaymentForm,    note,    parseNumber,    setMonthlyPaymentForm,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyPaymentModal,    slipPreviewUrl
-  } = useBooking();
+  } = useMonthlyBooking();
 
   if (!showMonthlyPaymentModal) return null;
 

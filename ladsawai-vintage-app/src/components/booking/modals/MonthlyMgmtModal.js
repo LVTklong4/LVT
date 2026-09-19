@@ -1,14 +1,22 @@
 'use client';
 
 import React from 'react';
-import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX } from 'lucide-react';
 import { monthNamesFull } from '@/utils/thaiDateHelper';
+import NewMonthlyModal from './NewMonthlyModal';
+import EditMonthlyModal from './EditMonthlyModal';
+import MonthlyPaymentModal from './MonthlyPaymentModal';
+import BulkRenewModal from './BulkRenewModal';
+import PreRenewalEditSubModal from './PreRenewalEditSubModal';
+import InvoicePreviewModal from './InvoicePreviewModal';
+import MonthlyPrintModal from './MonthlyPrintModal';
+import SlipPreviewModal from './SlipPreviewModal';
 
 export default function MonthlyMgmtModal() {
   const {
     activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
-  } = useBooking();
+  } = useMonthlyBooking();
 
   if (!showMonthlyMgmtModal) return null;
 
@@ -317,6 +325,16 @@ export default function MonthlyMgmtModal() {
               </div>
             </div>
           </div>
+
+          {/* Monthly Sub-Modals */}
+          <NewMonthlyModal />
+          <EditMonthlyModal />
+          <MonthlyPaymentModal />
+          <BulkRenewModal />
+          <PreRenewalEditSubModal />
+          <InvoicePreviewModal />
+          <MonthlyPrintModal />
+          <SlipPreviewModal />
         </div>
   );
 }

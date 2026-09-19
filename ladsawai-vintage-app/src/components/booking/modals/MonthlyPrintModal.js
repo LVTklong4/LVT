@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { X, Sun, Printer } from 'lucide-react';
 
 export default function MonthlyPrintModal() {
   const {
     cleanStallName,    handlePrintMonthlyReceipt,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    parseNumber,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setShowMonthlyPrintModal,    showMonthlyPrintModal,    stalls
-  } = useBooking();
+  } = useMonthlyBooking();
 
   if (!showMonthlyPrintModal && !monthlyPrintItem) return null;
 

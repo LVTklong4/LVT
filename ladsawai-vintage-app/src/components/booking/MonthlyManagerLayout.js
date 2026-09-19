@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { Search, Settings, CalendarDays, RotateCcw, User, Loader2, Plus, Trash2, CheckCircle, AlertCircle, X, CreditCard, FileText, Phone, Info, Sun, PlusCircle, Printer, Banknote, Check, Tag, CalendarX, Edit, HelpCircle } from 'lucide-react';
 
 import NewMonthlyModal from './modals/NewMonthlyModal';
@@ -145,10 +146,10 @@ export default function MonthlyManagerLayout() {
     stallFilterWed,
     showCancelled,
     setShowCancelled,
-    setShowSettingsMgmtModal,
     stalls,
     confirmInfo
-  } = useBooking();
+  } = useMonthlyBooking();
+  const { setShowSettingsMgmtModal } = useBooking();
 
   return (
     <div className="w-screen h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">

@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { X, Info } from 'lucide-react';
 
 export default function InvoicePreviewModal() {
   const {
     cleanStallName,    formatBookingMonth,    getDayOccurrences,    invoicePreviewItem,    parseNumber,    product,    setInvoicePreviewItem,    stalls
-  } = useBooking();
+  } = useMonthlyBooking();
 
   if (!invoicePreviewItem) return null;
 

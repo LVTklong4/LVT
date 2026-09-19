@@ -2,13 +2,17 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { X } from 'lucide-react';
 
 export default function SlipPreviewModal() {
-  const {
-    setFullScreenSlipUrl,
-    fullScreenSlipUrl
-  } = useBooking();
+  let bookingContext = null;
+  let monthlyContext = null;
+  try { bookingContext = useBooking(); } catch (e) {}
+  try { monthlyContext = useMonthlyBooking(); } catch (e) {}
+
+  const fullScreenSlipUrl = monthlyContext?.fullScreenSlipUrl || bookingContext?.fullScreenSlipUrl;
+  const setFullScreenSlipUrl = monthlyContext?.setFullScreenSlipUrl || bookingContext?.setFullScreenSlipUrl;
 
   if (!fullScreenSlipUrl) return null;
 
