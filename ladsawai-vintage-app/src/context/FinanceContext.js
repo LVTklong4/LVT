@@ -5,6 +5,56 @@ import { supabase } from '@/lib/supabase';
 
 const FinanceContext = createContext();
 
+// Helper: Parse single or split payment methods into cash and transfer amounts
+export function parsePaymentBreakdown(methodStr, totalAmount = 0) {
+  const str = String(methodStr || '').trim();
+  const amt = parseFloat(totalAmount) || 0;
+
+  if (!str) {
+    return { cash: 0, transfer: amt, isDiscount: false };
+  }
+
+  if (str.includes('ส่วนลด') || str.toLowerCase().includes('discount')) {
+    return { cash: 0, transfer: 0, discount: amt, isDiscount: true };
+  }
+
+  if (str.includes('+') || str.includes(':')) {
+    let parsedCash = 0;
+    let parsedTransfer = 0;
+    const parts = str.split('+');
+
+    parts.forEach(p => {
+      const seg = p.trim();
+      if (seg.includes(':')) {
+        const [methodName, valStr] = seg.split(':');
+        const val = parseFloat(valStr) || 0;
+        const mLow = (methodName || '').trim().toLowerCase();
+        if (mLow.includes('สด') || mLow.includes('cash')) {
+          parsedCash += val;
+        } else {
+          parsedTransfer += val;
+        }
+      } else {
+        const segLow = seg.toLowerCase();
+        if (segLow.includes('สด') || segLow.includes('cash')) {
+          parsedCash += amt;
+        } else {
+          parsedTransfer += amt;
+        }
+      }
+    });
+
+    return { cash: parsedCash, transfer: parsedTransfer, isDiscount: false };
+  }
+
+  const lower = str.toLowerCase();
+  if (lower.includes('สด') || lower.includes('cash')) {
+    return { cash: amt, transfer: 0, isDiscount: false };
+  }
+
+  return { cash: 0, transfer: amt, isDiscount: false };
+}
+
 export function FinanceProvider({ children }) {
   const [incomeList, setIncomeList] = useState([]);
   const [expenseList, setExpenseList] = useState([]);
@@ -48,14 +98,20 @@ export function FinanceProvider({ children }) {
 
       allTxns?.forEach(t => {
         const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
+        const amt = parseFloat(t.total_amount || t.amount || 0);
+        const rawMethod = t.payment_method || t.method || 'โอนเงิน';
+        const breakdown = parsePaymentBreakdown(rawMethod, amt);
+
         const itemObj = {
           id: t.id,
           date: t.date,
           category: t.category || (isExp ? 'ค่าใช้จ่ายทั่วไป' : 'รายรับทั่วไป'),
           description: t.description || t.note || t.booking_ref || '',
           item: t.description || t.note || t.booking_ref || '',
-          amount: parseFloat(t.total_amount || t.amount || 0),
-          method: t.payment_method || t.method || 'โอนเงิน',
+          amount: amt,
+          method: rawMethod,
+          cashAmount: breakdown.cash,
+          transferAmount: breakdown.transfer,
           officer: t.officer || 'Admin',
           timestamp: t.timestamp || t.created_at
         };
@@ -63,7 +119,10 @@ export function FinanceProvider({ children }) {
         if (isExp) {
           expList.push(itemObj);
         } else {
-          incList.push(itemObj);
+          // Do not include pure discounts in General Ledger income list
+          if (!breakdown.isDiscount) {
+            incList.push(itemObj);
+          }
         }
       });
 
@@ -106,11 +165,88 @@ export function FinanceProvider({ children }) {
     }
   }, []);
 
-  // Fetch Daily Summary for Closing Reconciliation
+  // Fetch Daily Summary for Closing Reconciliation (with Unclosed Carry-Forward & Float Handover)
   const fetchDailySummary = useCallback(async (targetDate) => {
     const selectedDate = targetDate || new Date().toISOString().split('T')[0];
     setLoading(true);
     try {
+      // 0. Fetch previous closing for Float Handover & unclosed dates
+      let suggestedFloat = 0;
+      let carryForwardCash = 0;
+      let carryForwardTransfer = 0;
+      let carryForwardExpenses = 0;
+      const carryForwardItems = [];
+
+      try {
+        const [prevClosingRes, allClosedRes] = await Promise.all([
+          supabase
+            .from('daily_closings')
+            .select('*')
+            .lt('date', selectedDate)
+            .order('date', { ascending: false })
+            .limit(1),
+          supabase
+            .from('daily_closings')
+            .select('date')
+            .eq('status', 'CLOSED')
+        ]);
+
+        if (prevClosingRes.data && prevClosingRes.data.length > 0) {
+          suggestedFloat = parseFloat(prevClosingRes.data[0].float_amount) || 0;
+        }
+
+        const closedDateSet = new Set((allClosedRes.data || []).map(r => r.date));
+
+        // Query transactions prior to selectedDate that were never closed
+        const { data: pastTxns } = await supabase
+          .from('transactions')
+          .select('*')
+          .lt('date', selectedDate)
+          .order('date', { ascending: true });
+
+        pastTxns?.forEach(t => {
+          if (!closedDateSet.has(t.date)) {
+            const amt = parseFloat(t.total_amount || t.amount) || 0;
+            const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
+            const payment = parsePaymentBreakdown(t.payment_method || t.method, amt);
+
+            if (isExp) {
+              carryForwardExpenses += amt;
+              carryForwardCash -= payment.cash;
+              carryForwardTransfer -= payment.transfer;
+              carryForwardItems.push({
+                id: t.id,
+                date: t.date,
+                description: `[ยกยอด ${t.date}] ${t.description || t.note || t.category || 'รายจ่าย'}`,
+                category: t.category || 'ยกยอด',
+                amount: amt,
+                method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
+                officer: t.officer || 'Admin',
+                isCarryForward: true
+              });
+            } else {
+              const isDiscount = t.category?.includes('ส่วนลด') || payment.isDiscount;
+              if (!isDiscount) {
+                carryForwardCash += payment.cash;
+                carryForwardTransfer += payment.transfer;
+                carryForwardItems.push({
+                  id: t.id,
+                  date: t.date,
+                  description: `[ยกยอด ${t.date}] ${t.description || t.note || t.category || 'รายรับ'}`,
+                  category: t.category || 'ยกยอด',
+                  amount: amt,
+                  method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
+                  officer: t.officer || 'Admin',
+                  isCarryForward: true
+                });
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Notice: Error checking carry-forward data:', err);
+      }
+
       const [bookingsRes, txnsRes, closingRes] = await Promise.all([
         supabase.from('bookings').select('*').eq('date', selectedDate),
         supabase.from('transactions').select('*').eq('date', selectedDate),
@@ -127,12 +263,12 @@ export function FinanceProvider({ children }) {
       let klongthomIncome = 0;
       let storageIncome = 0;
       let otherIncTotal = 0;
-      let totalExpenses = 0;
+      let totalExpenses = carryForwardExpenses;
 
-      let cashIn = 0;
-      let transferIn = 0;
-      let cashOut = 0;
-      let transferOut = 0;
+      let cashIn = Math.max(0, carryForwardCash);
+      let transferIn = Math.max(0, carryForwardTransfer);
+      let cashOut = carryForwardCash < 0 ? Math.abs(carryForwardCash) : 0;
+      let transferOut = carryForwardTransfer < 0 ? Math.abs(carryForwardTransfer) : 0;
 
       // Detailed category breakdown (Cash vs Transfer)
       const breakdown = {
@@ -141,7 +277,8 @@ export function FinanceProvider({ children }) {
         klongthom: { cash: 0, transfer: 0, total: 0 },
         storage: { cash: 0, transfer: 0, total: 0 },
         otherIncome: { cash: 0, transfer: 0, total: 0 },
-        expenses: { cash: 0, transfer: 0, total: 0 }
+        expenses: { cash: 0, transfer: 0, total: 0 },
+        discounts: { total: 0, count: 0 }
       };
 
       // 1. Transactions
@@ -151,7 +288,7 @@ export function FinanceProvider({ children }) {
       txns.forEach(t => {
         const amt = parseFloat(t.total_amount || t.amount) || 0;
         const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
-        const isCash = t.method === 'Cash' || t.method === 'เงินสด' || t.payment_method === 'Cash' || t.payment_method === 'เงินสด';
+        const payment = parsePaymentBreakdown(t.payment_method || t.method, amt);
         
         if (isExp) {
           totalExpenses += amt;
@@ -160,44 +297,54 @@ export function FinanceProvider({ children }) {
             description: t.description || t.note || t.category || 'รายจ่าย',
             category: t.category || 'ทั่วไป',
             amount: amt,
-            method: isCash ? 'เงินสด' : 'โอนเงิน',
+            method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
             officer: t.officer || 'Admin'
           });
-          if (isCash) {
-            cashOut += amt;
-            breakdown.expenses.cash += amt;
-          } else {
-            transferOut += amt;
-            breakdown.expenses.transfer += amt;
-          }
+          cashOut += payment.cash;
+          transferOut += payment.transfer;
+          breakdown.expenses.cash += payment.cash;
+          breakdown.expenses.transfer += payment.transfer;
           breakdown.expenses.total += amt;
         } else {
-          if (isCash) {
-            cashIn += amt;
-          } else {
-            transferIn += amt;
+          // Check for pure discounts
+          const isDiscountCategory = t.category?.includes('ส่วนลด') || payment.isDiscount;
+          if (isDiscountCategory) {
+            // Discounts are reductions, NOT income
+            breakdown.discounts.total += amt;
+            breakdown.discounts.count += 1;
+            return;
+          }
+
+          cashIn += payment.cash;
+          transferIn += payment.transfer;
+          if (payment.transfer > 0) {
             transferTxnCount++;
           }
 
-          if (t.category?.includes('คลองถม')) {
+          if (t.category?.includes('คลองถม') || t.bill_type === 'KlongThom') {
             klongthomIncome += amt;
-            if (isCash) breakdown.klongthom.cash += amt; else breakdown.klongthom.transfer += amt;
+            breakdown.klongthom.cash += payment.cash;
+            breakdown.klongthom.transfer += payment.transfer;
             breakdown.klongthom.total += amt;
-          } else if (t.category?.includes('ฝากของ')) {
+          } else if (t.category?.includes('ฝากของ') || t.bill_type === 'Storage') {
             storageIncome += amt;
-            if (isCash) breakdown.storage.cash += amt; else breakdown.storage.transfer += amt;
+            breakdown.storage.cash += payment.cash;
+            breakdown.storage.transfer += payment.transfer;
             breakdown.storage.total += amt;
-          } else if (t.booking_ref && (t.category?.includes('รายเดือน') || t.category?.includes('ส่วนลด') || t.category?.includes('สัญญา'))) {
+          } else if (t.booking_ref && (t.category?.includes('รายเดือน') || t.category?.includes('สัญญา'))) {
             monthlyIncome += amt;
-            if (isCash) breakdown.monthly.cash += amt; else breakdown.monthly.transfer += amt;
+            breakdown.monthly.cash += payment.cash;
+            breakdown.monthly.transfer += payment.transfer;
             breakdown.monthly.total += amt;
           } else if (t.category?.includes('รายได้อื่นๆ') || t.category?.includes('รายรับอื่นๆ')) {
             otherIncTotal += amt;
-            if (isCash) breakdown.otherIncome.cash += amt; else breakdown.otherIncome.transfer += amt;
+            breakdown.otherIncome.cash += payment.cash;
+            breakdown.otherIncome.transfer += payment.transfer;
             breakdown.otherIncome.total += amt;
           } else {
             dailyStallIncome += amt;
-            if (isCash) breakdown.dailyStall.cash += amt; else breakdown.dailyStall.transfer += amt;
+            breakdown.dailyStall.cash += payment.cash;
+            breakdown.dailyStall.transfer += payment.transfer;
             breakdown.dailyStall.total += amt;
           }
         }
@@ -210,16 +357,15 @@ export function FinanceProvider({ children }) {
           // check if already counted in txns
           const hasTxn = txns.some(t => t.booking_ref === b.id);
           if (!hasTxn) {
+            const bPayment = parsePaymentBreakdown(b.payment_method, amt);
             dailyStallIncome += amt;
-            const isCash = b.payment_method === 'เงินสด' || b.payment_method === 'Cash';
-            if (isCash) {
-              cashIn += amt;
-              breakdown.dailyStall.cash += amt;
-            } else {
-              transferIn += amt;
+            cashIn += bPayment.cash;
+            transferIn += bPayment.transfer;
+            if (bPayment.transfer > 0) {
               transferTxnCount++;
-              breakdown.dailyStall.transfer += amt;
             }
+            breakdown.dailyStall.cash += bPayment.cash;
+            breakdown.dailyStall.transfer += bPayment.transfer;
             breakdown.dailyStall.total += amt;
           }
         }
@@ -236,8 +382,17 @@ export function FinanceProvider({ children }) {
       const totalIncomeTransfer = breakdown.dailyStall.transfer + breakdown.monthly.transfer + breakdown.klongthom.transfer + breakdown.storage.transfer + breakdown.otherIncome.transfer;
       const totalIncomeAll = totalIncomeCash + totalIncomeTransfer;
 
+      const allExpenseItems = [...expenseItems, ...carryForwardItems.filter(i => i.isCarryForward && i.type === 'expense')];
+
       const summary = {
         date: selectedDate,
+        suggestedFloat,
+        carryForward: {
+          cash: carryForwardCash,
+          transfer: carryForwardTransfer,
+          total: carryForwardCash + carryForwardTransfer,
+          items: carryForwardItems
+        },
         dailyStallIncome,
         monthlyIncome,
         klongthomIncome,
@@ -251,7 +406,7 @@ export function FinanceProvider({ children }) {
         cashOut,
         transferOut,
         expectedCashInDrawer: cashIn - cashOut, // before float
-        expenseItems,
+        expenseItems: allExpenseItems,
         occupancy,
         transferTxnCount,
         breakdown: {
@@ -301,15 +456,47 @@ export function FinanceProvider({ children }) {
         closed_at: new Date().toISOString()
       };
 
-      // Try inserting into daily_closings table
+      // 1. Insert/Update daily_closings table
       const { data, error } = await supabase.from('daily_closings').upsert([closingObj]).select();
       if (error) {
         console.warn('daily_closings table notice (saving local fallback):', error.message);
-        // Fallback to local storage if table doesn't exist yet
         if (typeof window !== 'undefined') {
           localStorage.setItem(`daily_closing_${payload.date}`, JSON.stringify(closingObj));
         }
       }
+
+      // 2. Stamp closing_id on closed transactions (gracefully attempts if column exists)
+      try {
+        const txnIdsToStamp = [];
+        if (payload.summary?.expenseItems) {
+          payload.summary.expenseItems.forEach(i => { if (i.id) txnIdsToStamp.push(i.id); });
+        }
+        if (payload.summary?.carryForward?.items) {
+          payload.summary.carryForward.items.forEach(i => { if (i.id) txnIdsToStamp.push(i.id); });
+        }
+
+        if (txnIdsToStamp.length > 0) {
+          await supabase
+            .from('transactions')
+            .update({ closing_id: closingObj.id })
+            .in('id', txnIdsToStamp);
+        }
+
+        // Also stamp transactions on this date
+        await supabase
+          .from('transactions')
+          .update({ closing_id: closingObj.id })
+          .eq('date', payload.date);
+      } catch (stampErr) {
+        // Safe ignore if closing_id column does not exist yet
+      }
+
+      // 3. Update in-memory closedDates set immediately
+      setClosedDates(prev => {
+        const next = new Set(prev);
+        next.add(payload.date);
+        return next;
+      });
 
       setDailyClosingData(prev => prev ? { ...prev, existingClosing: closingObj } : prev);
       return { success: true, data: closingObj };

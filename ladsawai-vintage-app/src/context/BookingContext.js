@@ -991,29 +991,50 @@ export function BookingProvider({ children }) {
         .upsert(bookingData);
       if (saveError) throw saveError;
 
-      // 2. Record Transaction if Paid
+      // 2. Record Transaction if Paid (Append-only Incremental Ledger pattern)
       if (status === 'ชำระแล้ว') {
-        const txnId = `TXN-${Date.now()}`;
-        const txnData = {
-          id: txnId,
-          booking_ref: bookingId,
-          date: selectedDate,
-          category: (bookingType === 'รายวัน' || bookingType === 'ประจำ') ? 'ค่าล็อครายวัน' : 'ค่าล็อครายเดือน',
-          total_amount: totalVal,
-          method: finalPaymentMethod,
-          note: `ชำระเงินล็อค ${stallNames}`,
-          officer: adminUser.name,
-          timestamp: new Date().toISOString(),
-          stall_amt: parseNumber(stallPrice),
-          elec_amt: parseNumber(elecPrice),
-          storage_amt: 0,
-          bill_type: 'General'
-        };
-
-        const { error: txnError } = await supabase
+        // Query existing transactions for this booking_ref to calculate already paid amount
+        const { data: existingTxns } = await supabase
           .from('transactions')
-          .insert(txnData);
-        if (txnError) throw txnError;
+          .select('id, total_amount')
+          .eq('booking_ref', bookingId);
+
+        const alreadyPaid = (existingTxns || []).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0);
+
+        if (totalVal > alreadyPaid) {
+          const incrementalAmount = totalVal - alreadyPaid;
+          const isFirstPayment = alreadyPaid === 0;
+          const txnId = `TXN-${Date.now()}`;
+          const txnData = {
+            id: txnId,
+            booking_ref: bookingId,
+            date: selectedDate,
+            category: isFirstPayment 
+              ? ((bookingType === 'รายวัน' || bookingType === 'ประจำ') ? 'ค่าล็อครายวัน' : 'ค่าล็อครายเดือน')
+              : 'ชำระเงินล็อคเพิ่มเติม',
+            total_amount: incrementalAmount,
+            method: finalPaymentMethod,
+            note: isFirstPayment ? `ชำระเงินล็อค ${stallNames}` : `ชำระเพิ่มเติมล็อค ${stallNames} (ส่วนเพิ่ม ${incrementalAmount} บ.)`,
+            officer: adminUser.name,
+            timestamp: new Date().toISOString(),
+            stall_amt: isFirstPayment ? parseNumber(stallPrice) : incrementalAmount,
+            elec_amt: isFirstPayment ? parseNumber(elecPrice) : 0,
+            storage_amt: 0,
+            bill_type: 'General'
+          };
+
+          const { error: txnError } = await supabase
+            .from('transactions')
+            .insert(txnData);
+          if (txnError) throw txnError;
+        }
+        // If totalVal <= alreadyPaid, no new transaction is needed (editing booker name, product, or stall move with equal/lower price)
+      } else if (status === 'ค้างชำระ' && selectedBooking?.id) {
+        // If status changed from paid to unpaid, remove previously recorded transaction
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('booking_ref', selectedBooking.id);
       }
 
       if (adminUser) {
@@ -1070,6 +1091,16 @@ export function BookingProvider({ children }) {
         .delete()
         .in('id', idsToDelete);
       if (error) throw error;
+
+      // Delete corresponding transactions to avoid ghost income in ledger
+      try {
+        await supabase
+          .from('transactions')
+          .delete()
+          .in('booking_ref', idsToDelete);
+      } catch (txnDelErr) {
+        console.warn('Notice: Could not delete transactions associated with bookings:', txnDelErr.message);
+      }
 
       if (adminUser) {
         logOfficerActivity(

@@ -134,6 +134,12 @@ export default function FinanceLedger() {
 
   // Delete handlers
   const handleDeleteItem = async (id, type) => {
+    const targetItem = (type === 'income' ? incomeList : expenseList).find(x => x.id === id);
+    if (targetItem?.date && isDateClosed(targetItem.date)) {
+      alert(`⚠️ วันที่ ${targetItem.date} ได้ทำการปิดยอดประจำวันเรียบร้อยแล้ว ข้อมูลถูกล็อคไม่สามารถลบรายการได้`);
+      return;
+    }
+
     const isConfirmed = await showConfirm({
       title: 'ยืนยันการลบรายการบัญชี',
       message: 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้? การลบไม่สามารถย้อนกลับได้',

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
+import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet, Printer } from 'lucide-react';
 
 export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const { fetchDailySummary, saveDailyClosing, loading } = useFinance();
+  const { adminUser } = useAuthAdmin();
 
   const [selectedDate, setSelectedDate] = useState(() => defaultDate || new Date().toISOString().split('T')[0]);
   const [summary, setSummary] = useState(null);
@@ -54,6 +56,9 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
         setDiscrepancyNote(res.existingClosing.discrepancy_note || '');
         setIsSaved(true);
       } else {
+        setFloatAmount(String(res.suggestedFloat || '0'));
+        setCountedCash('');
+        setDiscrepancyNote('');
         setIsSaved(false);
       }
     }
@@ -71,6 +76,9 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
             setDiscrepancyNote(res.existingClosing.discrepancy_note || '');
             setIsSaved(true);
           } else {
+            setFloatAmount(String(res.suggestedFloat || '0'));
+            setCountedCash('');
+            setDiscrepancyNote('');
             setIsSaved(false);
           }
         }
@@ -115,7 +123,7 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
       cashShortageSurplus: shortageSurplus,
       discrepancyNote,
       summary,
-      officer: 'Admin'
+      officer: adminUser?.name || 'Admin'
     };
 
     const res = await saveDailyClosing(payload);
@@ -283,6 +291,22 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                           {(summary.breakdown?.otherIncome?.total ?? summary.otherIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
+                      {summary.carryForward && summary.carryForward.total !== 0 && (
+                        <tr className="bg-amber-50/80 border-y border-amber-200">
+                          <td className="p-2.5 flex items-center gap-1.5 font-bold text-amber-900">
+                            🔄 ยอดยกมาจากวันก่อนหน้าที่ยังไม่ได้ปิดรอบ (Carry-Forward)
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-amber-800">
+                            {(summary.carryForward.cash ?? 0).toLocaleString()} ฿
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-blue-700">
+                            {(summary.carryForward.transfer ?? 0).toLocaleString()} ฿
+                          </td>
+                          <td className="p-2.5 text-right font-extrabold text-amber-950">
+                            {(summary.carryForward.total ?? 0).toLocaleString()} ฿
+                          </td>
+                        </tr>
+                      )}
                       <tr className="bg-emerald-50/70 font-black">
                         <td className="p-2.5 text-emerald-950">รวมรายรับทั้งหมด (Total Income)</td>
                         <td className="p-2.5 text-right text-emerald-800 font-extrabold">
