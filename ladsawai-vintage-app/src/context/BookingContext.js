@@ -413,7 +413,8 @@ export function BookingProvider({ children }) {
       if (booking.status === 'ลา') {
         return { isVacant: true, label: 'ว่าง (ปล่อยเช่ารายวัน)', price, product: '' };
       } else if (booking.type === 'ประจำ' || booking.type === 'Regular') {
-        return { isVacant: false, label: 'ไม่ว่าง (ประจำ)', product: booking.product || 'ประจำ' };
+        const isPaid = booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง';
+        return { isVacant: false, label: isPaid ? 'ไม่ว่าง (ประจำ - ชำระแล้ว)' : 'ไม่ว่าง (ประจำ - ค้างชำระ)', product: booking.product || 'ประจำ' };
       } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || stall.type.includes('รายเดือน')) {
         return { isVacant: false, label: 'ไม่ว่าง (รายเดือน)', product: booking.product || 'รายเดือน' };
       } else if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {

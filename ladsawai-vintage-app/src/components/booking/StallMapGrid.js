@@ -47,6 +47,8 @@ export default function StallMapGrid({ hideLegend = false }) {
           map.set(cleanName, b);
         } else if (existing.status === 'ลา' && b.status !== 'ลา') {
           map.set(cleanName, b);
+        } else if (existing.status !== 'ชำระแล้ว' && (b.status === 'ชำระแล้ว' || b.status === 'ไม่ว่าง')) {
+          map.set(cleanName, b);
         }
       }
     }
@@ -180,8 +182,12 @@ export default function StallMapGrid({ hideLegend = false }) {
                     statusClass = isFood ? "bg-food-free text-green-900" : "bg-cloth-free text-blue-900";
                     statusText = priceText;
                   } else if (isRegularBooking) {
-                    // ล็อคประจำ (Regular) = สีส้มลายทาง พร้อมแสดงชื่อสินค้า
-                    statusClass = "bg-unpaid text-amber-900";
+                    // ล็อคประจำ (Regular): ถ้าชำระแล้ว = สีแดง, ถ้ายังไม่ชำระ = สีส้มลายทาง
+                    if (booking.status === 'ชำระแล้ว' || booking.status === 'ไม่ว่าง') {
+                      statusClass = "bg-occupied text-red-900";
+                    } else {
+                      statusClass = "bg-unpaid text-amber-900";
+                    }
                     statusText = booking.product || "ประจำ";
                   } else if (booking.type === 'รายเดือน' || stall.type === 'รายเดือน' || String(stall.type || '').includes('รายเดือน')) {
                     // รายเดือนสัญญาจริง (Standard, VIP, Room) = สีม่วงอ่อนเสมอ
