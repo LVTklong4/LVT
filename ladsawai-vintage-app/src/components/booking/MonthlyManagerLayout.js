@@ -236,15 +236,15 @@ export default function MonthlyManagerLayout() {
         </div>
 
         {/* Content columns */}
-        <div className="p-5 flex flex-col md:flex-row gap-5 flex-1 overflow-hidden">
+        <div className="p-4 md:p-5 flex flex-col md:flex-row gap-5 flex-1 min-h-0 overflow-hidden">
           {/* Left Side: List panel */}
-          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center shrink-0">
               <span>รายชื่อลูกค้ารายเดือน ({filteredMonthlyList.length} คน)</span>
               {loadingMonthly && <Loader2 className="w-4 h-4 text-amber-800 animate-spin" />}
             </h4>
             
-            <div className="overflow-auto border border-gray-200 rounded-lg flex-1 min-h-[300px] bg-white">
+            <div className="overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg flex-1 min-h-0 bg-white">
               <table className="w-full text-xs text-left">
                 <thead className="bg-[#F5E6D3] text-[#3E2723] border-b font-bold sticky top-0 z-10">
                   <tr>
@@ -367,9 +367,9 @@ export default function MonthlyManagerLayout() {
           </div>
 
           {/* Right Side: Selected Booking History & Details */}
-          <div className="w-full md:w-[400px] shrink-0 border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col min-h-[300px] md:min-h-0 h-full overflow-hidden">
+          <div className="w-full md:w-[400px] shrink-0 border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col min-h-0 h-full overflow-hidden">
             {activeMonthlyBooking ? (
-              <div className="flex flex-col gap-3 h-full overflow-hidden">
+              <div className="flex flex-col gap-3 h-full overflow-hidden min-h-0">
                 <div className="border-b pb-2 shrink-0">
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-bold text-xs text-[#3E2723] flex items-center gap-1.5 mt-1"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
@@ -415,7 +415,7 @@ export default function MonthlyManagerLayout() {
                   </div>
                 </div>
 
-                <div className="overflow-auto flex-1 pr-1">
+                <div className="overflow-y-auto flex-1 pr-1 min-h-0">
                   {activeMonthlyBooking.customer_type === 'Regular' ? (
                     <div className="text-center text-[#8B4513] py-12 px-4 flex flex-col items-center justify-center gap-2 border border-dashed border-[#8B4513]/25 bg-amber-50/20 rounded-xl">
                       <Banknote className="w-8 h-8 text-amber-600 animate-pulse" />
