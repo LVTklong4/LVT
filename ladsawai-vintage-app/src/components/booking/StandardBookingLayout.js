@@ -24,6 +24,7 @@ import { FinanceProvider } from '@/context/FinanceContext';
 import { KlongThomProvider } from '@/context/KlongThomContext';
 import StallMapGrid from './StallMapGrid';
 import StandardBookingTopBar from './StandardBookingTopBar';
+import MobileBottomNav from './mobile/MobileBottomNav';
 import { dayNamesShort, monthNamesFull, getModalDateFormat } from '@/utils/thaiDateHelper';
 import { formatPrice } from '@/utils/numberHelper';
 import { printMarketLayoutA4 } from '@/utils/marketLayoutPrinter';
@@ -191,8 +192,8 @@ export default function StandardBookingLayout() {
 
       </main>
 
-      {/* Floating Bottom Info bar */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#FAEBD7] border-t-3 border-[#8B4513] p-2.5 z-30 shadow-lg">
+      {/* Floating Bottom Info bar (Desktop >= md) */}
+      <footer className="hidden md:block fixed bottom-0 left-0 right-0 bg-[#FAEBD7] border-t-3 border-[#8B4513] p-2.5 z-30 shadow-lg">
         <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row justify-between items-center text-xs text-gray-700 font-bold gap-2">
           <div className="flex items-center gap-1">
             <CalendarDays className="w-4 h-4 text-[#8B4513]" />
@@ -209,13 +210,23 @@ export default function StandardBookingLayout() {
         </div>
       </footer>
 
+      {/* Mobile Bottom Navigation Bar (< md) */}
+      <MobileBottomNav
+        onOpenOffGrid={() => {
+          setSelectedOffGridBookingObj(null);
+          setShowOffGridBooking(true);
+        }}
+        onOpenKlongThom={() => setShowKlongThomModal(true)}
+        onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+      />
+
       {/* login modal */}
       
 
       {/* 🗓️ 2.4 Monthly Stall Details & Vacate Modal (from Map) */}
       {showMonthlyStallMapModal && selectedStall && selectedMonthlyStallBooking && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border border-[#8B4513]/10 overflow-hidden flex flex-col p-6 relative animate-pop-in">
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-[#FFFDF9] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-sm border-t sm:border border-[#8B4513]/10 overflow-hidden flex flex-col p-6 relative animate-slide-up sm:animate-pop-in">
             {/* Close button */}
             <button 
               onClick={() => setShowMonthlyStallMapModal(false)} 
