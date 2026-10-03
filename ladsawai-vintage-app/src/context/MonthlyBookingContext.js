@@ -445,7 +445,18 @@ export function MonthlyBookingProvider({ children }) {
     setBulkRenewEditData({});
   }, [monthlyList, monthlyMonthFilter]);
 
-  const handleOpenMonthlyPaymentModal = useCallback((booking) => {
+  const handleOpenMonthlyPaymentModal = useCallback((targetBooking) => {
+    const isSyntheticEvent = targetBooking && (targetBooking.nativeEvent || targetBooking._reactName || typeof targetBooking.preventDefault === 'function');
+    const booking = (!isSyntheticEvent && targetBooking && typeof targetBooking === 'object' && targetBooking.id)
+      ? targetBooking
+      : activeMonthlyBooking;
+
+    if (!booking || !booking.id) {
+      console.warn("handleOpenMonthlyPaymentModal: No valid monthly booking provided", { targetBooking, activeMonthlyBooking });
+      showAlert("กรุณาเลือกลูกค้ารายเดือนที่ต้องการชำระเงินก่อน", "แจ้งเตือน", true);
+      return;
+    }
+
     setActiveMonthlyBooking(booking);
     setMonthlyPaymentForm({
       date: new Date().toISOString().split('T')[0],
@@ -457,8 +468,10 @@ export function MonthlyBookingProvider({ children }) {
     });
     setSlipPreviewUrl(null);
     setShowMonthlyPaymentModal(true);
-    fetchMonthlyTransactions(booking.id);
-  }, [fetchMonthlyTransactions]);
+    if (booking.id) {
+      fetchMonthlyTransactions(booking.id);
+    }
+  }, [activeMonthlyBooking, fetchMonthlyTransactions, showAlert]);
 
   // CRUD Operations Handlers
   const handleCreateNewMonthlyBooking = useCallback(async (e) => {
@@ -652,7 +665,10 @@ export function MonthlyBookingProvider({ children }) {
   // Payment Handlers
   const handleMonthlyPaymentSubmit = useCallback(async (e) => {
     if (e?.preventDefault) e.preventDefault();
-    if (!activeMonthlyBooking) return;
+    if (!activeMonthlyBooking || !activeMonthlyBooking.id) {
+      showAlert("ไม่พบข้อมูลสัญญาที่กำลังเลือก กรุณาเลือกลูกค้ารายเดือนใหม่อีกครั้ง", "ข้อผิดพลาด", true);
+      return;
+    }
 
     setLoadingMonthly(true);
     try {

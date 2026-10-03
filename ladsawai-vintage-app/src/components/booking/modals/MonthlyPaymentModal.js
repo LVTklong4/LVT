@@ -2,19 +2,38 @@
 
 import React from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
-import { CreditCard, Banknote, Tag } from 'lucide-react';
+import { CreditCard, Banknote, Tag, Loader2, X } from 'lucide-react';
 
 export default function MonthlyPaymentModal() {
   const {
-    activeMonthlyBooking,    handleMonthlyPaymentSubmit,    handleSlipChange,    monthlyPaymentForm,    note,    parseNumber,    setMonthlyPaymentForm,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyPaymentModal,    slipPreviewUrl
+    activeMonthlyBooking,    handleMonthlyPaymentSubmit,    handleSlipChange,    monthlyPaymentForm,    note,    parseNumber,    setMonthlyPaymentForm,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyPaymentModal,    slipPreviewUrl,
+    loadingMonthly
   } = useMonthlyBooking();
 
   if (!showMonthlyPaymentModal || !activeMonthlyBooking) return null;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 overflow-hidden animate-pop-in flex flex-col p-6 gap-4">
-              <h3 className="font-bold text-lg text-center text-gray-800 shrink-0">บันทึกการชำระเงิน</h3>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 overflow-hidden animate-pop-in flex flex-col p-6 gap-3.5">
+              <div className="flex justify-between items-center shrink-0 border-b pb-2.5">
+                <div>
+                  <h3 className="font-bold text-base text-gray-800">บันทึกการชำระเงิน</h3>
+                  {activeMonthlyBooking?.booker_name && (
+                    <p className="text-[11px] text-gray-500 font-semibold mt-0.5">
+                      ผู้เช่า: <span className="text-[#8B4513] font-bold">{activeMonthlyBooking.booker_name}</span>
+                      {activeMonthlyBooking.stalls && <span> | ล็อค: <span className="text-[#8B4513] font-bold">{activeMonthlyBooking.stalls}</span></span>}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMonthlyPaymentModal(false)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                  title="ปิด"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
               
               <form onSubmit={handleMonthlyPaymentSubmit} className="flex flex-col gap-3.5 overflow-y-auto pr-1">
                 {/* วันที่ชำระเงิน */}
@@ -196,16 +215,25 @@ export default function MonthlyPaymentModal() {
                 <div className="flex gap-3 mt-3 shrink-0">
                   <button 
                     type="button" 
+                    disabled={loadingMonthly}
                     onClick={() => setShowMonthlyPaymentModal(false)}
-                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-all shadow-sm"
+                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
                   >
                     ยกเลิก
                   </button>
                   <button 
                     type="submit" 
-                    className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+                    disabled={loadingMonthly}
+                    className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    บันทึก
+                    {loadingMonthly ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>กำลังบันทึก...</span>
+                      </>
+                    ) : (
+                      'บันทึก'
+                    )}
                   </button>
                 </div>
               </form>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
-import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX } from 'lucide-react';
+import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX, AlertCircle, CheckCircle } from 'lucide-react';
 import { monthNamesFull } from '@/utils/thaiDateHelper';
 import NewMonthlyModal from './NewMonthlyModal';
 import EditMonthlyModal from './EditMonthlyModal';
@@ -15,7 +15,8 @@ import SlipPreviewModal from './SlipPreviewModal';
 
 export default function MonthlyMgmtModal() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls
+    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls,
+    alertInfo,    setAlertInfo,    confirmInfo
   } = useMonthlyBooking();
 
   if (!showMonthlyMgmtModal) return null;
@@ -220,7 +221,7 @@ export default function MonthlyMgmtModal() {
                         <div className="flex flex-col gap-1 items-end">
                           <button
                             type="button"
-                            onClick={handleOpenMonthlyPaymentModal}
+                            onClick={() => handleOpenMonthlyPaymentModal(activeMonthlyBooking)}
                             className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
                           >
                             <Plus className="w-3 h-3" /> ชำระเงิน
@@ -335,6 +336,57 @@ export default function MonthlyMgmtModal() {
           <InvoicePreviewModal />
           <MonthlyPrintModal />
           <SlipPreviewModal />
+
+          {/* Toast Alert for Monthly Actions */}
+          {alertInfo && (
+            <div className={`fixed top-4 right-4 z-[99999] flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in max-w-md ${
+              alertInfo.isError 
+                ? 'bg-red-50 border-red-200 text-red-800' 
+                : 'bg-green-50 border-green-200 text-green-800'
+            }`}>
+              {alertInfo.isError ? <AlertCircle className="w-5 h-5 shrink-0 text-red-600" /> : <CheckCircle className="w-5 h-5 shrink-0 text-green-600" />}
+              <span className="font-bold whitespace-pre-line flex-1">{alertInfo.message}</span>
+              <button 
+                onClick={() => setAlertInfo(null)}
+                className="p-0.5 rounded-full hover:bg-black/5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer shrink-0"
+                title="ปิด"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Confirm Dialog for Monthly Actions */}
+          {confirmInfo && (
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
+              <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
+                <div className="bg-[#FAEBD7] border-b border-[#8B4513]/20 px-4 py-3 font-bold text-sm text-[#4A3B32]">
+                  {confirmInfo.title}
+                </div>
+                <div className="p-5 text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                  {confirmInfo.message}
+                </div>
+                <div className="bg-gray-50 border-t border-gray-100 p-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => confirmInfo.onCancel ? confirmInfo.onCancel() : setConfirmInfo(null)}
+                    className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {confirmInfo.cancelText || 'ยกเลิก'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => confirmInfo.onConfirm && confirmInfo.onConfirm()}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all shadow-sm cursor-pointer ${
+                      confirmInfo.isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6D3410]'
+                    }`}
+                  >
+                    {confirmInfo.confirmText || 'ตกลง'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
   );
 }

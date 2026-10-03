@@ -56,7 +56,9 @@ export async function submitMonthlyPayment({
   paymentForm,
   adminUser
 }) {
-  if (!activeMonthlyBooking) throw new Error("ไม่พบข้อมูลสัญญาที่กำลังเลือก");
+  if (!activeMonthlyBooking || !activeMonthlyBooking.id) {
+    throw new Error("ไม่พบข้อมูลสัญญาที่กำลังเลือก กรุณาเลือกลูกค้ารายเดือนใหม่อีกครั้ง");
+  }
 
   const amountVal = parseNumber(paymentForm.amount);
   if (amountVal <= 0) throw new Error("กรุณาระบุจำนวนเงินที่ถูกต้อง");
@@ -65,7 +67,7 @@ export async function submitMonthlyPayment({
   const newPaid = currentPaid + amountVal;
   const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
 
-  if (newPaid > totalPrice + 0.01) {
+  if (totalPrice > 0 && newPaid > totalPrice + 0.01) {
     const remaining = Math.max(0, totalPrice - currentPaid);
     throw new Error(`ยอดเงินชำระ (${amountVal.toLocaleString()} บาท) ร่วมกับยอดที่เคยชำระแล้ว (${currentPaid.toLocaleString()} บาท) เกินกว่ายอดรวมค่าเช่ารายเดือนทั้งหมด (${totalPrice.toLocaleString()} บาท)\n\nกรุณากรอกยอดชำระไม่เกินยอดคงเหลือค้างชำระ: ${remaining.toLocaleString()} บาท`);
   }
