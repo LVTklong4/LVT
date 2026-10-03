@@ -34,31 +34,31 @@ export default function MonthlyTableFooter({
   return (
     <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-200 shrink-0 select-none">
       {/* 1. Pagination Controls - 3 Columns (Left, Center, Right) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 text-xs text-gray-600">
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-600">
         {/* Col 1: Range text (Left) */}
-        <div className="flex items-center justify-start">
+        <div className="flex items-center justify-start shrink-0 whitespace-nowrap">
           <span>
             แสดง <strong className="text-gray-900">{startItem}-{endItem}</strong> จาก <strong className="text-gray-900">{totalItems}</strong> ราย
           </span>
         </div>
 
-        {/* Col 2: Navigation buttons (Center) */}
-        <div className="flex items-center justify-center">
+        {/* Col 2: Navigation buttons (Center - Expanded) */}
+        <div className="flex-1 flex items-center justify-center min-w-0">
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0 whitespace-nowrap">
               <button
                 type="button"
                 disabled={currentPage <= 1}
                 onClick={() => onPageChange?.(currentPage - 1)}
-                className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold"
+                className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold whitespace-nowrap shrink-0"
               >
-                <ChevronLeft className="w-3.5 h-3.5" /> ก่อนหน้า
+                <ChevronLeft className="w-3.5 h-3.5 shrink-0" /> ก่อนหน้า
               </button>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 {getPageNumbers().map((p, idx) => {
                   if (p === '...') {
-                    return <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">...</span>;
+                    return <span key={`ellipsis-${idx}`} className="px-1 text-gray-400 shrink-0">...</span>;
                   }
                   const isActive = p === currentPage;
                   return (
@@ -66,7 +66,7 @@ export default function MonthlyTableFooter({
                       key={`page-${p}`}
                       type="button"
                       onClick={() => onPageChange?.(p)}
-                      className={`w-7 h-7 rounded text-xs font-bold transition-colors cursor-pointer ${
+                      className={`w-7 h-7 rounded text-xs font-bold transition-colors cursor-pointer shrink-0 ${
                         isActive
                           ? 'bg-[#8B4513] text-white shadow-xs'
                           : 'border border-gray-200 hover:bg-gray-100 text-gray-700'
@@ -82,16 +82,16 @@ export default function MonthlyTableFooter({
                 type="button"
                 disabled={currentPage >= totalPages}
                 onClick={() => onPageChange?.(currentPage + 1)}
-                className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold"
+                className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold whitespace-nowrap shrink-0"
               >
-                ถัดไป <ChevronRight className="w-3.5 h-3.5" />
+                ถัดไป <ChevronRight className="w-3.5 h-3.5 shrink-0" />
               </button>
             </div>
           )}
         </div>
 
         {/* Col 3: Items per page selector (Right) */}
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end gap-1 shrink-0 whitespace-nowrap">
           <span className="text-[11px] text-gray-500">แสดง:</span>
           <select
             value={pageSize}
