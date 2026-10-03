@@ -283,3 +283,21 @@ export function generateReceiptHTML({
     </html>
   `;
 }
+
+/**
+ * Opens a print window and triggers thermal receipt print directly.
+ */
+export function printThermalReceipt({ bookingObj, stallObj, adminUser }) {
+  if (typeof window === 'undefined') return;
+  const htmlContent = generateReceiptHTML({ bookingObj, stallObj, adminUser });
+  try {
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    }
+  } catch (e) {
+    console.error('Error opening print window:', e);
+  }
+}
