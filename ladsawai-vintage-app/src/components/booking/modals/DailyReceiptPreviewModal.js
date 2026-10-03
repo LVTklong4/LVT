@@ -203,55 +203,55 @@ export default function DailyReceiptPreviewModal() {
               {bookingObj.product && <p>สินค้าที่ขาย: {bookingObj.product}</p>}
             </div>
 
-            <div className="border-t border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <div className="text-center py-1.5 bg-gray-50 rounded border border-gray-300 my-1.5">
-              <span className="text-[10px] text-gray-700 font-bold block">ล็อคที่เช่า</span>
-              <span className="text-xl font-black tracking-wider text-black block">{formattedStallName}</span>
+            <div className="text-center py-1.5 bg-amber-50/40 rounded border border-amber-200/80 my-1.5">
+              <span className="text-[10px] text-gray-500 font-bold block">ล็อคที่เช่า</span>
+              <span className="text-xl font-black tracking-wider text-[#8B4513] block">{formattedStallName}</span>
             </div>
 
-            <div className="border-t border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <table className="w-full text-left text-[11px] border-collapse font-bold text-black">
+            <table className="w-full text-left text-[11px] border-collapse font-bold">
               <thead>
-                <tr className="border-b border-dashed border-black">
+                <tr className="border-b border-dashed border-gray-400 text-gray-600">
                   <th className="py-1">รายการ</th>
                   <th className="py-1 text-right">จำนวนเงิน</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-gray-800">
                 <tr>
                   <td className="py-1">1. ค่าเช่าล็อค</td>
-                  <td className="py-1 text-right font-mono">{formatPrice(stallPriceVal)}</td>
+                  <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(stallPriceVal)}</td>
                 </tr>
                 {elecPriceVal > 0 && (
                   <tr>
                     <td className="py-1">2. ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
-                    <td className="py-1 text-right font-mono">{formatPrice(elecPriceVal)}</td>
+                    <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(elecPriceVal)}</td>
                   </tr>
                 )}
                 {storageFeeVal > 0 && (
                   <tr>
                     <td className="py-1">3. ค่าฝากของ</td>
-                    <td className="py-1 text-right font-mono">{formatPrice(storageFeeVal)}</td>
+                    <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(storageFeeVal)}</td>
                   </tr>
                 )}
               </tbody>
             </table>
 
-            <div className="border-t border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <div className="space-y-1 text-black font-bold">
-              <div className="flex justify-between font-black text-sm text-black">
-                <span>ยอดรวมทั้งสิ้น:</span>
-                <span className="font-mono text-base">{formatPrice(totalAmountVal)}</span>
+            <div className="space-y-1 font-bold">
+              <div className="flex justify-between font-black text-sm">
+                <span className="text-gray-800">ยอดรวมทั้งสิ้น:</span>
+                <span className="font-mono text-base text-blue-900">{formatPrice(totalAmountVal)}</span>
               </div>
               
-              <div className="pt-1 space-y-0.5 text-[10px] text-black font-semibold border-t border-dashed border-black">
+              <div className="pt-1 space-y-0.5 text-[10px] font-semibold border-t border-dashed border-gray-400">
                 {paymentLines.map((p, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span>ชำระด้วย [{p.method}]:</span>
-                    <span className="font-mono font-bold">{formatPrice(p.amount)}</span>
+                  <div key={idx} className="flex justify-between items-center">
+                    <span className="text-gray-700">ชำระด้วย [<span className={p.method === 'เงินสด' ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>{p.method}</span>]:</span>
+                    <span className="font-mono font-bold text-green-700">{formatPrice(p.amount)}</span>
                   </div>
                 ))}
                 {changeVal > 0 && (
@@ -263,12 +263,12 @@ export default function DailyReceiptPreviewModal() {
               </div>
             </div>
 
-            <div className="border-t border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
             <div className="text-center text-[10px] text-black font-bold space-y-0.5">
               <p>สอบถามค่าล็อค ส่งสลิป ได้ที่</p>
               <p className="font-black text-[11px]">@ladsawaivintage</p>
-              <p className="text-[8px] text-gray-500 font-normal mt-2">Power by PJMJK</p>
+              <p className="text-[8px] text-gray-400 font-normal mt-2">Power by PJMJK</p>
             </div>
           </div>
         </div>

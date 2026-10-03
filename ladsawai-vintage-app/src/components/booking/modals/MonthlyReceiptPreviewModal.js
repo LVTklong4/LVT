@@ -142,36 +142,45 @@ export default function MonthlyReceiptPreviewModal() {
     return n.toLocaleString();
   };
 
-  // Day breakdown rows (exactly matching thermal paper print)
+  // Day breakdown rows (exactly matching thermal paper print with color accents)
   const dayBreakdownRows = [];
   if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
-    const sName = dayGroups[6].length > 0 ? dayGroups[6].map(s => cleanStall(s.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[6].reduce((sum, s) => sum + s.price, 0) || fallbackPricePerDay;
+    const sName = dayGroups[6].length > 0 ? dayGroups[6].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
     const sTotal = dayPrice * satCount;
     dayBreakdownRows.push({
-      label: `วันเสาร์ ล็อค : ${sName}`,
+      type: 'sat',
+      dayLabel: 'วันเสาร์',
+      dayColor: 'text-purple-700',
+      stallName: sName,
       calc: `${formatPriceInt(dayPrice)} x ${satCount} วัน`,
       total: sTotal
     });
   }
 
   if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
-    const sName = dayGroups[0].length > 0 ? dayGroups[0].map(s => cleanStall(s.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[0].reduce((sum, s) => sum + s.price, 0) || fallbackPricePerDay;
+    const sName = dayGroups[0].length > 0 ? dayGroups[0].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
     const sTotal = dayPrice * sunCount;
     dayBreakdownRows.push({
-      label: `วันอาทิตย์ ล็อค : ${sName}`,
+      type: 'sun',
+      dayLabel: 'วันอาทิตย์',
+      dayColor: 'text-rose-600',
+      stallName: sName,
       calc: `${formatPriceInt(dayPrice)} x ${sunCount} วัน`,
       total: sTotal
     });
   }
 
   if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
-    const sName = dayGroups[3].length > 0 ? dayGroups[3].map(s => cleanStall(s.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[3].reduce((sum, s) => sum + s.price, 0) || fallbackPricePerDay;
+    const sName = dayGroups[3].length > 0 ? dayGroups[3].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
     const sTotal = dayPrice * wedCount;
     dayBreakdownRows.push({
-      label: `วันพุธ ล็อค : ${sName}`,
+      type: 'wed',
+      dayLabel: 'วันพุธ',
+      dayColor: 'text-emerald-700',
+      stallName: sName,
       calc: `${formatPriceInt(dayPrice)} x ${wedCount} วัน`,
       total: sTotal
     });
@@ -181,7 +190,10 @@ export default function MonthlyReceiptPreviewModal() {
     const allDays = totalTradingDays || 1;
     const totalElec = elecRate * allDays;
     dayBreakdownRows.push({
-      label: `ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)`,
+      type: 'elec',
+      dayLabel: `ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)`,
+      dayColor: 'text-amber-700',
+      stallName: null,
       calc: `${formatPriceInt(elecRate)} x ${allDays} วัน`,
       total: totalElec
     });
@@ -189,7 +201,10 @@ export default function MonthlyReceiptPreviewModal() {
 
   if (storageFee > 0) {
     dayBreakdownRows.push({
-      label: `ค่าฝากของรายเดือน`,
+      type: 'storage',
+      dayLabel: `ค่าฝากของรายเดือน`,
+      dayColor: 'text-blue-700',
+      stallName: null,
       calc: null,
       total: storageFee
     });
@@ -352,7 +367,7 @@ export default function MonthlyReceiptPreviewModal() {
           </div>
         </div>
 
-        {/* Modal Body: Receipt Paper Preview (100% matched with thermal paper printout) */}
+        {/* Modal Body: Receipt Paper Preview (Exact Paper Structure + Clear Color Accents) */}
         <div className="p-3.5 flex-1 overflow-y-auto bg-gray-100 flex flex-col items-center max-h-[85vh]">
           {/* Printable / Capturable Receipt Card */}
           <div 
@@ -371,57 +386,62 @@ export default function MonthlyReceiptPreviewModal() {
               <div className="text-[9.5px] font-bold text-black leading-tight">โทร: 0-92-869-7774 , 0-92-869-7775</div>
             </div>
 
-            <div className="border-t-2 border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
             {/* 2. Document Title */}
             <div className="text-center font-black text-xs text-black mb-1.5">
               ตั๋ว/ใบเสร็จ (รายเดือน)
             </div>
 
-            {/* 3. Metadata Table */}
-            <table className="w-full text-[10px] text-black border-collapse">
+            {/* 3. Metadata Table with colored highlights */}
+            <table className="w-full text-[10px] text-gray-800 border-collapse">
               <tbody>
                 <tr>
-                  <td className="w-[36%] py-0.5 font-bold whitespace-nowrap">เลขที่ :</td>
-                  <td className="text-right py-0.5 font-mono text-[9px]">{txnNo}</td>
+                  <td className="w-[36%] py-0.5 font-bold whitespace-nowrap text-gray-600">เลขที่ :</td>
+                  <td className="text-right py-0.5 font-mono text-[9px] text-gray-700">{txnNo}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 font-bold whitespace-nowrap">วันที่ทำรายการ :</td>
-                  <td className="text-right py-0.5">{formattedTransaction}</td>
+                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">วันที่ทำรายการ :</td>
+                  <td className="text-right py-0.5 text-gray-800">{formattedTransaction}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 font-bold whitespace-nowrap">รหัสพนักงาน :</td>
-                  <td className="text-right py-0.5 font-mono text-[9px]">{empCode}</td>
+                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">รหัสพนักงาน :</td>
+                  <td className="text-right py-0.5 font-mono text-[9px] text-gray-700">{empCode}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 font-bold whitespace-nowrap">ประจำเดือน :</td>
-                  <td className="text-right py-0.5 font-black text-xs">{invoiceMonth}</td>
+                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">ประจำเดือน :</td>
+                  <td className="text-right py-0.5 font-black text-xs text-black">{invoiceMonth}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 font-bold whitespace-nowrap">ผู้จอง :</td>
-                  <td className="text-right py-0.5 font-black text-xs">{item.booker_name || item.customer_name || '-'}</td>
+                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">ผู้จอง :</td>
+                  <td className="text-right py-0.5 font-black text-xs text-[#8B4513]">{item.booker_name || item.customer_name || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 font-bold whitespace-nowrap">สินค้า :</td>
-                  <td className="text-right py-0.5 font-black text-xs">{productName}</td>
+                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">สินค้า :</td>
+                  <td className="text-right py-0.5 font-bold text-xs text-gray-800">{productName}</td>
                 </tr>
               </tbody>
             </table>
 
-            <div className="border-t-2 border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            {/* 4. Day Breakdown Table */}
-            <table className="w-full text-[10.5px] text-black border-collapse">
+            {/* 4. Day Breakdown Table with distinct Day & Stall Colors */}
+            <table className="w-full text-[10.5px] border-collapse">
               <tbody>
                 {dayBreakdownRows.map((d, idx) => (
                   <React.Fragment key={idx}>
                     <tr>
-                      <td className="font-bold text-left py-0.5">{d.label}</td>
-                      <td className="font-bold font-mono text-right py-0.5">{formatPrice(d.total)}</td>
+                      <td className="font-bold text-left py-0.5 text-gray-800">
+                        <span className={`${d.dayColor} font-black`}>{d.dayLabel}</span>
+                        {d.stallName && (
+                          <span> ล็อค : <strong className="text-[#8B4513] font-black">{d.stallName}</strong></span>
+                        )}
+                      </td>
+                      <td className="font-bold font-mono text-right py-0.5 text-gray-900">{formatPrice(d.total)}</td>
                     </tr>
                     {d.calc && (
                       <tr>
-                        <td colSpan={2} className="text-[9.5px] text-gray-700 font-semibold pb-1.5">
+                        <td colSpan={2} className="text-[9.5px] text-gray-500 font-semibold pb-1.5 pl-0.5">
                           {d.calc}
                         </td>
                       </tr>
@@ -431,59 +451,67 @@ export default function MonthlyReceiptPreviewModal() {
               </tbody>
             </table>
 
-            <div className="border-t-2 border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
             {/* 5. Payments History Table */}
-            <table className="w-full text-[10px] text-black border-collapse">
+            <table className="w-full text-[10px] border-collapse">
               <thead>
-                <tr className="border-b border-dashed border-black font-bold">
-                  <th className="text-left pb-1 font-bold">วันชำระ</th>
-                  <th className="text-center pb-1 font-bold">ช่องทางชำระ</th>
-                  <th className="text-right pb-1 font-bold">จำนวนเงิน</th>
+                <tr className="border-b border-dashed border-gray-400 font-bold text-gray-600">
+                  <th className="text-left pb-1">วันชำระ</th>
+                  <th className="text-center pb-1">ช่องทางชำระ</th>
+                  <th className="text-right pb-1">จำนวนเงิน</th>
                 </tr>
               </thead>
               <tbody className="divide-y-0">
                 {payments.map((p, i) => (
                   <tr key={i}>
-                    <td className="py-1 font-semibold">{p.date}</td>
-                    <td className="py-1 text-center font-bold">{normalizePaymentMethodThai(p.method)}</td>
-                    <td className="py-1 text-right font-mono font-bold">{formatPrice(p.amount)}</td>
+                    <td className="py-1 font-semibold text-gray-700">{p.date}</td>
+                    <td className="py-1 text-center font-bold">
+                      <span className={p.method === 'เงินสด' ? 'text-emerald-700' : 'text-blue-700'}>
+                        {normalizePaymentMethodThai(p.method)}
+                      </span>
+                    </td>
+                    <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(p.amount)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <div className="border-t-2 border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            {/* 6. Summary Totals Table */}
-            <table className="w-full text-[11px] font-bold text-black border-collapse">
+            {/* 6. Summary Totals Table with intuitive financial colors */}
+            <table className="w-full text-[11px] font-bold border-collapse">
               <tbody>
                 <tr>
-                  <td className="text-right font-extrabold pr-2 py-0.5">รวมเป็นเงินทั้งสิ้น :</td>
-                  <td className="text-right font-mono font-black text-xs py-0.5">{formatPrice(grandTotal)}</td>
+                  <td className="text-right font-extrabold pr-2 py-0.5 text-gray-800">รวมเป็นเงินทั้งสิ้น :</td>
+                  <td className="text-right font-mono font-black text-xs py-0.5 text-blue-900">{formatPrice(grandTotal)}</td>
                 </tr>
                 <tr>
-                  <td className="text-right font-bold pr-2 pt-1 border-t border-dashed border-black">ชำระแล้วรวมทั้งสิ้น :</td>
-                  <td className="text-right font-mono font-bold pt-1 border-t border-dashed border-black">{formatPrice(totalPaid)}</td>
+                  <td className="text-right font-bold pr-2 pt-1 border-t border-dashed border-gray-400 text-green-700">ชำระแล้วรวมทั้งสิ้น :</td>
+                  <td className="text-right font-mono font-black text-xs pt-1 border-t border-dashed border-gray-400 text-green-700">{formatPrice(totalPaid)}</td>
                 </tr>
                 <tr>
-                  <td className="text-right font-bold pr-2 py-0.5">คิดเป็นเปอร์เซ็นต์ :</td>
-                  <td className="text-right font-mono font-bold py-0.5">{percentage}%</td>
+                  <td className="text-right font-bold pr-2 py-0.5 text-blue-700">คิดเป็นเปอร์เซ็นต์ :</td>
+                  <td className="text-right font-mono font-bold py-0.5 text-blue-700">{percentage}%</td>
                 </tr>
-                <tr className="border-t border-b border-dashed border-black">
-                  <td className="text-right font-extrabold pr-2 py-1">ค้างชำระ/คงเหลือ :</td>
-                  <td className="text-right font-mono font-black text-xs py-1">{formatPrice(remaining)}</td>
+                <tr className="border-t border-b border-dashed border-gray-400">
+                  <td className={`text-right font-extrabold pr-2 py-1 ${remaining > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                    ค้างชำระ/คงเหลือ :
+                  </td>
+                  <td className={`text-right font-mono font-black text-xs py-1 ${remaining > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                    {formatPrice(remaining)}
+                  </td>
                 </tr>
               </tbody>
             </table>
 
-            <div className="border-t-2 border-dashed border-black my-2"></div>
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
 
             {/* 7. Footer Notice */}
             <div className="text-center text-[10px] space-y-0.5 font-bold text-black mt-2">
               <div>สอบถามค่าล็อค ส่งสลิป ได้ที่</div>
               <div className="text-[11px] font-black mt-0.5">@ladsawaivintage</div>
-              <div className="text-[8px] text-gray-500 font-normal mt-2.5">Power by PJMJK</div>
+              <div className="text-[8px] text-gray-400 font-normal mt-2.5">Power by PJMJK</div>
             </div>
           </div>
         </div>
