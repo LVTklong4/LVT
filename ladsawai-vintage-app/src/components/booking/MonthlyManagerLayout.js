@@ -15,6 +15,8 @@ import InvoicePreviewModal from './modals/InvoicePreviewModal';
 import MonthlyPrintModal from './modals/MonthlyPrintModal';
 import MonthlyReceiptPreviewModal from './modals/MonthlyReceiptPreviewModal';
 import SettingsMgmtModal from './modals/SettingsMgmtModal';
+import MonthlyTableFooter from './modals/MonthlyTableFooter';
+import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsService';
 import {
   monthNamesFull,
   formatBookingMonth,
@@ -153,6 +155,31 @@ export default function MonthlyManagerLayout() {
   } = useMonthlyBooking();
   const { setShowSettingsMgmtModal } = useBooking();
 
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(15);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [monthlyMonthFilter, monthlySearchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMonthlyList.length / pageSize));
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const summaryStats = React.useMemo(() => {
+    return calculateMonthlySummaryStats(filteredMonthlyList, stalls);
+  }, [filteredMonthlyList, stalls]);
+
+  const paginatedList = React.useMemo(() => {
+    if (pageSize >= 9999) return filteredMonthlyList;
+    const start = (currentPage - 1) * pageSize;
+    return filteredMonthlyList.slice(start, start + pageSize);
+  }, [filteredMonthlyList, currentPage, pageSize]);
+
   return (
     <div className="w-screen h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
         {/* Header bar */}
@@ -252,36 +279,48 @@ export default function MonthlyManagerLayout() {
                   <tr>
                     <th 
                       onClick={() => handleSortToggle('booking_month')}
-                      className="p-2 cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors"
+                      className="p-2 cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors whitespace-nowrap"
                     >
-                      เดือน {renderSortArrow('booking_month')}
+                      <div className="inline-flex items-center gap-1">
+                        <span>เดือน</span>
+                        <span className="text-[10px] text-amber-900/70">{renderSortArrow('booking_month')}</span>
+                      </div>
                     </th>
-                    <th className="p-2 select-none">ประเภท</th>
-                    <th className="p-2 select-none">ลูกค้า</th>
-                    <th className="p-2 select-none">ล็อค</th>
+                    <th className="p-2 select-none whitespace-nowrap">ประเภท</th>
+                    <th className="p-2 select-none whitespace-nowrap">ลูกค้า</th>
+                    <th className="p-2 select-none whitespace-nowrap">ล็อค</th>
                     <th 
                       onClick={() => handleSortToggle('total_price')}
-                      className="p-2 text-center cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors"
+                      className="p-2 text-center cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors whitespace-nowrap"
                     >
-                      ค่าล็อค {renderSortArrow('total_price')}
+                      <div className="inline-flex items-center justify-center gap-1">
+                        <span>ค่าล็อค</span>
+                        <span className="text-[10px] text-amber-900/70">{renderSortArrow('total_price')}</span>
+                      </div>
                     </th>
                     <th 
                       onClick={() => handleSortToggle('paid_amount')}
-                      className="p-2 text-center cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors"
+                      className="p-2 text-center cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors whitespace-nowrap"
                     >
-                      ชำระแล้ว {renderSortArrow('paid_amount')}
+                      <div className="inline-flex items-center justify-center gap-1">
+                        <span>ชำระแล้ว</span>
+                        <span className="text-[10px] text-amber-900/70">{renderSortArrow('paid_amount')}</span>
+                      </div>
                     </th>
                     <th 
                       onClick={() => handleSortToggle('remaining')}
-                      className="p-2 text-center cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors"
+                      className="p-2 text-center cursor-pointer hover:bg-[#EFEBE9]/50 select-none transition-colors whitespace-nowrap"
                     >
-                      คงเหลือ {renderSortArrow('remaining')}
+                      <div className="inline-flex items-center justify-center gap-1">
+                        <span>คงเหลือ</span>
+                        <span className="text-[10px] text-amber-900/70">{renderSortArrow('remaining')}</span>
+                      </div>
                     </th>
-                    <th className="p-2 text-center select-none">จัดการ</th>
+                    <th className="p-2 text-center select-none whitespace-nowrap">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white">
-                  {filteredMonthlyList.map((item) => {
+                  {paginatedList.map((item) => {
                     const unpaidBalance = parseNumber(item.total_price) - parseNumber(item.paid_amount || 0);
                     return (
                       <tr 
@@ -358,6 +397,18 @@ export default function MonthlyManagerLayout() {
                 </tbody>
               </table>
             </div>
+
+            <MonthlyTableFooter
+              totalItems={filteredMonthlyList.length}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+              stats={summaryStats}
+            />
           </div>
 
           {/* Right Side: Selected Booking History & Details */}
