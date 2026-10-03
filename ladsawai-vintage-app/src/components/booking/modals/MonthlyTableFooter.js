@@ -33,105 +33,101 @@ export default function MonthlyTableFooter({
 
   return (
     <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-200 shrink-0 select-none">
-      {/* 1. Pagination Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
-        <div className="flex items-center gap-2">
+      {/* 1. Pagination Controls - 3 Columns (Left, Center, Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 text-xs text-gray-600">
+        {/* Col 1: Range text (Left) */}
+        <div className="flex items-center justify-start">
           <span>
-            แสดง <strong className="text-gray-900">{startItem}-{endItem}</strong> จากทั้งหมด <strong className="text-gray-900">{totalItems}</strong> ราย
+            แสดง <strong className="text-gray-900">{startItem}-{endItem}</strong> จาก <strong className="text-gray-900">{totalItems}</strong> ราย
           </span>
-          <div className="flex items-center gap-1 ml-2">
-            <span className="text-[11px] text-gray-500">แสดง:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
-              className="p-1 border border-gray-300 rounded text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-            >
-              <option value={15}>15</option>
-              <option value={30}>30</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={9999}>ทั้งหมด</option>
-            </select>
-            <span className="text-[11px] text-gray-500">/ หน้า</span>
-          </div>
         </div>
 
-        {/* Page Nav */}
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={currentPage <= 1}
-              onClick={() => onPageChange?.(currentPage - 1)}
-              className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" /> ก่อนหน้า
-            </button>
-
+        {/* Col 2: Navigation buttons (Center) */}
+        <div className="flex items-center justify-center">
+          {totalPages > 1 && (
             <div className="flex items-center gap-1">
-              {getPageNumbers().map((p, idx) => {
-                if (p === '...') {
-                  return <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">...</span>;
-                }
-                const isActive = p === currentPage;
-                return (
-                  <button
-                    key={`page-${p}`}
-                    type="button"
-                    onClick={() => onPageChange?.(p)}
-                    className={`w-7 h-7 rounded text-xs font-bold transition-colors cursor-pointer ${
-                      isActive
-                        ? 'bg-[#8B4513] text-white shadow-xs'
-                        : 'border border-gray-200 hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-            </div>
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => onPageChange?.(currentPage - 1)}
+                className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> ก่อนหน้า
+              </button>
 
-            <button
-              type="button"
-              disabled={currentPage >= totalPages}
-              onClick={() => onPageChange?.(currentPage + 1)}
-              className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold"
-            >
-              ถัดไป <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((p, idx) => {
+                  if (p === '...') {
+                    return <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">...</span>;
+                  }
+                  const isActive = p === currentPage;
+                  return (
+                    <button
+                      key={`page-${p}`}
+                      type="button"
+                      onClick={() => onPageChange?.(p)}
+                      className={`w-7 h-7 rounded text-xs font-bold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-[#8B4513] text-white shadow-xs'
+                          : 'border border-gray-200 hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => onPageChange?.(currentPage + 1)}
+                className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-0.5 text-xs font-semibold"
+              >
+                ถัดไป <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Col 3: Items per page selector (Right) */}
+        <div className="flex items-center justify-end gap-1">
+          <span className="text-[11px] text-gray-500">แสดง:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
+            className="p-1 border border-gray-300 rounded text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+          >
+            <option value={15}>15</option>
+            <option value={30}>30</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={9999}>ทั้งหมด</option>
+          </select>
+          <span className="text-[11px] text-gray-500">/ หน้า</span>
+        </div>
       </div>
 
-      {/* 2. Market Summary Stats Footer */}
-      <div className="bg-amber-50/70 border border-amber-200/90 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-xs">
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-          <span className="font-extrabold text-[#5D4037] flex items-center gap-1 shrink-0">
-            📊 สรุป:
-          </span>
-          <span className="bg-white px-2 py-0.5 rounded border border-amber-200 text-gray-700 font-medium">
-            ทั้งหมด <strong className="text-amber-900 font-bold">{stats.totalCust || 0}</strong> ราย
-          </span>
-          <span className="bg-orange-50/90 px-2 py-0.5 rounded border border-orange-200 text-orange-950 font-medium">
-            🍲 อาหาร <strong className="text-orange-800 font-bold">{stats.foodCust || 0}</strong> ราย ({stats.foodStalls || 0} ล็อค)
-          </span>
-          <span className="bg-blue-50/90 px-2 py-0.5 rounded border border-blue-200 text-blue-950 font-medium">
-            🛍️ ทั่วไป <strong className="text-blue-800 font-bold">{stats.genCust || 0}</strong> ราย ({stats.genStalls || 0} ล็อค)
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="text-gray-500 font-bold">ล็อคต่อวัน:</span>
-          <span className="bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-emerald-800 font-bold">
-            พุธ: {stats.wedStalls || 0} ล็อค
-          </span>
-          <span className="bg-purple-50 px-2 py-0.5 rounded border border-purple-200 text-purple-800 font-bold">
-            เสาร์: {stats.satStalls || 0} ล็อค
-          </span>
-          <span className="bg-rose-50 px-2 py-0.5 rounded border border-rose-200 text-rose-800 font-bold">
-            อาทิตย์: {stats.sunStalls || 0} ล็อค
-          </span>
-        </div>
+      {/* 2. Market Summary Stats Footer - Single Line Without Label Icons */}
+      <div className="bg-amber-50/60 border border-amber-200/80 rounded-lg px-3 py-1.5 flex flex-wrap items-center justify-between gap-1.5 text-xs">
+        <span className="bg-white px-2 py-0.5 rounded border border-amber-200 text-gray-700 font-medium">
+          ทั้งหมด <strong className="text-amber-900 font-bold">{stats.totalCust || 0}</strong> ราย
+        </span>
+        <span className="bg-orange-50 px-2 py-0.5 rounded border border-orange-200 text-orange-950 font-medium">
+          🍲 อาหาร <strong className="text-orange-800 font-bold">{stats.foodCust || 0}</strong> ราย ({stats.foodStalls || 0} ล็อค)
+        </span>
+        <span className="bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-blue-950 font-medium">
+          🛍️ ทั่วไป <strong className="text-blue-800 font-bold">{stats.genCust || 0}</strong> ราย ({stats.genStalls || 0} ล็อค)
+        </span>
+        <span className="bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-emerald-800 font-bold">
+          พุธ: {stats.wedStalls || 0} ล็อค
+        </span>
+        <span className="bg-purple-50 px-2 py-0.5 rounded border border-purple-200 text-purple-800 font-bold">
+          เสาร์: {stats.satStalls || 0} ล็อค
+        </span>
+        <span className="bg-rose-50 px-2 py-0.5 rounded border border-rose-200 text-rose-800 font-bold">
+          อาทิตย์: {stats.sunStalls || 0} ล็อค
+        </span>
       </div>
     </div>
   );
