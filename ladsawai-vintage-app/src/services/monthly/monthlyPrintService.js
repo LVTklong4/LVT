@@ -1,6 +1,7 @@
 import { formatPrice, formatPriceInt, parseNumber } from '@/utils/numberHelper';
 import { monthNamesFull, formatBookingMonth } from '@/utils/thaiDateHelper';
 import { calculateStallDayPrice } from './monthlyPricingService';
+import { normalizePaymentMethodThai } from '@/utils/receiptImageHelper';
 
 /**
  * Counts occurrences of a specific day of week within the contract's month range.
@@ -76,60 +77,129 @@ export function generateMonthlyReceiptHTML({
     invoiceMonth = `${thaiMonth} ${thaiYear}`;
   }
 
+  const cleanStall = (name) => (name || '').replace(/[\[\]]/g, '').trim();
+  const rawStallNames = (item.stalls || '').replace(/[\[\]]/g, '').split(',').map(x => x.trim()).filter(Boolean);
+
   const activeDays = [];
-  if (item.selected_days?.toLowerCase().includes('wed')) activeDays.push(3);
-  if (item.selected_days?.toLowerCase().includes('sat')) activeDays.push(6);
-  if (item.selected_days?.toLowerCase().includes('sun')) activeDays.push(0);
+  if (item.selected_days?.toLowerCase().includes('wed') || item.selected_days?.includes('พุธ') || (item.stalls_wed && item.stalls_wed.length > 0)) activeDays.push(3);
+  if (item.selected_days?.toLowerCase().includes('sat') || item.selected_days?.includes('เสาร์') || (item.stalls_sat && item.stalls_sat.length > 0)) activeDays.push(6);
+  if (item.selected_days?.toLowerCase().includes('sun') || item.selected_days?.includes('อาทิตย์') || (item.stalls_sun && item.stalls_sun.length > 0)) activeDays.push(0);
+
+  if (activeDays.length === 0) {
+    rawStallNames.forEach(name => {
+      if (name.startsWith('ส') && !activeDays.includes(6)) activeDays.push(6);
+      if (name.startsWith('อ') && !activeDays.includes(0)) activeDays.push(0);
+      if (name.startsWith('พ') && !activeDays.includes(3)) activeDays.push(3);
+    });
+  }
+  if (activeDays.length === 0) activeDays.push(6);
+
+  if (dayGroups[6].length === 0 && dayGroups[0].length === 0 && dayGroups[3].length === 0) {
+    rawStallNames.forEach(stallName => {
+      const sMaster = stalls.find(m => m.name === stallName);
+      const daysForStall = [];
+      if (stallName.startsWith('ส') || (activeDays.includes(6) && !stallName.startsWith('อ') && !stallName.startsWith('พ'))) daysForStall.push(6);
+      if (stallName.startsWith('อ') || (activeDays.includes(0) && !stallName.startsWith('ส') && !stallName.startsWith('พ'))) daysForStall.push(0);
+      if (stallName.startsWith('พ') || (activeDays.includes(3) && !stallName.startsWith('ส') && !stallName.startsWith('อ'))) daysForStall.push(3);
+      if (daysForStall.length === 0) daysForStall.push(6);
+
+      daysForStall.forEach(d => {
+        const p = sMaster ? calculateStallDayPrice(sMaster, d, item.customer_type, isFullPackage) : 0;
+        dayGroups[d].push({ name: stallName, price: p });
+      });
+    });
+  }
 
   const satCount = customCounts ? customCounts.satCount : getDayOccurrences(item.start_date, 6, activeDays);
   const sunCount = customCounts ? customCounts.sunCount : getDayOccurrences(item.start_date, 0, activeDays);
   const wedCount = customCounts ? customCounts.wedCount : getDayOccurrences(item.start_date, 3, activeDays);
 
-  let dayDetailsHtml = '';
-  const cleanStall = (name) => (name || '').replace(/[\[\]]/g, '').trim();
+  const totalTradingDays = (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6)) ? satCount : 0) +
+                           (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0)) ? sunCount : 0) +
+                           (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3)) ? wedCount : 0);
 
-  if (satCount > 0 && dayGroups[6].length > 0) {
-    const satStalls = dayGroups[6].map(x => cleanStall(x.name)).join(', ');
-    const satStallPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0);
-    const satTotal = (satStallPrice + elecRate) * satCount;
+  let calculatedStallTotal = 0;
+  [6, 0, 3].forEach(d => {
+    const count = d === 6 ? satCount : d === 0 ? sunCount : wedCount;
+    if (count > 0 && dayGroups[d].length > 0) {
+      calculatedStallTotal += dayGroups[d].reduce((sum, s) => sum + s.price, 0) * count;
+    }
+  });
+
+  let fallbackPricePerDay = 0;
+  if (calculatedStallTotal === 0 && totalTradingDays > 0) {
+    const baseStall = parseNumber(item.stall_price) || (parseNumber(item.total_price) - (elecRate * totalTradingDays) - parseNumber(item.storage_fee || 0));
+    fallbackPricePerDay = Math.round(baseStall / totalTradingDays);
+  }
+
+  let dayDetailsHtml = '';
+
+  if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
+    const satStalls = dayGroups[6].length > 0 ? dayGroups[6].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const satStallPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+    const satTotal = satStallPrice * satCount;
     dayDetailsHtml += `
       <tr>
         <td class="bold">วันเสาร์ ล็อค : ${satStalls}</td>
         <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
       </tr>
       <tr class="calc-row">
-        <td>(${formatPriceInt(satStallPrice)} x ${satCount}) + (${formatPriceInt(elecRate)} x ${satCount})</td>
+        <td>${formatPriceInt(satStallPrice)} x ${satCount} วัน</td>
         <td></td>
       </tr>
     `;
   }
-  if (sunCount > 0 && dayGroups[0].length > 0) {
-    const sunStalls = dayGroups[0].map(x => cleanStall(x.name)).join(', ');
-    const sunStallPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0);
-    const sunTotal = (sunStallPrice + elecRate) * sunCount;
+  if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
+    const sunStalls = dayGroups[0].length > 0 ? dayGroups[0].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const sunStallPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+    const sunTotal = sunStallPrice * sunCount;
     dayDetailsHtml += `
       <tr>
         <td class="bold">วันอาทิตย์ ล็อค : ${sunStalls}</td>
         <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
       </tr>
       <tr class="calc-row">
-        <td>(${formatPriceInt(sunStallPrice)} x ${sunCount}) + (${formatPriceInt(elecRate)} x ${sunCount})</td>
+        <td>${formatPriceInt(sunStallPrice)} x ${sunCount} วัน</td>
         <td></td>
       </tr>
     `;
   }
-  if (wedCount > 0 && dayGroups[3].length > 0) {
-    const wedStalls = dayGroups[3].map(x => cleanStall(x.name)).join(', ');
-    const wedStallPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0);
-    const wedTotal = (wedStallPrice + elecRate) * wedCount;
+  if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
+    const wedStalls = dayGroups[3].length > 0 ? dayGroups[3].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const wedStallPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+    const wedTotal = wedStallPrice * wedCount;
     dayDetailsHtml += `
       <tr>
         <td class="bold">วันพุธ ล็อค : ${wedStalls}</td>
         <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
       </tr>
       <tr class="calc-row">
-        <td>(${formatPriceInt(wedStallPrice)} x ${wedCount}) + (${formatPriceInt(elecRate)} x ${wedCount})</td>
+        <td>${formatPriceInt(wedStallPrice)} x ${wedCount} วัน</td>
         <td></td>
+      </tr>
+    `;
+  }
+
+  if (elecRate > 0) {
+    const allDays = totalTradingDays || 1;
+    const totalElec = elecRate * allDays;
+    dayDetailsHtml += `
+      <tr>
+        <td class="bold">ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)</td>
+        <td class="val" style="text-align: right;">${formatPrice(totalElec)}</td>
+      </tr>
+      <tr class="calc-row">
+        <td>${formatPriceInt(elecRate)} x ${allDays} วัน</td>
+        <td></td>
+      </tr>
+    `;
+  }
+
+  if (parseNumber(item.storage_fee) > 0) {
+    dayDetailsHtml += `
+      <tr>
+        <td class="bold">ค่าฝากของรายเดือน</td>
+        <td class="val" style="text-align: right;">${formatPrice(item.storage_fee)}</td>
       </tr>
     `;
   }
@@ -161,7 +231,7 @@ export function generateMonthlyReceiptHTML({
       paymentsHtml += `
         <tr>
           <td>${pDateStr}</td>
-          <td style="text-align: center;">${p.method || 'โอนจ่าย'}</td>
+          <td style="text-align: center;">${normalizePaymentMethodThai(p.method)}</td>
           <td style="text-align: right;" class="bold">${formatPrice(amt)}</td>
         </tr>
       `;
@@ -181,7 +251,7 @@ export function generateMonthlyReceiptHTML({
     paymentsHtml += `
       <tr>
         <td>${paidDateStr}</td>
-        <td style="text-align: center;">${item.payment_method || 'โอนจ่าย'}</td>
+        <td style="text-align: center;">${normalizePaymentMethodThai(item.payment_method)}</td>
         <td style="text-align: right;" class="bold">${formatPrice(totalPaidFromPayments)}</td>
       </tr>
     `;

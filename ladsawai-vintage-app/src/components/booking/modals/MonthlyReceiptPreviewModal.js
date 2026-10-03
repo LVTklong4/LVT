@@ -5,7 +5,9 @@ import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { cleanStallName, parseNumber, formatPrice } from '@/utils/numberHelper';
 import { formatBookingMonth, monthNamesFull } from '@/utils/thaiDateHelper';
-import { copyReceiptImage, shareOrCopyReceiptImage } from '@/utils/receiptImageHelper';
+import { copyReceiptImage, shareReceiptImage, normalizePaymentMethodThai } from '@/utils/receiptImageHelper';
+import { calculateStallDayPrice } from '@/services/monthly/monthlyPricingService';
+import { getDayOccurrences } from '@/services/monthly/monthlyPrintService';
 import { Printer, Copy, Check, Share2, X, Loader2 } from 'lucide-react';
 
 export default function MonthlyReceiptPreviewModal() {
@@ -57,15 +59,131 @@ export default function MonthlyReceiptPreviewModal() {
     stallDetailsList = [];
   }
 
-  const dayGroups = { 6: [], 0: [], 3: [] }; // Sat, Sun, Wed
-  stallDetailsList.forEach(s => {
-    (s.days || []).forEach(d => {
-      if (dayGroups[d]) dayGroups[d].push(s);
+  const cleanStall = (name) => (name || '').replace(/[\[\]]/g, '').trim();
+  const rawStallNames = (item.stalls || '').replace(/[\[\]]/g, '').split(',').map(x => x.trim()).filter(Boolean);
+
+  // Active days
+  const activeDays = [];
+  if (item.selected_days?.toLowerCase().includes('wed') || item.selected_days?.includes('พุธ') || (item.stalls_wed && item.stalls_wed.length > 0)) activeDays.push(3);
+  if (item.selected_days?.toLowerCase().includes('sat') || item.selected_days?.includes('เสาร์') || (item.stalls_sat && item.stalls_sat.length > 0)) activeDays.push(6);
+  if (item.selected_days?.toLowerCase().includes('sun') || item.selected_days?.includes('อาทิตย์') || (item.stalls_sun && item.stalls_sun.length > 0)) activeDays.push(0);
+
+  if (activeDays.length === 0) {
+    rawStallNames.forEach(name => {
+      if (name.startsWith('ส') && !activeDays.includes(6)) activeDays.push(6);
+      if (name.startsWith('อ') && !activeDays.includes(0)) activeDays.push(0);
+      if (name.startsWith('พ') && !activeDays.includes(3)) activeDays.push(3);
     });
+  }
+  if (activeDays.length === 0) activeDays.push(6);
+
+  const isFullPackage = activeDays.includes(3) && activeDays.includes(6) && activeDays.includes(0);
+
+  // Day counts
+  const satCount = customCounts?.satCount !== undefined ? customCounts.satCount : getDayOccurrences(item.start_date, 6, activeDays);
+  const sunCount = customCounts?.sunCount !== undefined ? customCounts.sunCount : getDayOccurrences(item.start_date, 0, activeDays);
+  const wedCount = customCounts?.wedCount !== undefined ? customCounts.wedCount : getDayOccurrences(item.start_date, 3, activeDays);
+
+  const dayGroups = { 6: [], 0: [], 3: [] }; // Sat, Sun, Wed
+  if (stallDetailsList && stallDetailsList.length > 0) {
+    stallDetailsList.forEach(s => {
+      const sMaster = stalls.find(m => m.name === s.name);
+      (s.days || []).forEach(d => {
+        if (dayGroups[d] !== undefined) {
+          const p = s.price || (sMaster ? calculateStallDayPrice(sMaster, d, item.customer_type, isFullPackage) : 0);
+          dayGroups[d].push({ name: s.name, price: p });
+        }
+      });
+    });
+  }
+
+  if (dayGroups[6].length === 0 && dayGroups[0].length === 0 && dayGroups[3].length === 0) {
+    rawStallNames.forEach(stallName => {
+      const sMaster = stalls.find(m => m.name === stallName);
+      const daysForStall = [];
+      if (stallName.startsWith('ส') || (activeDays.includes(6) && !stallName.startsWith('อ') && !stallName.startsWith('พ'))) daysForStall.push(6);
+      if (stallName.startsWith('อ') || (activeDays.includes(0) && !stallName.startsWith('ส') && !stallName.startsWith('พ'))) daysForStall.push(0);
+      if (stallName.startsWith('พ') || (activeDays.includes(3) && !stallName.startsWith('ส') && !stallName.startsWith('อ'))) daysForStall.push(3);
+      if (daysForStall.length === 0) daysForStall.push(6);
+
+      daysForStall.forEach(d => {
+        const p = sMaster ? calculateStallDayPrice(sMaster, d, item.customer_type, isFullPackage) : 0;
+        dayGroups[d].push({ name: stallName, price: p });
+      });
+    });
+  }
+
+  const grandTotal = parseNumber(item.total_price);
+  const elecUnit = parseNumber(item.elec_unit || 0);
+  const elecPerDay = elecUnit * 10;
+  const storageFee = parseNumber(item.storage_fee || 0);
+
+  // Breakdown rows
+  const breakdownRows = [];
+  const totalTradingDays = (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6)) ? satCount : 0) +
+                           (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0)) ? sunCount : 0) +
+                           (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3)) ? wedCount : 0);
+
+  let calculatedStallTotal = 0;
+  [6, 0, 3].forEach(d => {
+    const count = d === 6 ? satCount : d === 0 ? sunCount : wedCount;
+    if (count > 0 && dayGroups[d].length > 0) {
+      calculatedStallTotal += dayGroups[d].reduce((sum, s) => sum + s.price, 0) * count;
+    }
   });
 
-  const elecRate = (parseNumber(item.elec_unit || 0) * 10);
-  const cleanStall = (name) => (name || '').replace(/[\[\]]/g, '').trim();
+  let fallbackPricePerDay = 0;
+  if (calculatedStallTotal === 0 && totalTradingDays > 0) {
+    const baseStall = parseNumber(item.stall_price) || (grandTotal - (elecPerDay * totalTradingDays) - storageFee);
+    fallbackPricePerDay = Math.round(baseStall / totalTradingDays);
+  }
+
+  if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
+    const sName = dayGroups[6].length > 0 ? dayGroups[6].map(s => cleanStall(s.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[6].reduce((sum, s) => sum + s.price, 0) || fallbackPricePerDay;
+    breakdownRows.push({
+      label: `วันเสาร์: ล็อค ${sName}`,
+      calc: `${formatPrice(dayPrice)} x ${satCount}`,
+      total: dayPrice * satCount
+    });
+  }
+
+  if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
+    const sName = dayGroups[0].length > 0 ? dayGroups[0].map(s => cleanStall(s.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[0].reduce((sum, s) => sum + s.price, 0) || fallbackPricePerDay;
+    breakdownRows.push({
+      label: `วันอาทิตย์: ล็อค ${sName}`,
+      calc: `${formatPrice(dayPrice)} x ${sunCount}`,
+      total: dayPrice * sunCount
+    });
+  }
+
+  if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
+    const sName = dayGroups[3].length > 0 ? dayGroups[3].map(s => cleanStall(s.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[3].reduce((sum, s) => sum + s.price, 0) || fallbackPricePerDay;
+    breakdownRows.push({
+      label: `วันพุธ: ล็อค ${sName}`,
+      calc: `${formatPrice(dayPrice)} x ${wedCount}`,
+      total: dayPrice * wedCount
+    });
+  }
+
+  if (elecPerDay > 0) {
+    const elecDays = totalTradingDays || 1;
+    breakdownRows.push({
+      label: `ค่าไฟฟ้า: (${elecUnit} หน่วย)`,
+      calc: `${formatPrice(elecPerDay)} x ${elecDays}`,
+      total: elecPerDay * elecDays
+    });
+  }
+
+  if (storageFee > 0) {
+    breakdownRows.push({
+      label: `ค่าฝากของ:`,
+      calc: `รายเดือน`,
+      total: storageFee
+    });
+  }
 
   // Transactions list
   const txns = customCounts?.payments || (activeMonthlyTransactions?.length > 0 ? activeMonthlyTransactions : []);
@@ -90,7 +208,7 @@ export default function MonthlyReceiptPreviewModal() {
       }
       return {
         date: pDateStr,
-        method: p.method || 'โอนจ่าย',
+        method: p.method || 'โอนเงิน',
         amount: amt
       };
     });
@@ -106,12 +224,11 @@ export default function MonthlyReceiptPreviewModal() {
     }
     payments = [{
       date: pDateStr,
-      method: item.payment_method || 'โอนจ่าย',
+      method: item.payment_method || 'โอนเงิน',
       amount: totalPaid
     }];
   }
 
-  const grandTotal = parseNumber(item.total_price);
   const remaining = grandTotal - totalPaid;
   const txnNo = customCounts?.txnNo || item.receipt_no || `TXN-${item.id ? item.id.replace(/\D/g, '') : Date.now()}`;
   const filename = `monthly-receipt-${cleanStall(item.stalls)}-${item.booker_name || ''}.png`;
@@ -120,7 +237,7 @@ export default function MonthlyReceiptPreviewModal() {
     if (!receiptRef.current) return;
     setCopying(true);
     try {
-      const res = await copyReceiptImage(receiptRef.current, filename);
+      const res = await copyReceiptImage(receiptRef.current);
       setCopied(true);
       if (typeof showAlert === 'function') {
         showAlert(res.message, "สำเร็จ");
@@ -129,7 +246,7 @@ export default function MonthlyReceiptPreviewModal() {
     } catch (err) {
       console.error(err);
       if (typeof showAlert === 'function') {
-        showAlert("ไม่สามารถคัดลอกรูปภาพได้: " + err.message, "แจ้งเตือน", true);
+        showAlert(err.message, "แจ้งเตือน", true);
       }
     } finally {
       setCopying(false);
@@ -140,14 +257,14 @@ export default function MonthlyReceiptPreviewModal() {
     if (!receiptRef.current) return;
     setSharing(true);
     try {
-      const res = await shareOrCopyReceiptImage(receiptRef.current, filename);
+      const res = await shareReceiptImage(receiptRef.current, filename);
       if (typeof showAlert === 'function' && res.type !== 'cancelled') {
         showAlert(res.message, "สำเร็จ");
       }
     } catch (err) {
       console.error(err);
       if (typeof showAlert === 'function') {
-        showAlert("เกิดข้อผิดพลาด: " + err.message, "ข้อผิดพลาด", true);
+        showAlert(err.message, "ข้อผิดพลาด", true);
       }
     } finally {
       setSharing(false);
@@ -193,7 +310,7 @@ export default function MonthlyReceiptPreviewModal() {
         {/* Modal Body: Receipt Paper Preview */}
         <div className="p-3.5 flex-1 overflow-y-auto bg-gray-100 flex flex-col items-center">
           <div className="w-full text-center text-[10px] text-gray-500 font-semibold mb-2">
-            💡 เลือกกด <b>"คัดลอกรูป"</b> เพื่อส่งใน Line หรือ <b>"พิมพ์"</b> สำหรับลูกค้าเงินสด
+            💡 กด <b>"คัดลอกรูป"</b> เพื่อส่งใน Line หรือ <b>"พิมพ์"</b> สำหรับลูกค้าเงินสด
           </div>
 
           {/* Printable / Capturable Receipt Card */}
@@ -217,68 +334,77 @@ export default function MonthlyReceiptPreviewModal() {
               <p>เลขที่ใบเสร็จ: <span className="font-mono">{txnNo}</span></p>
               <p>วันที่ออกตั๋ว: {formattedTransaction}</p>
               <p className="text-black font-bold">รอบเดือน: {invoiceMonth}</p>
-              <p>ผู้ทำรายการ: {adminUser?.name || 'Admin'}</p>
+              <p>ผู้ทำรายการ: {adminUser?.name || 'ตลาดนัดลาดสวายวินเทจ'}</p>
               <p className="text-black font-bold">ผู้เช่า: <span className="font-extrabold text-[#8B4513]">{item.booker_name || '-'}</span></p>
               <p>สินค้า: {item.product || 'ของชำทั่วไป'}</p>
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-1.5"></div>
 
-            <div className="text-center py-1 bg-amber-50/60 rounded border border-amber-200/50 my-1.5">
-              <span className="text-[10px] text-gray-600 font-bold block">ล็อคที่เช่า</span>
-              <span className="text-xl font-black tracking-wider text-black block">{cleanStall(item.stalls)}</span>
-            </div>
-
-            <div className="border-t border-dashed border-gray-400 my-1.5"></div>
-
-            {/* Days Breakdown */}
-            <div className="space-y-1 text-[11px] font-bold">
-              <div className="flex justify-between">
-                <span>ค่าเช่าพื้นที่ (รายเดือน):</span>
-                <span className="font-mono">{formatPrice(grandTotal)} บ.</span>
+            {/* Rent Breakdown */}
+            <div className="space-y-1 text-[10.5px]">
+              <div className="text-[11px] font-black text-black mb-1">
+                รายละเอียดการเช่า:
               </div>
-              {elecRate > 0 && (
-                <div className="flex justify-between text-amber-900 text-[10px]">
-                  <span>ค่าไฟต่อรอบ ({item.elec_unit || 0} หน่วย):</span>
-                  <span className="font-mono">{formatPrice(elecRate)} บ./วัน</span>
-                </div>
-              )}
-              {item.storage_fee > 0 && (
-                <div className="flex justify-between text-blue-900 text-[10px]">
-                  <span>ค่าฝากของรายเดือน:</span>
-                  <span className="font-mono">{formatPrice(item.storage_fee)} บ.</span>
-                </div>
-              )}
-              <div className="border-t border-gray-300 my-1"></div>
-              <div className="flex justify-between text-sm font-black text-black">
+              <div className="space-y-1">
+                {breakdownRows.map((row, idx) => (
+                  <div key={idx} className="flex justify-between items-baseline font-bold text-gray-800">
+                    <div>
+                      <span>{row.label}</span>
+                      <span className="text-[9.5px] text-gray-500 font-normal ml-1">({row.calc})</span>
+                    </div>
+                    <span className="font-mono text-black font-extrabold">{formatPrice(row.total)} บ.</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="border-t border-dashed border-gray-400 my-1.5"></div>
+              
+              <div className="flex justify-between text-xs font-black text-black">
                 <span>ยอดรวมทั้งสิ้น:</span>
-                <span className="font-mono text-base">{formatPrice(grandTotal)} บ.</span>
+                <span className="font-mono text-sm">{formatPrice(grandTotal)} บ.</span>
               </div>
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-1.5"></div>
 
-            {/* Payments History */}
-            <div className="space-y-0.5 text-[10px] font-semibold text-gray-800">
-              <p className="font-bold">ประวัติการชำระเงิน:</p>
-              {payments.map((p, i) => (
-                <div key={i} className="flex justify-between text-gray-700 pl-2">
-                  <span>- {p.date} ({p.method}):</span>
-                  <span className="font-mono font-bold">{formatPrice(p.amount)} บ.</span>
-                </div>
-              ))}
-              <div className="flex justify-between text-green-800 font-bold pl-2 pt-0.5">
+            {/* Payments History Table */}
+            <div className="space-y-1 text-[10px]">
+              <div className="text-[10.5px] font-black text-black mb-0.5">
+                ประวัติการชำระเงิน:
+              </div>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-300 text-gray-500 font-bold text-[9px]">
+                    <th className="py-0.5">วันที่ชำระ</th>
+                    <th className="py-0.5 text-center">ช่องทางชำระ</th>
+                    <th className="py-0.5 text-right">จำนวน</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 font-semibold text-gray-800">
+                  {payments.map((p, i) => (
+                    <tr key={i}>
+                      <td className="py-1">{p.date}</td>
+                      <td className="py-1 text-center font-bold text-gray-700">{normalizePaymentMethodThai(p.method)}</td>
+                      <td className="py-1 text-right font-mono font-bold">{formatPrice(p.amount)} บ.</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex justify-between text-green-800 font-black pt-1 border-t border-gray-300 text-[10.5px]">
                 <span>ชำระแล้วรวม:</span>
                 <span className="font-mono">{formatPrice(totalPaid)} บ.</span>
               </div>
+
               {remaining > 0 ? (
-                <div className="flex justify-between text-red-700 font-black pl-2 pt-0.5">
+                <div className="flex justify-between text-red-700 font-black text-[10.5px]">
                   <span>ยอดค้างชำระ:</span>
                   <span className="font-mono">{formatPrice(remaining)} บ.</span>
                 </div>
               ) : (
-                <div className="text-center py-0.5 mt-1 bg-green-50 text-green-700 font-black text-[10px] rounded border border-green-200">
-                  ชำระครบถ้วนแล้ว
+                <div className="text-center py-1 mt-1 bg-green-50 text-green-700 font-black text-[10px] rounded border border-green-200">
+                  ✓ ชำระครบถ้วนแล้ว
                 </div>
               )}
             </div>
@@ -293,60 +419,49 @@ export default function MonthlyReceiptPreviewModal() {
           </div>
         </div>
 
-        {/* Modal Footer Actions */}
-        <div className="bg-[#FAEBD7] border-t border-[#8B4513]/20 p-2.5 flex flex-col gap-2 shrink-0">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={copying}
-              onClick={handleCopy}
-              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 ${
-                copied 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              {copying ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : copied ? (
-                <Check className="w-3.5 h-3.5" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
-              )}
-              <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกรูป (ส่ง Line)'}</span>
-            </button>
+        {/* Modal Footer Actions - Single clean row */}
+        <div className="bg-[#FAEBD7] border-t border-[#8B4513]/20 p-2.5 flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            disabled={copying}
+            onClick={handleCopy}
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 ${
+              copied 
+                ? 'bg-emerald-600 text-white' 
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {copying ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : copied ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกรูป (ส่ง Line)'}</span>
+          </button>
 
-            <button
-              type="button"
-              disabled={sharing}
-              onClick={handleShare}
-              className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-            >
-              {sharing ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Share2 className="w-3.5 h-3.5" />
-              )}
-              <span>แชร์ / บันทึกรูป</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={sharing}
+            onClick={handleShare}
+            className="flex-1 py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+          >
+            {sharing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Share2 className="w-3.5 h-3.5" />
+            )}
+            <span>แชร์รูป (ส่ง Line)</span>
+          </button>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex-1 py-1.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95"
-            >
-              <Printer className="w-3.5 h-3.5" /> สั่งพิมพ์ใบเสร็จ
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowMonthlyReceiptPreviewModal(false)}
-              className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
-            >
-              ปิด
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowMonthlyReceiptPreviewModal(false)}
+            className="py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            ปิด
+          </button>
         </div>
 
       </div>

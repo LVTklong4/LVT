@@ -5,8 +5,8 @@ import { useBooking } from '@/context/BookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { cleanStallName, parseNumber, formatPrice } from '@/utils/numberHelper';
 import { dayNamesShort, monthNamesFull } from '@/utils/thaiDateHelper';
-import { copyReceiptImage, downloadReceiptImage, shareOrCopyReceiptImage } from '@/utils/receiptImageHelper';
-import { Printer, Copy, Check, Download, Share2, X, Loader2 } from 'lucide-react';
+import { copyReceiptImage, shareReceiptImage, normalizePaymentMethodThai } from '@/utils/receiptImageHelper';
+import { Printer, Copy, Check, Share2, X, Loader2 } from 'lucide-react';
 
 export default function DailyReceiptPreviewModal() {
   const {
@@ -50,13 +50,13 @@ export default function DailyReceiptPreviewModal() {
     rawPayments.split('+').forEach(p => {
       const parts = p.trim().split(':');
       if (parts.length >= 2) {
-        paymentLines.push({ method: parts[0].trim() === 'โอนเงิน' ? 'โอนจ่าย' : parts[0].trim(), amount: parseNumber(parts[1]) });
+        paymentLines.push({ method: normalizePaymentMethodThai(parts[0].trim()), amount: parseNumber(parts[1]) });
       } else {
-        paymentLines.push({ method: p.trim(), amount: totalAmountVal });
+        paymentLines.push({ method: normalizePaymentMethodThai(p.trim()), amount: totalAmountVal });
       }
     });
   } else {
-    paymentLines.push({ method: rawPayments === 'โอนเงิน' ? 'โอนจ่าย' : rawPayments || 'เงินสด', amount: totalAmountVal });
+    paymentLines.push({ method: normalizePaymentMethodThai(rawPayments || 'เงินสด'), amount: totalAmountVal });
   }
 
   const totalPaidVal = paymentLines.reduce((sum, p) => sum + p.amount, 0);
@@ -67,7 +67,7 @@ export default function DailyReceiptPreviewModal() {
     if (!receiptRef.current) return;
     setCopying(true);
     try {
-      const res = await copyReceiptImage(receiptRef.current, filename);
+      const res = await copyReceiptImage(receiptRef.current);
       setCopied(true);
       if (typeof showAlert === 'function') {
         showAlert(res.message, "สำเร็จ");
@@ -76,7 +76,7 @@ export default function DailyReceiptPreviewModal() {
     } catch (err) {
       console.error(err);
       if (typeof showAlert === 'function') {
-        showAlert("ไม่สามารถคัดลอกรูปภาพได้: " + err.message, "แจ้งเตือน", true);
+        showAlert(err.message, "แจ้งเตือน", true);
       }
     } finally {
       setCopying(false);
@@ -87,14 +87,14 @@ export default function DailyReceiptPreviewModal() {
     if (!receiptRef.current) return;
     setSharing(true);
     try {
-      const res = await shareOrCopyReceiptImage(receiptRef.current, filename);
+      const res = await shareReceiptImage(receiptRef.current, filename);
       if (typeof showAlert === 'function' && res.type !== 'cancelled') {
         showAlert(res.message, "สำเร็จ");
       }
     } catch (err) {
       console.error(err);
       if (typeof showAlert === 'function') {
-        showAlert("เกิดข้อผิดพลาด: " + err.message, "ข้อผิดพลาด", true);
+        showAlert(err.message, "ข้อผิดพลาด", true);
       }
     } finally {
       setSharing(false);
@@ -115,7 +115,7 @@ export default function DailyReceiptPreviewModal() {
         <div className="bg-[#FAEBD7] border-b-2 border-[#8B4513] px-3.5 py-2.5 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-1.5">
             <Printer className="w-4 h-4 text-[#8B4513]" />
-            <span className="font-extrabold text-[#5D4037] text-xs">ตั๋วใบเสร็จรับเงิน (รายวัน)</span>
+            <span className="font-extrabold text-[#5D4037] text-xs">ใบเสร็จรับเงิน (รายวัน)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -140,7 +140,7 @@ export default function DailyReceiptPreviewModal() {
         {/* Modal Body: Receipt Paper Preview */}
         <div className="p-3.5 flex-1 overflow-y-auto bg-gray-100 flex flex-col items-center">
           <div className="w-full text-center text-[10px] text-gray-500 font-semibold mb-2">
-            💡 เลือกกด <b>"คัดลอกรูป"</b> เพื่อส่งใน Line หรือ <b>"พิมพ์"</b> สำหรับลูกค้าเงินสด
+            💡 กด <b>"คัดลอกรูป"</b> เพื่อส่งใน Line หรือ <b>"พิมพ์"</b> สำหรับลูกค้าเงินสด
           </div>
 
           {/* Printable / Capturable Receipt Card */}
@@ -155,69 +155,85 @@ export default function DailyReceiptPreviewModal() {
                 className="w-16 h-16 object-contain mb-1 drop-shadow-xs" 
               />
               <h2 className="font-black text-sm tracking-wide text-black text-center">ตลาดลาดสวายวินเทจ</h2>
-              <p className="text-[9px] text-gray-700 font-bold text-center">ใบเสร็จรับเงิน / ใบนำเข้าพื้นที่</p>
+              <p className="text-[9px] text-gray-700 font-bold text-center">ใบเสร็จรับเงิน (รายวัน)</p>
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-1.5"></div>
 
             <div className="space-y-0.5 text-[10px] text-gray-800 font-semibold">
+              <p>เลขที่เอกสาร: <span className="font-mono">{bookingObj.id}</span></p>
               <p>วันที่ทำรายการ: {formattedTransaction}</p>
-              <p className="text-black font-bold">วันที่ค้าขาย: {tradingDateFormatted}</p>
-              <p>ผู้ทำรายการ: {adminUser?.name || 'Admin'}</p>
-              <p className="text-black font-bold">ชื่อผู้จอง: <span className="font-extrabold text-[#8B4513]">{bookingObj.booker_name || '-'}</span></p>
-              <p>สินค้า: {bookingObj.product || 'สินค้าทั่วไป'}</p>
+              <p>ผู้ทำรายการ: {adminUser?.name || 'Staff'}</p>
+              <p>วันที่ทำการค้า: <span className="font-bold text-black">{tradingDateFormatted}</span></p>
+              <p>ผู้ค้า: <span className="font-bold text-[#8B4513]">{bookingObj.booker_name || '-'}</span></p>
+              {bookingObj.product && <p>สินค้าที่ขาย: {bookingObj.product}</p>}
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-1.5"></div>
 
             <div className="text-center py-1 bg-amber-50/60 rounded border border-amber-200/50 my-1.5">
-              <span className="text-[10px] text-gray-600 font-bold block">ล็อคที่ได้รับ</span>
+              <span className="text-[10px] text-gray-600 font-bold block">ล็อคที่เช่า</span>
               <span className="text-xl font-black tracking-wider text-black block">{formattedStallName}</span>
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-1.5"></div>
 
-            <div className="space-y-1 text-[11px] font-bold">
-              <div className="flex justify-between">
-                <span>ค่าเช่าพื้นที่:</span>
-                <span className="font-mono">{formatPrice(stallPriceVal)} บ.</span>
-              </div>
-              {elecPriceVal > 0 && (
-                <div className="flex justify-between text-amber-900">
-                  <span>ค่าไฟ ({bookingObj.elec_unit || 1} จุด):</span>
-                  <span className="font-mono">{formatPrice(elecPriceVal)} บ.</span>
-                </div>
-              )}
-              {storageFeeVal > 0 && (
-                <div className="flex justify-between text-blue-900">
-                  <span>ค่าฝากของ:</span>
-                  <span className="font-mono">{formatPrice(storageFeeVal)} บ.</span>
-                </div>
-              )}
-              <div className="border-t border-gray-300 my-1"></div>
-              <div className="flex justify-between text-sm font-black text-black">
-                <span>ยอดรวมทั้งสิ้น:</span>
-                <span className="font-mono text-base">{formatPrice(totalAmountVal)} บ.</span>
-              </div>
-            </div>
+            <table className="w-full text-left text-[11px] border-collapse font-bold">
+              <thead>
+                <tr className="border-b border-dashed border-gray-400 text-gray-600">
+                  <th className="py-1">รายการ</th>
+                  <th className="py-1 text-right">จำนวนเงิน</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-800">
+                <tr>
+                  <td className="py-1">1. ค่าเช่าล็อค</td>
+                  <td className="py-1 text-right font-mono">{formatPrice(stallPriceVal)} บ.</td>
+                </tr>
+                {elecPriceVal > 0 && (
+                  <tr>
+                    <td className="py-1">2. ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
+                    <td className="py-1 text-right font-mono">{formatPrice(elecPriceVal)} บ.</td>
+                  </tr>
+                )}
+                {storageFeeVal > 0 && (
+                  <tr>
+                    <td className="py-1">3. ค่าฝากของ</td>
+                    <td className="py-1 text-right font-mono">{formatPrice(storageFeeVal)} บ.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
 
             <div className="border-t border-dashed border-gray-400 my-1.5"></div>
 
-            <div className="space-y-0.5 text-[10px] font-semibold text-gray-800">
-              <p className="font-bold">การชำระเงิน:</p>
-              {paymentLines.map((p, i) => (
-                <div key={i} className="flex justify-between text-gray-700 pl-2">
-                  <span>- {p.method}:</span>
-                  <span className="font-mono">{formatPrice(p.amount)} บ.</span>
-                </div>
-              ))}
-              {changeVal > 0 && (
-                <div className="flex justify-between text-red-700 font-black pl-2 pt-0.5">
-                  <span>เงินทอน:</span>
-                  <span className="font-mono">{formatPrice(changeVal)} บ.</span>
-                </div>
-              )}
+            <div className="space-y-1">
+              <div className="flex justify-between font-black text-sm text-black">
+                <span>ยอดรวมทั้งสิ้น:</span>
+                <span className="font-mono text-base">{formatPrice(totalAmountVal)} บ.</span>
+              </div>
+              
+              <div className="pt-1 space-y-0.5 text-[10px] text-gray-700 font-semibold border-t border-dotted border-gray-300">
+                {paymentLines.map((p, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>ชำระด้วย [{p.method}]:</span>
+                    <span className="font-mono font-bold">{formatPrice(p.amount)} บ.</span>
+                  </div>
+                ))}
+                {changeVal > 0 && (
+                  <div className="flex justify-between text-red-700 font-bold">
+                    <span>เงินทอน:</span>
+                    <span className="font-mono">{formatPrice(changeVal)} บ.</span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {bookingObj.note && (
+              <div className="border-t border-dashed border-gray-400 my-1.5 pt-1 text-[9.5px] text-gray-600">
+                <span className="font-bold">หมายเหตุ:</span> {bookingObj.note}
+              </div>
+            )}
 
             <div className="border-t border-dashed border-gray-400 my-2"></div>
 
@@ -229,60 +245,49 @@ export default function DailyReceiptPreviewModal() {
           </div>
         </div>
 
-        {/* Modal Footer Actions */}
-        <div className="bg-[#FAEBD7] border-t border-[#8B4513]/20 p-2.5 flex flex-col gap-2 shrink-0">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={copying}
-              onClick={handleCopy}
-              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 ${
-                copied 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              {copying ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : copied ? (
-                <Check className="w-3.5 h-3.5" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
-              )}
-              <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกรูป (ส่ง Line)'}</span>
-            </button>
+        {/* Modal Footer Actions - Single clean row */}
+        <div className="bg-[#FAEBD7] border-t border-[#8B4513]/20 p-2.5 flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            disabled={copying}
+            onClick={handleCopy}
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 ${
+              copied 
+                ? 'bg-emerald-600 text-white' 
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {copying ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : copied ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกรูป (ส่ง Line)'}</span>
+          </button>
 
-            <button
-              type="button"
-              disabled={sharing}
-              onClick={handleShare}
-              className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-            >
-              {sharing ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Share2 className="w-3.5 h-3.5" />
-              )}
-              <span>แชร์ / บันทึกรูป</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={sharing}
+            onClick={handleShare}
+            className="flex-1 py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+          >
+            {sharing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Share2 className="w-3.5 h-3.5" />
+            )}
+            <span>แชร์รูป (ส่ง Line)</span>
+          </button>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex-1 py-1.5 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95"
-            >
-              <Printer className="w-3.5 h-3.5" /> สั่งพิมพ์ใบเสร็จ
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowReceiptPreviewModal(false)}
-              className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
-            >
-              ปิด
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowReceiptPreviewModal(false)}
+            className="py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            ปิด
+          </button>
         </div>
 
       </div>

@@ -1,134 +1,97 @@
 /**
- * Utility functions for capturing, copying, downloading, and sharing receipt images.
- * Uses html2canvas to convert receipt DOM elements into high-definition PNG images.
+ * Utility functions for capturing, copying, and sharing receipt images.
+ * Uses html-to-image to render DOM elements via SVG foreignObject,
+ * completely supporting modern CSS color functions (oklch, lab, etc.) without parsing errors.
  */
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+import { toBlob } from 'html-to-image';
 
 /**
- * Captures an HTML element as a canvas with crisp high-DPI resolution.
+ * Normalizes payment method text to friendly Thai language.
  */
-async function captureElementToCanvas(element) {
-  const html2canvas = (await import('html2canvas')).default;
-  return await html2canvas(element, {
-    scale: 2.5, // High resolution for crisp receipt text
-    backgroundColor: '#ffffff',
-    useCORS: true,
-    logging: false
-  });
+export function normalizePaymentMethodThai(method) {
+  if (!method) return 'เงินสด';
+  const m = String(method).trim().toLowerCase();
+  if (m === 'cash' || m.includes('เงินสด')) return 'เงินสด';
+  if (m === 'transfer' || m.includes('โอน')) return 'โอนเงิน';
+  return method;
 }
 
 /**
  * Copies receipt image directly to the clipboard (works seamlessly on Desktop/Chrome/Edge/Mac).
- * Fallback to file download if clipboard writing is unsupported or restricted.
  */
-export async function copyReceiptImage(element, filename = `receipt-${Date.now()}.png`) {
+export async function copyReceiptImage(element) {
   if (!element) throw new Error('ไม่พบข้อมูลใบเสร็จ');
 
-  const canvas = await captureElementToCanvas(element);
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        reject(new Error('ไม่สามารถแปลงใบเสร็จเป็นรูปภาพได้'));
-        return;
-      }
-
-      // Try Clipboard API
-      try {
-        if (typeof window !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-          ]);
-          resolve({ type: 'clipboard', message: 'คัดลอกรูปใบเสร็จแล้ว สามารถกดวาง (Ctrl+V) ใน Line ได้ทันที' });
-          return;
-        }
-      } catch (err) {
-        console.warn('Clipboard write failed, falling back to download:', err);
-      }
-
-      // Fallback: Download file
-      try {
-        downloadBlob(blob, filename);
-        resolve({ type: 'download', message: 'ดาวน์โหลดรูปใบเสร็จเรียบร้อยแล้ว' });
-      } catch (err) {
-        reject(err);
-      }
-    }, 'image/png');
+  const blob = await toBlob(element, {
+    pixelRatio: 2.5, // Crisp 2.5x resolution for 80mm receipts
+    backgroundColor: '#ffffff',
+    cacheBust: true
   });
+
+  if (!blob) throw new Error('ไม่สามารถแปลงใบเสร็จเป็นรูปภาพได้');
+
+  // Clipboard API
+  if (typeof window !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      return { type: 'clipboard', message: 'คัดลอกรูปใบเสร็จแล้ว สามารถกดวาง (Ctrl+V) ใน Line ได้ทันที' };
+    } catch (err) {
+      console.warn('Clipboard write error:', err);
+      throw new Error('ไม่สามารถเข้าถึงคลิปบอร์ดได้: ' + (err.message || 'กรุณาลองใหม่อีกครั้ง'));
+    }
+  }
+
+  throw new Error('เบราว์เซอร์นี้ไม่รองรับการคัดลอกรูปภาพลงคลิปบอร์ดโดยตรง');
 }
 
 /**
- * Downloads receipt image as a PNG file.
+ * Shares receipt image via native Web Share API (Mobile Line, WhatsApp, Photos, AirDrop).
+ * NOTE: Per user request, this does NOT download files to disk on fallback to save device storage.
  */
-export async function downloadReceiptImage(element, filename = `receipt-${Date.now()}.png`) {
+export async function shareReceiptImage(element, filename = `receipt-${Date.now()}.png`) {
   if (!element) throw new Error('ไม่พบข้อมูลใบเสร็จ');
-  const canvas = await captureElementToCanvas(element);
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) return reject(new Error('ไม่สามารถแปลงรูปภาพได้'));
-      downloadBlob(blob, filename);
-      resolve({ type: 'download', message: 'ดาวน์โหลดรูปภาพใบเสร็จเรียบร้อย' });
-    }, 'image/png');
+
+  const blob = await toBlob(element, {
+    pixelRatio: 2.5,
+    backgroundColor: '#ffffff',
+    cacheBust: true
   });
+
+  if (!blob) throw new Error('ไม่สามารถแปลงรูปภาพได้');
+
+  const file = new File([blob], filename, { type: 'image/png' });
+
+  // Mobile Web Share API
+  if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'ใบเสร็จรับเงิน ลาดสวายวินเทจ',
+        text: 'ใบเสร็จรับเงิน ตลาดลาดสวายวินเทจ'
+      });
+      return { type: 'share', message: 'แชร์รูปภาพใบเสร็จเรียบร้อย' };
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return { type: 'cancelled', message: 'ยกเลิกการแชร์' };
+      }
+      throw err;
+    }
+  }
+
+  // If navigator.share is unsupported (e.g. on Desktop PC), copy to clipboard instead of downloading
+  if (typeof window !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      return { type: 'clipboard', message: 'อุปกรณ์นี้ไม่รองรับการแชร์โดยตรง ระบบได้คัดลอกรูปภาพแล้ว กดวาง (Ctrl+V) ใน Line ได้เลยครับ' };
+    } catch (e) {}
+  }
+
+  throw new Error('อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับการแชร์รูปภาพ กรุณาใช้ปุ่ม "คัดลอกรูป" เพื่อส่งใน Line');
 }
 
-/**
- * Mobile-friendly share: triggers Web Share API if supported, or copies to clipboard / downloads.
- */
-export async function shareOrCopyReceiptImage(element, filename = `receipt-${Date.now()}.png`) {
-  if (!element) throw new Error('ไม่พบข้อมูลใบเสร็จ');
-  const canvas = await captureElementToCanvas(element);
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) return reject(new Error('ไม่สามารถแปลงรูปภาพได้'));
-
-      const file = new File([blob], filename, { type: 'image/png' });
-
-      // Mobile Web Share API
-      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'ใบเสร็จรับเงิน ลาดสวายวินเทจ',
-            text: 'ใบเสร็จรับเงิน ตลาดลาดสวายวินเทจ'
-          });
-          resolve({ type: 'share', message: 'แชร์รูปภาพใบเสร็จเรียบร้อย' });
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') {
-            resolve({ type: 'cancelled', message: 'ยกเลิกการแชร์' });
-            return;
-          }
-        }
-      }
-
-      // Desktop Clipboard API
-      try {
-        if (typeof window !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-          ]);
-          resolve({ type: 'clipboard', message: 'คัดลอกรูปใบเสร็จแล้ว สามารถกดวาง (Ctrl+V) ใน Line ได้ทันที' });
-          return;
-        }
-      } catch (err) {
-        console.warn('Clipboard write fallback to download:', err);
-      }
-
-      // Fallback
-      downloadBlob(blob, filename);
-      resolve({ type: 'download', message: 'ดาวน์โหลดรูปใบเสร็จเรียบร้อย' });
-    }, 'image/png');
-  });
-}
+// Backward-compatible alias
+export const shareOrCopyReceiptImage = shareReceiptImage;
