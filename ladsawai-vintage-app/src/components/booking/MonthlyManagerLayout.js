@@ -16,6 +16,7 @@ import MonthlyPrintModal from './modals/MonthlyPrintModal';
 import MonthlyReceiptPreviewModal from './modals/MonthlyReceiptPreviewModal';
 import SettingsMgmtModal from './modals/SettingsMgmtModal';
 import MonthlyTableFooter from './modals/MonthlyTableFooter';
+import MonthlyManagerMobile from './mobile/MonthlyManagerMobile';
 import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsService';
 import {
   monthNamesFull,
@@ -182,6 +183,8 @@ export default function MonthlyManagerLayout() {
 
   return (
     <div className="w-full h-screen md:h-screen min-h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
+      {/* Desktop Layout (>= md) */}
+      <div className="hidden md:flex flex-col flex-1 h-full min-h-0 overflow-hidden">
         {/* Header bar */}
         <div className="bg-[#5D4037] text-white px-5 py-3 flex justify-between items-center shrink-0 shadow-md border-b-2 border-[#8B4513]">
           <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings Manager)</h3>
@@ -661,6 +664,12 @@ export default function MonthlyManagerLayout() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Layout (< md) */}
+      <div className="flex md:hidden flex-col flex-1 h-full min-h-0 overflow-hidden">
+        <MonthlyManagerMobile />
+      </div>
 
         {/* 🗓️ 2.2 Edit Monthly Item Modal */}
         

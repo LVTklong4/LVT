@@ -14,6 +14,7 @@ import MonthlyPrintModal from './MonthlyPrintModal';
 import SlipPreviewModal from './SlipPreviewModal';
 import MonthlyReceiptPreviewModal from './MonthlyReceiptPreviewModal';
 import MonthlyTableFooter from './MonthlyTableFooter';
+import MonthlyManagerMobile from '../mobile/MonthlyManagerMobile';
 import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsService';
 
 export default function MonthlyMgmtModal() {
@@ -50,12 +51,14 @@ export default function MonthlyMgmtModal() {
   if (!showMonthlyMgmtModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-7xl border-2 border-[#8B4513] overflow-hidden animate-pop-in flex flex-col h-[94vh] sm:h-[90vh] max-h-[94vh] sm:max-h-[90vh]">
-            <div className="bg-[#5D4037] text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-[#8B4513]">
-              <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings)</h3>
-              <button onClick={() => setShowMonthlyMgmtModal(false)} className="text-amber-200 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 overflow-y-auto">
+          <div className="bg-[#FFFDF9] rounded-none md:rounded-xl shadow-2xl w-full max-w-7xl border-0 md:border-2 border-[#8B4513] overflow-hidden animate-pop-in flex flex-col h-full md:h-[90vh] max-h-screen md:max-h-[90vh]">
+            {/* Desktop View (>= md) */}
+            <div className="hidden md:flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="bg-[#5D4037] text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-[#8B4513]">
+                <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings)</h3>
+                <button onClick={() => setShowMonthlyMgmtModal(false)} className="text-amber-200 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+              </div>
             
             {/* Top Toolbar Action Bar */}
             <div className="bg-gray-50 px-5 py-3 border-b flex flex-wrap items-center justify-between gap-3 shrink-0">
@@ -414,6 +417,12 @@ export default function MonthlyMgmtModal() {
               </div>
             </div>
           </div>
+
+          {/* Mobile View (< md) */}
+          <div className="flex md:hidden flex-col flex-1 min-h-0 overflow-hidden">
+            <MonthlyManagerMobile onClose={() => setShowMonthlyMgmtModal(false)} />
+          </div>
+        </div>
 
           {/* Monthly Sub-Modals */}
           <NewMonthlyModal />
