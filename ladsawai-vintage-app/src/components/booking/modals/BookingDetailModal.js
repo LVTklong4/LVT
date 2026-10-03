@@ -440,18 +440,42 @@ export default function BookingDetailModal({
                       {paymentList.map((entry, index) => {
                         const isAmountEntered = entry.amount && parseNumber(entry.amount) > 0;
                         return (
-                          <div key={index} className="flex items-center gap-2">
-                            <div className="flex-1 relative">
+                          <div key={index} className="flex items-center gap-1.5 sm:gap-2">
+                            <button
+                              type="button"
+                              disabled={isAlreadyPaid || entry.isSaved}
+                              onClick={() => {
+                                const otherPaid = paymentList
+                                  .filter((_, idx) => idx !== index)
+                                  .reduce((sum, p) => sum + parseNumber(p.amount), 0);
+                                const remaining = totalVal - otherPaid;
+                                const fillAmount = remaining > 0 ? remaining : (totalVal > 0 ? totalVal : 0);
+                                const updated = [...paymentList];
+                                updated[index].amount = String(fillAmount);
+                                setPaymentList(updated);
+                              }}
+                              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all shrink-0 border shadow-xs ${
+                                (isAlreadyPaid || entry.isSaved)
+                                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                                  : 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600 active:scale-95 cursor-pointer'
+                              }`}
+                              title="คลิกเพื่อใส่ยอดเงินที่ต้องชำระอัตโนมัติ"
+                            >
+                              ชำระ
+                            </button>
+
+                            <div className="w-28 sm:w-32 relative shrink-0">
                               <input
                                 type="number"
                                 disabled={isAlreadyPaid || entry.isSaved}
                                 value={entry.amount}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => {
                                   const updated = [...paymentList];
                                   updated[index].amount = e.target.value;
                                   setPaymentList(updated);
                                 }}
-                                placeholder="กรอกยอดเงินชำระ"
+                                placeholder="ยอดชำระ"
                                 className={`w-full p-2 border border-[#8B4513]/30 rounded-lg text-xs text-right text-gray-800 bg-white font-mono font-extrabold focus:outline-none focus:ring-1 focus:ring-[#8B4513] ${
                                   (isAlreadyPaid || entry.isSaved) ? 'opacity-65 bg-gray-100 cursor-not-allowed' : ''
                                 }`}
