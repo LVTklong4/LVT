@@ -50,8 +50,8 @@ export default function MonthlyMgmtModal() {
   if (!showMonthlyMgmtModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-7xl border-2 border-[#8B4513] overflow-hidden animate-pop-in flex flex-col h-[90vh] max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-7xl border-2 border-[#8B4513] overflow-hidden animate-pop-in flex flex-col h-[94vh] sm:h-[90vh] max-h-[94vh] sm:max-h-[90vh]">
             <div className="bg-[#5D4037] text-white px-4 py-3 flex justify-between items-center shrink-0 border-b-2 border-[#8B4513]">
               <h3 className="font-bold text-sm flex items-center gap-1.5">🗓️ จัดการลูกค้ารายเดือน (Monthly Bookings)</h3>
               <button onClick={() => setShowMonthlyMgmtModal(false)} className="text-amber-200 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
@@ -127,10 +127,10 @@ export default function MonthlyMgmtModal() {
               </div>
             </div>
             
-            <div className="p-4 md:p-5 flex flex-col md:flex-row gap-5 flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
+            <div className="p-3 sm:p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-5 flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
               {/* Left Side: List panel */}
-              <div className="flex-1 flex flex-col min-w-0 min-h-[480px] md:min-h-0 h-auto md:h-full overflow-hidden">
-                <div className="overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg flex-1 min-h-0 bg-white">
+              <div className="flex-1 flex flex-col min-w-0 min-h-[500px] md:min-h-0 h-auto md:h-full overflow-hidden bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                <div className="overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg flex-1 min-h-[380px] md:min-h-0 bg-white">
                   <table className="w-full min-w-[760px] text-xs text-left">
                     <thead className="bg-[#F5E6D3] text-[#3E2723] border-b font-bold sticky top-0 z-10">
                       <tr>
@@ -176,7 +176,27 @@ export default function MonthlyMgmtModal() {
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
-                      {paginatedList.map((item) => {
+                      {loadingMonthly ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-gray-500 font-bold">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <Loader2 className="w-6 h-6 text-amber-800 animate-spin" />
+                              <span className="text-xs">กำลังโหลดข้อมูลลูกค้ารายเดือน...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : paginatedList.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-gray-400 font-bold">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <AlertCircle className="w-6 h-6 text-amber-900/40" />
+                              <span className="text-xs text-gray-600">ไม่พบข้อมูลลูกค้ารายเดือนในเงื่อนไขที่เลือก</span>
+                              <span className="text-[11px] text-gray-400 font-normal">ลองเปลี่ยนตัวกรองเดือน หรือล้างคำค้นหา</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedList.map((item) => {
                         const unpaidBalance = parseNumber(item.total_price) - parseNumber(item.paid_amount || 0);
                         const displayStalls = (() => {
                           const rawStall = item.stalls || item.stall_name;
@@ -250,7 +270,7 @@ export default function MonthlyMgmtModal() {
                             </td>
                           </tr>
                         );
-                      })}
+                      }))}
                     </tbody>
                   </table>
                 </div>
@@ -269,7 +289,7 @@ export default function MonthlyMgmtModal() {
               </div>
 
               {/* Right Side: Selected Booking History & Details */}
-              <div className="w-full md:w-[400px] shrink-0 border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col min-h-0 h-full overflow-hidden">
+              <div className="w-full md:w-[400px] shrink-0 border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col min-h-0 h-auto md:h-full overflow-hidden">
                 {activeMonthlyBooking ? (
                   <div className="flex flex-col gap-3 h-full overflow-hidden min-h-0">
                     <div className="border-b pb-2 shrink-0">

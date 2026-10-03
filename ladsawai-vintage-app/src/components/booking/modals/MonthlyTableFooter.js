@@ -33,17 +33,34 @@ export default function MonthlyTableFooter({
 
   return (
     <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-200 shrink-0 select-none">
-      {/* 1. Pagination Controls - 3 Columns (Left, Center, Right) */}
-      <div className="flex items-center justify-between gap-2 text-xs text-gray-600">
-        {/* Col 1: Range text (Left) */}
-        <div className="flex items-center justify-start shrink-0 whitespace-nowrap">
-          <span>
+      {/* 1. Pagination Controls - Responsive (Mobile: 2-row adaptive, Desktop: 3-column) */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">
+        {/* Top/Left: Range text + Mobile page size */}
+        <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 shrink-0">
+          <div className="whitespace-nowrap">
             แสดง <strong className="text-gray-900">{startItem}-{endItem}</strong> จาก <strong className="text-gray-900">{totalItems}</strong> ราย
-          </span>
+          </div>
+
+          {/* Mobile only page size dropdown */}
+          <div className="flex sm:hidden items-center gap-1 shrink-0 whitespace-nowrap">
+            <span className="text-[11px] text-gray-500">แสดง:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
+              className="p-1 border border-gray-300 rounded text-xs bg-white text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+            >
+              <option value={15}>15</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={9999}>ทั้งหมด</option>
+            </select>
+            <span className="text-[11px] text-gray-500">/ หน้า</span>
+          </div>
         </div>
 
-        {/* Col 2: Navigation buttons (Center - Expanded) */}
-        <div className="flex-1 flex items-center justify-center min-w-0">
+        {/* Center: Navigation buttons */}
+        <div className="w-full sm:w-auto flex-1 flex items-center justify-center min-w-0 overflow-x-auto py-0.5">
           {totalPages > 1 && (
             <div className="flex items-center gap-1 shrink-0 whitespace-nowrap">
               <button
@@ -90,8 +107,8 @@ export default function MonthlyTableFooter({
           )}
         </div>
 
-        {/* Col 3: Items per page selector (Right) */}
-        <div className="flex items-center justify-end gap-1 shrink-0 whitespace-nowrap">
+        {/* Right: Items per page selector (Desktop only) */}
+        <div className="hidden sm:flex items-center justify-end gap-1 shrink-0 whitespace-nowrap">
           <span className="text-[11px] text-gray-500">แสดง:</span>
           <select
             value={pageSize}
