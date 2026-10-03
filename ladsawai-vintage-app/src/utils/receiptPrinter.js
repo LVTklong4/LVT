@@ -1,5 +1,6 @@
 import { dayNamesShort, monthNamesFull } from './thaiDateHelper';
 import { cleanStallName, parseNumber, formatPrice } from './numberHelper';
+import { normalizePaymentMethodThai } from './receiptImageHelper';
 
 /**
  * Generates thermal receipt HTML content for printing daily booking tickets.
@@ -36,13 +37,13 @@ export function generateReceiptHTML({
     rawPayments.split('+').forEach(p => {
       const parts = p.trim().split(':');
       if (parts.length >= 2) {
-        paymentLines.push({ method: parts[0].trim() === 'โอนเงิน' ? 'โอนจ่าย' : parts[0].trim(), amount: parseNumber(parts[1]) });
+        paymentLines.push({ method: normalizePaymentMethodThai(parts[0].trim()), amount: parseNumber(parts[1]) });
       } else {
-        paymentLines.push({ method: p.trim(), amount: totalAmountVal });
+        paymentLines.push({ method: normalizePaymentMethodThai(p.trim()), amount: totalAmountVal });
       }
     });
   } else {
-    paymentLines.push({ method: rawPayments === 'โอนเงิน' ? 'โอนจ่าย' : rawPayments || 'เงินสด', amount: totalAmountVal });
+    paymentLines.push({ method: normalizePaymentMethodThai(rawPayments || 'เงินสด'), amount: totalAmountVal });
   }
 
   const totalPaidVal = paymentLines.reduce((sum, p) => sum + p.amount, 0);
@@ -102,6 +103,8 @@ export function generateReceiptHTML({
           .flex-row {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 4px;
             margin-bottom: 3.5px;
             font-size: 9.5pt;
           }
@@ -116,10 +119,12 @@ export function generateReceiptHTML({
           .trade-details .val {
             font-weight: 800;
             color: #000;
+            text-align: right;
           }
           .trade-details .red-val {
             font-weight: 800;
             color: #b91c1c;
+            text-align: right;
           }
           .price-table {
             width: 100%;

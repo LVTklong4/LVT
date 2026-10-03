@@ -1141,21 +1141,60 @@ export function BookingProvider({ children }) {
   // Print thermal 80mm ticket
   // Show receipt preview for mobile screen capture
   const handleShowReceiptPreview = (bookingObj, stallObj) => {
+    const multiStallsStr = (selectedStallsList && selectedStallsList.length > 1)
+      ? selectedStallsList.map(s => cleanStallName(s.name)).join(', ')
+      : '';
+
     const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
     const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
 
-    const targetBooking = bookingObj || {
-      id: selectedBooking?.id || `B-${Date.now()}`,
-      created_at: selectedBooking?.created_at || new Date().toISOString(),
-      date: selectedDate,
-      stall_name: selectedStallsList.map(s => s.name).join(', '),
-      booker_name: bookerName || 'ไม่ระบุชื่อ',
-      product: product || 'สินค้าทั่วไป',
-      stall_price: finalStallPrice,
-      elec_unit: parseNumber(elecUnit),
-      elec_price: parseNumber(elecPrice),
-      storage_fee: 0,
-      payment_method: paymentList.filter(p => p.method && p.amount).map(p => `${p.method}:${p.amount}`).join(' + ') || 'เงินสด'
+    const needsMultiConsolidation = !bookingObj || (
+      multiStallsStr && (
+        !bookingObj.stall_name ||
+        !bookingObj.stall_name.includes(',') ||
+        parseNumber(bookingObj.stall_price) < finalStallPrice
+      )
+    );
+
+    const resolvedStallName = (needsMultiConsolidation && multiStallsStr)
+      ? multiStallsStr
+      : (bookingObj?.stall_name 
+          ? cleanStallName(bookingObj.stall_name) 
+          : (stallObj?.name ? cleanStallName(stallObj.name) : (selectedStall ? cleanStallName(selectedStall.name) : '-')));
+
+    const resolvedStallPrice = (needsMultiConsolidation && finalStallPrice > 0)
+      ? finalStallPrice
+      : (bookingObj && parseNumber(bookingObj.stall_price) > 0 ? parseNumber(bookingObj.stall_price) : finalStallPrice);
+
+    const resolvedElecPrice = (needsMultiConsolidation || !bookingObj)
+      ? parseNumber(elecPrice)
+      : (parseNumber(bookingObj?.elec_price) || parseNumber(elecPrice));
+
+    const resolvedElecUnit = (needsMultiConsolidation || !bookingObj)
+      ? parseNumber(elecUnit)
+      : (parseNumber(bookingObj?.elec_unit) || parseNumber(elecUnit));
+
+    const resolvedStorageFee = parseNumber(bookingObj?.storage_fee || bookingObj?.storage_fee_price) || 0;
+
+    const activePayments = paymentList.filter(p => p.method && p.amount);
+    const paymentMethodStr = (activePayments.length > 0 && needsMultiConsolidation)
+      ? activePayments.map(p => `${p.method}:${p.amount}`).join(' + ')
+      : (bookingObj?.payment_method || (activePayments.length > 0 ? activePayments.map(p => `${p.method}:${p.amount}`).join(' + ') : 'เงินสด'));
+
+    const targetBooking = {
+      ...(bookingObj || selectedBooking || {}),
+      id: bookingObj?.id || selectedBooking?.id || `B-${Date.now()}`,
+      created_at: bookingObj?.created_at || selectedBooking?.created_at || new Date().toISOString(),
+      date: bookingObj?.date || selectedDate,
+      stall_name: resolvedStallName,
+      booker_name: bookerName || bookingObj?.booker_name || selectedBooking?.booker_name || 'ไม่ระบุชื่อ',
+      product: product || bookingObj?.product || selectedBooking?.product || 'สินค้าทั่วไป',
+      stall_price: resolvedStallPrice,
+      elec_unit: resolvedElecUnit,
+      elec_price: resolvedElecPrice,
+      storage_fee: resolvedStorageFee,
+      total_price: resolvedStallPrice + resolvedElecPrice + resolvedStorageFee,
+      payment_method: paymentMethodStr
     };
 
     const targetStall = stallObj || (selectedStallsList.length > 0 ? selectedStallsList[0] : selectedStall);
@@ -1167,21 +1206,60 @@ export function BookingProvider({ children }) {
 
   // Print thermal 80mm ticket directly
   const handlePrintReceipt = (bookingObj, stallObj) => {
+    const multiStallsStr = (selectedStallsList && selectedStallsList.length > 1)
+      ? selectedStallsList.map(s => cleanStallName(s.name)).join(', ')
+      : '';
+
     const calculatedStallPrice = calculateDefaultStallPrice(selectedStallsList, selectedDate);
     const finalStallPrice = parseNumber(stallPrice) > 0 ? parseNumber(stallPrice) : calculatedStallPrice;
 
-    const targetBooking = bookingObj || {
-      id: selectedBooking?.id || `B-${Date.now()}`,
-      created_at: selectedBooking?.created_at || new Date().toISOString(),
-      date: selectedDate,
-      stall_name: selectedStallsList.map(s => s.name).join(', '),
-      booker_name: bookerName || 'ไม่ระบุชื่อ',
-      product: product || 'สินค้าทั่วไป',
-      stall_price: finalStallPrice,
-      elec_unit: parseNumber(elecUnit),
-      elec_price: parseNumber(elecPrice),
-      storage_fee: 0,
-      payment_method: paymentList.filter(p => p.method && p.amount).map(p => `${p.method}:${p.amount}`).join(' + ') || 'เงินสด'
+    const needsMultiConsolidation = !bookingObj || (
+      multiStallsStr && (
+        !bookingObj.stall_name ||
+        !bookingObj.stall_name.includes(',') ||
+        parseNumber(bookingObj.stall_price) < finalStallPrice
+      )
+    );
+
+    const resolvedStallName = (needsMultiConsolidation && multiStallsStr)
+      ? multiStallsStr
+      : (bookingObj?.stall_name 
+          ? cleanStallName(bookingObj.stall_name) 
+          : (stallObj?.name ? cleanStallName(stallObj.name) : (selectedStall ? cleanStallName(selectedStall.name) : '-')));
+
+    const resolvedStallPrice = (needsMultiConsolidation && finalStallPrice > 0)
+      ? finalStallPrice
+      : (bookingObj && parseNumber(bookingObj.stall_price) > 0 ? parseNumber(bookingObj.stall_price) : finalStallPrice);
+
+    const resolvedElecPrice = (needsMultiConsolidation || !bookingObj)
+      ? parseNumber(elecPrice)
+      : (parseNumber(bookingObj?.elec_price) || parseNumber(elecPrice));
+
+    const resolvedElecUnit = (needsMultiConsolidation || !bookingObj)
+      ? parseNumber(elecUnit)
+      : (parseNumber(bookingObj?.elec_unit) || parseNumber(elecUnit));
+
+    const resolvedStorageFee = parseNumber(bookingObj?.storage_fee || bookingObj?.storage_fee_price) || 0;
+
+    const activePayments = paymentList.filter(p => p.method && p.amount);
+    const paymentMethodStr = (activePayments.length > 0 && needsMultiConsolidation)
+      ? activePayments.map(p => `${p.method}:${p.amount}`).join(' + ')
+      : (bookingObj?.payment_method || (activePayments.length > 0 ? activePayments.map(p => `${p.method}:${p.amount}`).join(' + ') : 'เงินสด'));
+
+    const targetBooking = {
+      ...(bookingObj || selectedBooking || {}),
+      id: bookingObj?.id || selectedBooking?.id || `B-${Date.now()}`,
+      created_at: bookingObj?.created_at || selectedBooking?.created_at || new Date().toISOString(),
+      date: bookingObj?.date || selectedDate,
+      stall_name: resolvedStallName,
+      booker_name: bookerName || bookingObj?.booker_name || selectedBooking?.booker_name || 'ไม่ระบุชื่อ',
+      product: product || bookingObj?.product || selectedBooking?.product || 'สินค้าทั่วไป',
+      stall_price: resolvedStallPrice,
+      elec_unit: resolvedElecUnit,
+      elec_price: resolvedElecPrice,
+      storage_fee: resolvedStorageFee,
+      total_price: resolvedStallPrice + resolvedElecPrice + resolvedStorageFee,
+      payment_method: paymentMethodStr
     };
 
     const targetStall = stallObj || (selectedStallsList.length > 0 ? selectedStallsList[0] : selectedStall);

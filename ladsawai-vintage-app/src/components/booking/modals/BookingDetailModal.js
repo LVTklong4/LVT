@@ -218,6 +218,33 @@ export default function BookingDetailModal({
             const cashNeeded = totalVal - transferTotal;
             const changeVal = (cashTotal > cashNeeded && cashNeeded >= 0) ? (cashTotal - cashNeeded) : 0;
 
+            const getConsolidatedBooking = () => {
+              const stallNames = (selectedStallsList && selectedStallsList.length > 0)
+                ? selectedStallsList.map(s => cleanStallName(s.name)).join(', ')
+                : (selectedStall ? cleanStallName(selectedStall.name) : cleanStallName(selectedBooking?.stall_name || ''));
+
+              const activePayments = paymentList.filter(p => p.method && p.amount);
+              const paymentMethodStr = activePayments.length > 0
+                ? activePayments.map(p => `${p.method}:${p.amount}`).join(' + ')
+                : (selectedBooking?.payment_method || 'เงินสด');
+
+              return {
+                ...(selectedBooking || {}),
+                id: selectedBooking?.id || `B-${Date.now()}`,
+                created_at: selectedBooking?.created_at || new Date().toISOString(),
+                date: selectedDate,
+                stall_name: stallNames,
+                booker_name: bookerName || selectedBooking?.booker_name || 'ไม่ระบุชื่อ',
+                product: product || selectedBooking?.product || 'สินค้าทั่วไป',
+                stall_price: computedStallPrice,
+                elec_unit: parseNumber(elecUnit),
+                elec_price: parseNumber(elecPrice),
+                total_price: totalVal,
+                storage_fee: parseNumber(selectedBooking?.storage_fee) || 0,
+                payment_method: paymentMethodStr
+              };
+            };
+
             return (
               <>
                 <div className="p-4 flex flex-col gap-3.5 max-h-[80vh] overflow-y-auto custom-scrollbar text-xs bg-[#FAF6EE]">
@@ -622,7 +649,7 @@ export default function BookingDetailModal({
 
                         <button
                           type="button"
-                          onClick={() => handleShowReceiptPreview(selectedBooking, selectedStall)}
+                          onClick={() => handleShowReceiptPreview(getConsolidatedBooking(), selectedStall)}
                           className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-purple-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
                           <Camera className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> แคปตั๋ว
@@ -630,7 +657,7 @@ export default function BookingDetailModal({
 
                         <button
                           type="button"
-                          onClick={() => handlePrintReceipt(selectedBooking, selectedStall)}
+                          onClick={() => handlePrintReceipt(getConsolidatedBooking(), selectedStall)}
                           className="px-0.5 py-1.5 sm:px-1 sm:py-2 md:px-2 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-[8.5px] sm:text-[9.5px] md:text-xs font-black flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 border border-emerald-600/10 cursor-pointer text-center w-full whitespace-nowrap overflow-hidden"
                         >
                           <Printer className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" /> พิมพ์ตั๋ว

@@ -221,17 +221,17 @@ export default function DailyReceiptPreviewModal() {
                 <span className="text-gray-500 font-bold">วันที่ทำการค้า:</span>
                 <span className={`font-black ${dayColor}`}>{tradingDateFormatted}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 font-bold">ล็อกที่เช่า:</span>
-                <span className="font-black text-rose-600 text-sm tracking-wide">{formattedStallName}</span>
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-gray-500 font-bold shrink-0">ล็อกที่เช่า:</span>
+                <span className="font-black text-rose-600 text-sm tracking-wide text-right">{formattedStallName}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 font-bold">ผู้ค้า:</span>
-                <span className="font-bold text-[#8B4513]">{bookingObj.booker_name || '-'}</span>
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-gray-500 font-bold shrink-0">ผู้ค้า:</span>
+                <span className="font-bold text-[#8B4513] text-right">{bookingObj.booker_name || '-'}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 font-bold">สินค้าที่ขาย:</span>
-                <span className="font-bold text-gray-800">{bookingObj.product || '-'}</span>
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-gray-500 font-bold shrink-0">สินค้าที่ขาย:</span>
+                <span className="font-bold text-gray-800 text-right">{bookingObj.product || '-'}</span>
               </div>
             </div>
 
