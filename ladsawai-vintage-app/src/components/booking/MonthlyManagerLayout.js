@@ -261,6 +261,8 @@ export default function MonthlyManagerLayout() {
               />
               <span>แสดงประวัติยกเลิก</span>
             </label>
+
+            {loadingMonthly && <Loader2 className="w-4 h-4 text-amber-800 animate-spin" />}
           </div>
         </div>
 
@@ -268,11 +270,6 @@ export default function MonthlyManagerLayout() {
         <div className="p-4 md:p-5 flex flex-col md:flex-row gap-5 flex-1 min-h-0 overflow-hidden">
           {/* Left Side: List panel */}
           <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <h4 className="font-bold text-xs text-gray-800 border-b pb-1.5 mb-2 flex justify-between items-center shrink-0">
-              <span>รายชื่อลูกค้ารายเดือน ({filteredMonthlyList.length} คน)</span>
-              {loadingMonthly && <Loader2 className="w-4 h-4 text-amber-800 animate-spin" />}
-            </h4>
-            
             <div className="overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg flex-1 min-h-0 bg-white">
               <table className="w-full text-xs text-left">
                 <thead className="bg-[#F5E6D3] text-[#3E2723] border-b font-bold sticky top-0 z-10">
