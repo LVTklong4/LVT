@@ -12,10 +12,11 @@ import PreRenewalEditSubModal from './PreRenewalEditSubModal';
 import InvoicePreviewModal from './InvoicePreviewModal';
 import MonthlyPrintModal from './MonthlyPrintModal';
 import SlipPreviewModal from './SlipPreviewModal';
+import MonthlyReceiptPreviewModal from './MonthlyReceiptPreviewModal';
 
 export default function MonthlyMgmtModal() {
   const {
-    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls,
+    activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleShowMonthlyReceiptPreview,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls,
     alertInfo,    setAlertInfo,    confirmInfo
   } = useMonthlyBooking();
 
@@ -228,7 +229,7 @@ export default function MonthlyMgmtModal() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
+                            onClick={() => handleShowMonthlyReceiptPreview(activeMonthlyBooking)}
                             className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
                           >
                             <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
@@ -297,7 +298,7 @@ export default function MonthlyMgmtModal() {
                                     <span className="text-blue-900 font-bold flex items-center gap-1">📎 มีหลักฐานการโอนเงิน (สลิป)</span>
                                     <button
                                       type="button"
-                                      onClick={() => setSlipPreviewUrl(txn.slip_url)}
+                                      onClick={() => setFullScreenSlipUrl(txn.slip_url)}
                                       className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer transition-all active:scale-95 text-[9px]"
                                     >
                                       ดูรูปภาพสลิป
@@ -336,6 +337,7 @@ export default function MonthlyMgmtModal() {
           <InvoicePreviewModal />
           <MonthlyPrintModal />
           <SlipPreviewModal />
+          <MonthlyReceiptPreviewModal />
 
           {/* Toast Alert for Monthly Actions */}
           {alertInfo && (

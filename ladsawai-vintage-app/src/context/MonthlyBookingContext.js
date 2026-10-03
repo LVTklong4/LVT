@@ -167,6 +167,8 @@ export function MonthlyBookingProvider({ children }) {
   const [monthlyPrintWedCount, setMonthlyPrintWedCount] = useState(0);
   const [monthlyPrintTxnNo, setMonthlyPrintTxnNo] = useState('');
   const [monthlyPrintPayments, setMonthlyPrintPayments] = useState([]);
+  const [showMonthlyReceiptPreviewModal, setShowMonthlyReceiptPreviewModal] = useState(false);
+  const [monthlyReceiptPreviewData, setMonthlyReceiptPreviewData] = useState(null);
 
   // Fetch Master Data
   const fetchMonthlyBookings = useCallback(async () => {
@@ -662,6 +664,13 @@ export function MonthlyBookingProvider({ children }) {
     }
   }, [bulkRenewCheckedIds, monthlyList, bulkRenewEditData, stalls, showAlert, fetchMonthlyBookings]);
 
+  // Print & Receipt Preview Handlers
+  const handleShowMonthlyReceiptPreview = useCallback((item, customCounts = null) => {
+    if (!item) return;
+    setMonthlyReceiptPreviewData({ item, customCounts });
+    setShowMonthlyReceiptPreviewModal(true);
+  }, []);
+
   // Payment Handlers
   const handleMonthlyPaymentSubmit = useCallback(async (e) => {
     if (e?.preventDefault) e.preventDefault();
@@ -684,13 +693,14 @@ export function MonthlyBookingProvider({ children }) {
       setActiveMonthlyBooking(updatedBooking);
       fetchMonthlyBookings();
       fetchMonthlyTransactions(updatedBooking.id);
+      handleShowMonthlyReceiptPreview(updatedBooking);
     } catch (err) {
       console.error(err);
       showAlert(err.message, "ข้อผิดพลาด", true);
     } finally {
       setLoadingMonthly(false);
     }
-  }, [activeMonthlyBooking, monthlyPaymentForm, adminUser, showAlert, fetchMonthlyBookings, fetchMonthlyTransactions]);
+  }, [activeMonthlyBooking, monthlyPaymentForm, adminUser, showAlert, fetchMonthlyBookings, fetchMonthlyTransactions, handleShowMonthlyReceiptPreview]);
 
   const handleDeleteMonthlyTransaction = useCallback(async (txn) => {
     setLoadingMonthly(true);
@@ -743,6 +753,7 @@ export function MonthlyBookingProvider({ children }) {
   }, [showAlert]);
 
   // Print Handlers
+
   const handlePrintMonthlyReceiptDirect = useCallback((item) => {
     if (!item) return;
     const html = generateMonthlyReceiptHTML({
@@ -987,6 +998,10 @@ export function MonthlyBookingProvider({ children }) {
       handleSlipChange,
       handlePrintMonthlyReceiptDirect,
       handlePrintMonthlyReceipt,
+      handleShowMonthlyReceiptPreview,
+      showMonthlyReceiptPreviewModal,
+      setShowMonthlyReceiptPreviewModal,
+      monthlyReceiptPreviewData,
       handlePrintMonthlyInvoice,
       handleSyncFromLegacySheets,
       fetchMonthlyTransactions,

@@ -6,7 +6,7 @@ import { X, Sun, Printer } from 'lucide-react';
 
 export default function MonthlyPrintModal() {
   const {
-    cleanStallName,    handlePrintMonthlyReceipt,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    parseNumber,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setShowMonthlyPrintModal,    showMonthlyPrintModal,    stalls
+    cleanStallName,    handlePrintMonthlyReceipt,    handleShowMonthlyReceiptPreview,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    parseNumber,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setShowMonthlyPrintModal,    showMonthlyPrintModal,    stalls
   } = useMonthlyBooking();
 
   if (!showMonthlyPrintModal && !monthlyPrintItem) return null;
@@ -170,10 +170,21 @@ export default function MonthlyPrintModal() {
               </button>
               <button 
                 type="button"
-                onClick={handlePrintMonthlyReceipt}
+                onClick={() => {
+                  handleShowMonthlyReceiptPreview(monthlyPrintItem, {
+                    satCount: monthlyPrintSatCount,
+                    sunCount: monthlyPrintSunCount,
+                    wedCount: monthlyPrintWedCount,
+                    month: monthlyPrintMonth,
+                    product: monthlyPrintProduct,
+                    txnNo: monthlyPrintTxnNo,
+                    payments: monthlyPrintPayments
+                  });
+                  setShowMonthlyPrintModal(false);
+                }}
                 className="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded text-xs flex items-center gap-1 shadow cursor-pointer animate-pulse-subtle"
               >
-                <Printer className="w-4 h-4" /> สั่งพิมพ์ (80mm)
+                <Printer className="w-4 h-4" /> ดูใบเสร็จ / แคปรูป / สั่งพิมพ์ (80mm)
               </button>
             </div>
           </div>

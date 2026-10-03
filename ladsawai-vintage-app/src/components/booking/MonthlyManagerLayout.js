@@ -13,6 +13,7 @@ import BulkRenewModal from './modals/BulkRenewModal';
 import PreRenewalEditSubModal from './modals/PreRenewalEditSubModal';
 import InvoicePreviewModal from './modals/InvoicePreviewModal';
 import MonthlyPrintModal from './modals/MonthlyPrintModal';
+import MonthlyReceiptPreviewModal from './modals/MonthlyReceiptPreviewModal';
 import SettingsMgmtModal from './modals/SettingsMgmtModal';
 import {
   monthNamesFull,
@@ -55,6 +56,7 @@ export default function MonthlyManagerLayout() {
     handlePrintMonthlyInvoice,
     handlePrintMonthlyReceipt,
     handlePrintMonthlyReceiptDirect,
+    handleShowMonthlyReceiptPreview,
     handleSaveEditedMonthlyBooking,
     handleSyncFromLegacySheets,
     syncingLegacy,
@@ -385,7 +387,7 @@ export default function MonthlyManagerLayout() {
                         {activeMonthlyBooking.paid_amount > 0 && (
                           <button
                             type="button"
-                            onClick={() => handlePrintMonthlyReceiptDirect(activeMonthlyBooking)}
+                            onClick={() => handleShowMonthlyReceiptPreview(activeMonthlyBooking)}
                             className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
                           >
                             <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
@@ -665,6 +667,7 @@ export default function MonthlyManagerLayout() {
       <InvoicePreviewModal />
       <MonthlyPrintModal />
       <SlipPreviewModal />
+      <MonthlyReceiptPreviewModal />
       <SettingsMgmtModal />
     </div>
   );

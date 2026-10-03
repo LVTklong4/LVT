@@ -17,7 +17,7 @@ export default function SlipPreviewModal() {
   if (!fullScreenSlipUrl) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[9999] p-4" onClick={() => setFullScreenSlipUrl(null)}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[99999] p-4" onClick={() => setFullScreenSlipUrl(null)}>
       <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col relative border border-gray-100" onClick={(e) => e.stopPropagation()}>
         <div className="p-3 border-b flex justify-between items-center bg-gray-50">
           <span className="font-bold text-xs text-gray-800">📸 พรีวิวรูปภาพสลิปโอนเงิน</span>

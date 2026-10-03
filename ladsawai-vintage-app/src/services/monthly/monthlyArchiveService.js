@@ -163,10 +163,19 @@ export async function syncMonthlyAndFinanceFromSheets() {
       } catch (e) {}
     }
 
+    const rawTimestamp = r[1] || '';
+    let parsedTimestamp = new Date().toISOString();
+    if (rawTimestamp) {
+      const d = new Date(rawTimestamp);
+      if (!isNaN(d.getTime())) {
+        parsedTimestamp = d.toISOString();
+      }
+    }
+
     monthlyMap.set(id, {
       id: id,
-      timestamp: new Date().toISOString(),
-      start_date: startDate,
+      timestamp: parsedTimestamp,
+      start_date: startDate || parsedTimestamp.split('T')[0],
       booker_name: bookerName,
       customer_name: bookerName,
       stalls: cleanStalls,
@@ -207,11 +216,28 @@ export async function syncMonthlyAndFinanceFromSheets() {
     const ref = r[1] || '';
     const date = r[2] || '';
     const totalAmount = parseFloat(r[4]) || 0;
-    const stallAmt = parseFloat(r[8]) || 0;
-    const elecAmt = parseFloat(r[9]) || 0;
-    const storageAmt = parseFloat(r[10]) || 0;
     const note = r[6] || '';
     const officer = r[7] || 'System';
+
+    const rawTxnTimestamp = r[8] || '';
+    let txnTimestamp = new Date().toISOString();
+    if (rawTxnTimestamp) {
+      const d = new Date(rawTxnTimestamp);
+      if (!isNaN(d.getTime())) {
+        txnTimestamp = d.toISOString();
+      }
+    } else if (date) {
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) {
+        txnTimestamp = d.toISOString();
+      }
+    }
+
+    const stallAmt = parseFloat(r[9]) || 0;
+    const elecAmt = parseFloat(r[10]) || 0;
+    const storageAmt = parseFloat(r[11]) || 0;
+    const billType = r[12] || '';
+    const slipUrl = r[13] || '';
 
     txnMap.set(id, {
       id: id,
@@ -223,12 +249,12 @@ export async function syncMonthlyAndFinanceFromSheets() {
       note: note,
       description: note,
       officer: officer,
-      timestamp: new Date().toISOString(),
+      timestamp: txnTimestamp,
       stall_amt: stallAmt,
       elec_amt: elecAmt,
       storage_amt: storageAmt,
-      bill_type: r[11] || '',
-      slip_url: r[12] || ''
+      bill_type: billType,
+      slip_url: slipUrl
     });
   }
 

@@ -933,7 +933,7 @@ export function BookingProvider({ children }) {
       setShowBookingModal(false);
       fetchBookingsAndStorage();
       if (autoPrint) {
-        handlePrintReceipt(bookingData, selectedStall);
+        handleShowReceiptPreview(bookingData, selectedStall);
       }
     } catch (e) {
       console.error(e);

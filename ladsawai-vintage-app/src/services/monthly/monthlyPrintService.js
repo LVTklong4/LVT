@@ -142,8 +142,22 @@ export function generateMonthlyReceiptHTML({
     txns.forEach(p => {
       const amt = parseNumber(p.total_amount || p.amount);
       totalPaidFromPayments += amt;
-      const pDate = p.timestamp ? new Date(p.timestamp) : now;
-      const pDateStr = pDate.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+      let pDateStr = '';
+      if (p.dateStr) {
+        pDateStr = p.dateStr;
+      } else if (p.date) {
+        const d = new Date(p.date);
+        pDateStr = !isNaN(d.getTime()) 
+          ? d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })
+          : p.date;
+      } else if (p.timestamp) {
+        const d = new Date(p.timestamp);
+        pDateStr = !isNaN(d.getTime()) 
+          ? d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })
+          : '-';
+      } else {
+        pDateStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
       paymentsHtml += `
         <tr>
           <td>${pDateStr}</td>
@@ -153,12 +167,21 @@ export function generateMonthlyReceiptHTML({
       `;
     });
   } else if (item.paid_amount > 0) {
-    const todayStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+    let paidDateStr = '';
+    const dateSource = item.start_date || item.timestamp || item.created_at;
+    if (dateSource) {
+      const d = new Date(dateSource);
+      paidDateStr = !isNaN(d.getTime())
+        ? d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })
+        : dateSource;
+    } else {
+      paidDateStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
     totalPaidFromPayments = parseNumber(item.paid_amount);
     paymentsHtml += `
       <tr>
-        <td>${todayStr}</td>
-        <td style="text-align: center;">โอนจ่าย</td>
+        <td>${paidDateStr}</td>
+        <td style="text-align: center;">${item.payment_method || 'โอนจ่าย'}</td>
         <td style="text-align: right;" class="bold">${formatPrice(totalPaidFromPayments)}</td>
       </tr>
     `;
