@@ -350,14 +350,6 @@ export default function MonthlyManagerLayout() {
                             >
                               <Trash2 className="w-3 h-3" /> ลบ
                             </button>
-                            {item.customer_type !== 'Regular' && (
-                              <button 
-                                onClick={() => handlePrintMonthlyInvoice(item)}
-                                className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold hover:bg-amber-100 flex items-center gap-0.5 cursor-pointer"
-                              >
-                                <FileText className="w-3 h-3" /> แจ้งหนี้
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -380,17 +372,26 @@ export default function MonthlyManagerLayout() {
                         <button
                           type="button"
                           onClick={() => handleOpenMonthlyPaymentModal(activeMonthlyBooking)}
-                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-28 justify-center"
                         >
                           <Plus className="w-3 h-3" /> ชำระเงิน
                         </button>
-                        {activeMonthlyBooking.paid_amount > 0 && (
+                        {parseNumber(activeMonthlyBooking.paid_amount || 0) > 0 || activeMonthlyTransactions.length > 0 ? (
                           <button
                             type="button"
                             onClick={() => handleShowMonthlyReceiptPreview(activeMonthlyBooking)}
-                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-24 justify-center"
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-28 justify-center"
                           >
                             <Printer className="w-3 h-3" /> พิมพ์ใบเสร็จ
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handlePrintMonthlyInvoice(activeMonthlyBooking)}
+                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-28 justify-center"
+                            title="พิมพ์ใบแจ้งหนี้/เรียกเก็บเงินสำหรับผู้ที่ยังไม่ได้ชำระ"
+                          >
+                            <FileText className="w-3 h-3" /> ใบแจ้งหนี้
                           </button>
                         )}
                       </div>
