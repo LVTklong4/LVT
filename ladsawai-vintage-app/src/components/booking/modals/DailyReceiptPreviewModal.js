@@ -109,27 +109,59 @@ export default function DailyReceiptPreviewModal() {
 
   return (
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 overflow-y-auto">
-      <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in my-auto">
+      <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-[380px] border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in my-auto">
         
-        {/* Modal Header */}
-        <div className="bg-[#FAEBD7] border-b-2 border-[#8B4513] px-3.5 py-2.5 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-1.5">
-            <Printer className="w-4 h-4 text-[#8B4513]" />
-            <span className="font-extrabold text-[#5D4037] text-xs">ใบเสร็จรับเงิน (รายวัน)</span>
+        {/* Modal Header with all action buttons on the same row */}
+        <div className="bg-[#FAEBD7] border-b-2 border-[#8B4513] px-3 py-2 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-extrabold text-[#5D4037] text-xs truncate">ตั๋ว/ใบเสร็จ (รายวัน)</span>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Copy Button */}
+            <button
+              type="button"
+              disabled={copying}
+              onClick={handleCopy}
+              className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 ${
+                copied 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+              title="คัดลอกรูปภาพส่งใน Line"
+            >
+              {copying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
+            </button>
+
+            {/* Share Button */}
+            <button
+              type="button"
+              disabled={sharing}
+              onClick={handleShare}
+              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+              title="แชร์รูปภาพ"
+            >
+              {sharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+              <span>แชร์</span>
+            </button>
+
+            {/* Print Button */}
             <button
               type="button"
               onClick={handlePrint}
-              className="px-2.5 py-1 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
+              className="px-2 py-1 bg-[#8B4513] hover:bg-[#5D4037] text-white rounded text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
               title="สั่งพิมพ์ใบเสร็จเครื่องพิมพ์ความร้อน"
             >
-              <Printer className="w-3 h-3" /> พิมพ์
+              <Printer className="w-3.5 h-3.5" />
+              <span>พิมพ์</span>
             </button>
+
+            {/* Close Button */}
             <button 
               type="button"
               onClick={() => setShowReceiptPreviewModal(false)}
-              className="p-1 rounded-full text-gray-500 hover:bg-[#8B4513]/10 transition-colors cursor-pointer"
+              className="p-1 rounded text-gray-500 hover:bg-[#8B4513]/10 hover:text-black transition-colors cursor-pointer ml-0.5"
               title="ปิด"
             >
               <X className="w-4 h-4 text-[#8B4513]" />
@@ -138,156 +170,107 @@ export default function DailyReceiptPreviewModal() {
         </div>
 
         {/* Modal Body: Receipt Paper Preview */}
-        <div className="p-3.5 flex-1 overflow-y-auto bg-gray-100 flex flex-col items-center">
-          <div className="w-full text-center text-[10px] text-gray-500 font-semibold mb-2">
-            💡 กด <b>"คัดลอกรูป"</b> เพื่อส่งใน Line หรือ <b>"พิมพ์"</b> สำหรับลูกค้าเงินสด
-          </div>
-
+        <div className="p-3.5 flex-1 overflow-y-auto bg-gray-100 flex flex-col items-center max-h-[85vh]">
           {/* Printable / Capturable Receipt Card */}
           <div 
             ref={receiptRef} 
-            className="w-full max-w-[280px] bg-white p-4 rounded-lg shadow-md border border-gray-200 text-black font-sans leading-relaxed text-xs"
+            className="w-full max-w-[285px] bg-white p-4 rounded shadow-sm border border-gray-200 text-black font-sans leading-tight text-xs"
           >
-            <div className="flex flex-col items-center mb-2.5">
+            {/* Header & Address */}
+            <div className="text-center">
               <img 
                 src="/logo.png" 
-                alt="LVT Logo" 
-                className="w-16 h-16 object-contain mb-1 drop-shadow-xs" 
+                alt="Logo" 
+                className="w-16 h-16 mx-auto mb-1 object-contain" 
               />
-              <h2 className="font-black text-sm tracking-wide text-black text-center">ตลาดลาดสวายวินเทจ</h2>
-              <p className="text-[9px] text-gray-700 font-bold text-center">ใบเสร็จรับเงิน (รายวัน)</p>
+              <div className="font-extrabold text-[13px] text-black">ตลาดนัดลาดสวายวินเทจ</div>
+              <div className="text-[9.5px] font-bold text-black mt-0.5 leading-tight">เลขที่ 52/34 หมู่ 5 ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
+              <div className="text-[9.5px] font-bold text-black leading-tight">โทร: 0-92-869-7774 , 0-92-869-7775</div>
             </div>
 
-            <div className="border-t border-dashed border-gray-400 my-1.5"></div>
+            <div className="border-t-2 border-dashed border-black my-2"></div>
 
-            <div className="space-y-0.5 text-[10px] text-gray-800 font-semibold">
+            <div className="text-center font-black text-xs text-black mb-1.5">
+              ตั๋ว/ใบเสร็จ (รายวัน)
+            </div>
+
+            <div className="space-y-0.5 text-[10px] text-black font-semibold">
               <p>เลขที่เอกสาร: <span className="font-mono">{bookingObj.id}</span></p>
               <p>วันที่ทำรายการ: {formattedTransaction}</p>
               <p>ผู้ทำรายการ: {adminUser?.name || 'Staff'}</p>
               <p>วันที่ทำการค้า: <span className="font-bold text-black">{tradingDateFormatted}</span></p>
-              <p>ผู้ค้า: <span className="font-bold text-[#8B4513]">{bookingObj.booker_name || '-'}</span></p>
+              <p>ผู้ค้า: <span className="font-bold text-black">{bookingObj.booker_name || '-'}</span></p>
               {bookingObj.product && <p>สินค้าที่ขาย: {bookingObj.product}</p>}
             </div>
 
-            <div className="border-t border-dashed border-gray-400 my-1.5"></div>
+            <div className="border-t border-dashed border-black my-2"></div>
 
-            <div className="text-center py-1 bg-amber-50/60 rounded border border-amber-200/50 my-1.5">
-              <span className="text-[10px] text-gray-600 font-bold block">ล็อคที่เช่า</span>
+            <div className="text-center py-1.5 bg-gray-50 rounded border border-gray-300 my-1.5">
+              <span className="text-[10px] text-gray-700 font-bold block">ล็อคที่เช่า</span>
               <span className="text-xl font-black tracking-wider text-black block">{formattedStallName}</span>
             </div>
 
-            <div className="border-t border-dashed border-gray-400 my-1.5"></div>
+            <div className="border-t border-dashed border-black my-2"></div>
 
-            <table className="w-full text-left text-[11px] border-collapse font-bold">
+            <table className="w-full text-left text-[11px] border-collapse font-bold text-black">
               <thead>
-                <tr className="border-b border-dashed border-gray-400 text-gray-600">
+                <tr className="border-b border-dashed border-black">
                   <th className="py-1">รายการ</th>
                   <th className="py-1 text-right">จำนวนเงิน</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-800">
+              <tbody>
                 <tr>
                   <td className="py-1">1. ค่าเช่าล็อค</td>
-                  <td className="py-1 text-right font-mono">{formatPrice(stallPriceVal)} บ.</td>
+                  <td className="py-1 text-right font-mono">{formatPrice(stallPriceVal)}</td>
                 </tr>
                 {elecPriceVal > 0 && (
                   <tr>
                     <td className="py-1">2. ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
-                    <td className="py-1 text-right font-mono">{formatPrice(elecPriceVal)} บ.</td>
+                    <td className="py-1 text-right font-mono">{formatPrice(elecPriceVal)}</td>
                   </tr>
                 )}
                 {storageFeeVal > 0 && (
                   <tr>
                     <td className="py-1">3. ค่าฝากของ</td>
-                    <td className="py-1 text-right font-mono">{formatPrice(storageFeeVal)} บ.</td>
+                    <td className="py-1 text-right font-mono">{formatPrice(storageFeeVal)}</td>
                   </tr>
                 )}
               </tbody>
             </table>
 
-            <div className="border-t border-dashed border-gray-400 my-1.5"></div>
+            <div className="border-t border-dashed border-black my-2"></div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 text-black font-bold">
               <div className="flex justify-between font-black text-sm text-black">
                 <span>ยอดรวมทั้งสิ้น:</span>
-                <span className="font-mono text-base">{formatPrice(totalAmountVal)} บ.</span>
+                <span className="font-mono text-base">{formatPrice(totalAmountVal)}</span>
               </div>
               
-              <div className="pt-1 space-y-0.5 text-[10px] text-gray-700 font-semibold border-t border-dotted border-gray-300">
+              <div className="pt-1 space-y-0.5 text-[10px] text-black font-semibold border-t border-dashed border-black">
                 {paymentLines.map((p, idx) => (
                   <div key={idx} className="flex justify-between">
                     <span>ชำระด้วย [{p.method}]:</span>
-                    <span className="font-mono font-bold">{formatPrice(p.amount)} บ.</span>
+                    <span className="font-mono font-bold">{formatPrice(p.amount)}</span>
                   </div>
                 ))}
                 {changeVal > 0 && (
-                  <div className="flex justify-between text-red-700 font-bold">
+                  <div className="flex justify-between text-blue-700 font-bold pt-0.5">
                     <span>เงินทอน:</span>
-                    <span className="font-mono">{formatPrice(changeVal)} บ.</span>
+                    <span className="font-mono">{formatPrice(changeVal)}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {bookingObj.note && (
-              <div className="border-t border-dashed border-gray-400 my-1.5 pt-1 text-[9.5px] text-gray-600">
-                <span className="font-bold">หมายเหตุ:</span> {bookingObj.note}
-              </div>
-            )}
+            <div className="border-t border-dashed border-black my-2"></div>
 
-            <div className="border-t border-dashed border-gray-400 my-2"></div>
-
-            <div className="text-center text-[9px] text-gray-700 font-bold space-y-0.5">
-              <p>Line Official: @ladsawaivintage</p>
-              <p className="text-black font-extrabold">ขอบคุณที่ใช้บริการครับ/ค่ะ</p>
-              <p className="text-[7.5px] text-gray-400 font-normal">Powered by PJMJK</p>
+            <div className="text-center text-[10px] text-black font-bold space-y-0.5">
+              <p>สอบถามค่าล็อค ส่งสลิป ได้ที่</p>
+              <p className="font-black text-[11px]">@ladsawaivintage</p>
+              <p className="text-[8px] text-gray-500 font-normal mt-2">Power by PJMJK</p>
             </div>
           </div>
-        </div>
-
-        {/* Modal Footer Actions - Single clean row */}
-        <div className="bg-[#FAEBD7] border-t border-[#8B4513]/20 p-2.5 flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            disabled={copying}
-            onClick={handleCopy}
-            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 ${
-              copied 
-                ? 'bg-emerald-600 text-white' 
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
-          >
-            {copying ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : copied ? (
-              <Check className="w-3.5 h-3.5" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
-            <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกรูป (ส่ง Line)'}</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={sharing}
-            onClick={handleShare}
-            className="flex-1 py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-          >
-            {sharing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Share2 className="w-3.5 h-3.5" />
-            )}
-            <span>แชร์รูป (ส่ง Line)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowReceiptPreviewModal(false)}
-            className="py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0"
-          >
-            ปิด
-          </button>
         </div>
 
       </div>
