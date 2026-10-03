@@ -61,10 +61,10 @@ export default function MonthlyPricingSummary() {
     );
   }
 
-  const pricing = getNewMonthlyPricing();
-  const totalNads = (newMonthlyDays.wed && newMonthlyStallsWed.length > 0 ? pricing.wedCount : 0) +
-                    (newMonthlyDays.sat && newMonthlyStallsSat.length > 0 ? pricing.satCount : 0) +
-                    (newMonthlyDays.sun && newMonthlyStallsSun.length > 0 ? pricing.sunCount : 0);
+  const pricing = getNewMonthlyPricing() || {};
+  const totalNads = (newMonthlyDays.wed && newMonthlyStallsWed.length > 0 ? (pricing.wedCount || 0) : 0) +
+                    (newMonthlyDays.sat && newMonthlyStallsSat.length > 0 ? (pricing.satCount || 0) : 0) +
+                    (newMonthlyDays.sun && newMonthlyStallsSun.length > 0 ? (pricing.sunCount || 0) : 0);
 
   return (
     <div className="bg-[#FFFDF9] border border-[#8B4513]/30 rounded-lg p-3 flex flex-col gap-2 shadow-xs">
@@ -79,10 +79,10 @@ export default function MonthlyPricingSummary() {
                   ล็อค {newMonthlyStallsWed.map(cleanStallName).join(', ')}
                 </span>
               </span>
-              <span className="font-black text-purple-950 text-xs">{pricing.wedTotal.toLocaleString()}.-</span>
+              <span className="font-black text-purple-950 text-xs">{(pricing.wedTotal || 0).toLocaleString()}.-</span>
             </div>
             <div className="text-[11px] text-gray-500 font-medium pl-0.5">
-              {pricing.wedCount} วัน x {pricing.wedStallsPrice.toLocaleString()}.-
+              {pricing.wedCount || 0} วัน x {(pricing.wedStallsPrice || 0).toLocaleString()}.-
             </div>
           </div>
         )}
@@ -96,10 +96,10 @@ export default function MonthlyPricingSummary() {
                   ล็อค {newMonthlyStallsSat.map(cleanStallName).join(', ')}
                 </span>
               </span>
-              <span className="font-black text-purple-950 text-xs">{pricing.satTotal.toLocaleString()}.-</span>
+              <span className="font-black text-purple-950 text-xs">{(pricing.satTotal || 0).toLocaleString()}.-</span>
             </div>
             <div className="text-[11px] text-gray-500 font-medium pl-0.5">
-              {pricing.satCount} วัน x {pricing.satStallsPrice.toLocaleString()}.-
+              {pricing.satCount || 0} วัน x {(pricing.satStallsPrice || 0).toLocaleString()}.-
             </div>
           </div>
         )}
@@ -113,25 +113,25 @@ export default function MonthlyPricingSummary() {
                   ล็อค {newMonthlyStallsSun.map(cleanStallName).join(', ')}
                 </span>
               </span>
-              <span className="font-black text-purple-950 text-xs">{pricing.sunTotal.toLocaleString()}.-</span>
+              <span className="font-black text-purple-950 text-xs">{(pricing.sunTotal || 0).toLocaleString()}.-</span>
             </div>
             <div className="text-[11px] text-gray-500 font-medium pl-0.5">
-              {pricing.sunCount} วัน x {pricing.sunStallsPrice.toLocaleString()}.-
+              {pricing.sunCount || 0} วัน x {(pricing.sunStallsPrice || 0).toLocaleString()}.-
             </div>
           </div>
         )}
 
-        {parseNumber(newMonthlyElecUnit) > 0 && pricing.totalElecCharged > 0 && (
+        {parseNumber(newMonthlyElecUnit) > 0 && (pricing.totalElecCharged || 0) > 0 && (
           <div className="bg-amber-50/50 p-2 rounded-lg border border-amber-200/80 flex justify-between items-center text-xs text-amber-950">
-            <span>⚡ ค่าไฟ: {pricing.totalElecCharged} วัน x ({parseNumber(newMonthlyElecUnit)} หน่วย x 10บ.)</span>
-            <span className="font-black text-amber-900">{pricing.totalElecPrice.toLocaleString()}.-</span>
+            <span>⚡ ค่าไฟ: {pricing.totalElecCharged || 0} วัน x ({parseNumber(newMonthlyElecUnit)} หน่วย x 10บ.)</span>
+            <span className="font-black text-amber-900">{(pricing.totalElecPrice || 0).toLocaleString()}.-</span>
           </div>
         )}
 
         {parseNumber(newMonthlyStorageFee) > 0 && (
           <div className="bg-amber-50/50 p-2 rounded-lg border border-amber-200/80 flex justify-between items-center text-xs text-amber-950">
             <span>📦 ค่าฝากของ:</span>
-            <span className="font-black text-amber-900">{pricing.storageFeeVal.toLocaleString()}.-</span>
+            <span className="font-black text-amber-900">{(pricing.storageFeeVal || 0).toLocaleString()}.-</span>
           </div>
         )}
 
@@ -145,7 +145,7 @@ export default function MonthlyPricingSummary() {
 
       <div className="border-t border-dashed border-[#8B4513]/30 pt-2 mt-1 flex justify-between items-center">
         <span className="font-bold text-sm text-[#3E2723]">ยอดรวมที่ต้องชำระทั้งสิ้น</span>
-        <span className="font-black text-lg text-amber-800">{pricing.grandTotal.toLocaleString()} บาท</span>
+        <span className="font-black text-lg text-amber-800">{(pricing.grandTotal || 0).toLocaleString()} บาท</span>
       </div>
     </div>
   );

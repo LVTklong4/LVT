@@ -45,7 +45,28 @@ export function calculateMonthlySummary({
   storageFee = 0,
   customPrice = ''
 }) {
-  if (!startDate) return { totalPrice: 0, wedCount: 0, satCount: 0, sunCount: 0, totalElecCharged: 0 };
+  if (!startDate) {
+    return {
+      totalPrice: 0,
+      grandTotal: 0,
+      rawStallTotal: 0,
+      wedCount: 0,
+      satCount: 0,
+      sunCount: 0,
+      totalElecCharged: 0,
+      totalElecFee: 0,
+      totalElecPrice: 0,
+      totalStorageFee: 0,
+      storageFeeVal: 0,
+      wedStallsPrice: 0,
+      satStallsPrice: 0,
+      sunStallsPrice: 0,
+      wedTotal: 0,
+      satTotal: 0,
+      sunTotal: 0,
+      isFullPackage: false
+    };
+  }
 
   const start = new Date(startDate);
   const year = start.getFullYear();
@@ -93,7 +114,11 @@ export function calculateMonthlySummary({
   const satPricePerDay = sumStallPrices(stallsSat, 6);
   const sunPricePerDay = sumStallPrices(stallsSun, 0);
 
-  const rawStallTotal = (wedCount * wedPricePerDay) + (satCount * satPricePerDay) + (sunCount * sunPricePerDay);
+  const wedTotal = wedCount * wedPricePerDay;
+  const satTotal = satCount * satPricePerDay;
+  const sunTotal = sunCount * sunPricePerDay;
+
+  const rawStallTotal = wedTotal + satTotal + sunTotal;
   const totalElecFee = totalElecCharged * parseNumber(elecUnit) * 10;
   const totalStorageFee = parseNumber(storageFee);
 
@@ -104,13 +129,22 @@ export function calculateMonthlySummary({
 
   return {
     totalPrice: finalPrice,
+    grandTotal: finalPrice,
     rawStallTotal,
     wedCount,
     satCount,
     sunCount,
     totalElecCharged,
     totalElecFee,
+    totalElecPrice: totalElecFee,
     totalStorageFee,
+    storageFeeVal: totalStorageFee,
+    wedStallsPrice: wedPricePerDay,
+    satStallsPrice: satPricePerDay,
+    sunStallsPrice: sunPricePerDay,
+    wedTotal,
+    satTotal,
+    sunTotal,
     isFullPackage
   };
 }

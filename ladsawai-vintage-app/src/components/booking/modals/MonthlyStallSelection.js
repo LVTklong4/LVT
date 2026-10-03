@@ -110,7 +110,7 @@ export default function MonthlyStallSelection() {
                   />
                   {(() => {
                     const occupiedStalls = getOccupiedStallsInRound(3);
-                    const filtered = stalls.filter(s => 
+                    const filtered = (stalls || []).filter(s => 
                       s.type !== 'ทางเดิน' && 
                       s.type !== 'อื่นๆ' && 
                       !newMonthlyStallsWed.includes(s.name) && 
@@ -195,7 +195,7 @@ export default function MonthlyStallSelection() {
                   />
                   {(() => {
                     const occupiedStalls = getOccupiedStallsInRound(6);
-                    const filtered = stalls.filter(s => 
+                    const filtered = (stalls || []).filter(s => 
                       s.type !== 'ทางเดิน' && 
                       s.type !== 'อื่นๆ' && 
                       !newMonthlyStallsSat.includes(s.name) && 
@@ -280,7 +280,7 @@ export default function MonthlyStallSelection() {
                   />
                   {(() => {
                     const occupiedStalls = getOccupiedStallsInRound(0);
-                    const filtered = stalls.filter(s => 
+                    const filtered = (stalls || []).filter(s => 
                       s.type !== 'ทางเดิน' && 
                       s.type !== 'อื่นๆ' && 
                       !newMonthlyStallsSun.includes(s.name) && 

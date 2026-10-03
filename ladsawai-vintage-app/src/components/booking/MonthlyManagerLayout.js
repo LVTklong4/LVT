@@ -267,11 +267,11 @@ export default function MonthlyManagerLayout() {
         </div>
 
         {/* Content columns */}
-        <div className="p-4 md:p-5 flex flex-col md:flex-row gap-5 flex-1 min-h-0 overflow-hidden">
+        <div className="p-4 md:p-5 flex flex-col md:flex-row gap-5 flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
           {/* Left Side: List panel */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex-1 flex flex-col min-w-0 min-h-[480px] md:min-h-0 h-auto md:h-full overflow-hidden bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div className="overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg flex-1 min-h-0 bg-white">
-              <table className="w-full text-xs text-left">
+              <table className="w-full min-w-[760px] text-xs text-left">
                 <thead className="bg-[#F5E6D3] text-[#3E2723] border-b font-bold sticky top-0 z-10">
                   <tr>
                     <th 
@@ -319,6 +319,21 @@ export default function MonthlyManagerLayout() {
                 <tbody className="divide-y bg-white">
                   {paginatedList.map((item) => {
                     const unpaidBalance = parseNumber(item.total_price) - parseNumber(item.paid_amount || 0);
+                    const displayStalls = (() => {
+                      const rawStall = item.stalls || item.stall_name;
+                      if (rawStall) return cleanStallName(rawStall);
+                      if (item.stall_details) {
+                        try {
+                          const parsed = typeof item.stall_details === 'string' ? JSON.parse(item.stall_details) : item.stall_details;
+                          if (Array.isArray(parsed) && parsed.length > 0) {
+                            const names = parsed.map(s => cleanStallName(s.name || s.stall_name)).filter(Boolean);
+                            if (names.length > 0) return names.join(', ');
+                          }
+                        } catch (e) {}
+                      }
+                      return '-';
+                    })();
+
                     return (
                       <tr 
                         key={item.id} 
@@ -330,10 +345,10 @@ export default function MonthlyManagerLayout() {
                           activeMonthlyBooking?.id === item.id ? 'bg-[#F5E6D3]/60 hover:bg-[#F5E6D3]/80' : ''
                         }`}
                       >
-                        <td className="p-2 font-semibold text-gray-700">
+                        <td className="p-2 font-semibold text-gray-700 whitespace-nowrap">
                           {formatBookingMonth(item.booking_month)}
                         </td>
-                         <td className="p-2">
+                         <td className="p-2 whitespace-nowrap">
                           {(() => {
                             const cType = item.customer_type || 'Standard';
                             if (cType === 'Regular') {
@@ -351,17 +366,17 @@ export default function MonthlyManagerLayout() {
                           <div className="font-bold text-gray-800">{item.booker_name || item.customer_name}</div>
                           <div className="text-[10px] text-amber-900/90 font-bold">{item.product || '-'}</div>
                         </td>
-                        <td className="p-2 font-bold text-[#8B4513]">{cleanStallName(item.stalls)}</td>
-                        <td className="p-2 text-center font-semibold text-gray-800">
+                        <td className="p-2 font-bold text-[#8B4513] whitespace-nowrap">{displayStalls}</td>
+                        <td className="p-2 text-center font-semibold text-gray-800 whitespace-nowrap">
                           {parseNumber(item.total_price).toLocaleString()}.-
                         </td>
-                        <td className="p-2 text-center font-semibold text-green-700">
+                        <td className="p-2 text-center font-semibold text-green-700 whitespace-nowrap">
                           {parseNumber(item.paid_amount || 0).toLocaleString()}.-
                         </td>
-                        <td className={`p-2 text-center font-bold ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                        <td className={`p-2 text-center font-bold whitespace-nowrap ${unpaidBalance > 0 ? 'text-red-600' : 'text-green-700'}`}>
                           {parseNumber(unpaidBalance).toLocaleString()}.-
                         </td>
-                        <td className="p-2 text-left pl-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-2 text-left pl-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-1 justify-start">
                             <button
                               onClick={() => handleToggleNonRenewal(item)}

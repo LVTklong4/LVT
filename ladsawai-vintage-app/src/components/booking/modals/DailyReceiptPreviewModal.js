@@ -40,6 +40,10 @@ export default function DailyReceiptPreviewModal() {
   const dayName = dayNamesShort[tradingDateObj.getDay()] || '';
   const tradingDateFormatted = `${dayName} ที่ ${tradingDateObj.getDate()} ${monthNamesFull[tradingDateObj.getMonth()]} ${tradingDateObj.getFullYear() + 543}`;
 
+  const tradingDayOfWeek = tradingDateObj.getDay();
+  const dayColor = tradingDayOfWeek === 6 ? 'text-purple-700' : tradingDayOfWeek === 0 ? 'text-rose-600' : tradingDayOfWeek === 3 ? 'text-emerald-700' : 'text-gray-900';
+  const empCode = adminUser ? (adminUser.name || 'Admin') : 'Admin';
+
   const formattedStallName = bookingObj.stall_name 
     ? cleanStallName(bookingObj.stall_name) 
     : (stallObj ? cleanStallName(stallObj.name) : '-');
@@ -176,43 +180,65 @@ export default function DailyReceiptPreviewModal() {
             ref={receiptRef} 
             className="w-full max-w-[285px] bg-white p-4 rounded shadow-sm border border-gray-200 text-black font-sans leading-tight text-xs"
           >
-            {/* Header & Address */}
+            {/* 1. Header & Address matching receiptPrinter.js */}
             <div className="text-center">
               <img 
                 src="/logo.png" 
                 alt="Logo" 
                 className="w-16 h-16 mx-auto mb-1 object-contain" 
               />
-              <div className="font-extrabold text-[13px] text-black">ตลาดนัดลาดสวายวินเทจ</div>
-              <div className="text-[9.5px] font-bold text-black mt-0.5 leading-tight">เลขที่ 52/34 หมู่ 5 ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
-              <div className="text-[9.5px] font-bold text-black leading-tight">โทร: 0-92-869-7774 , 0-92-869-7775</div>
-            </div>
-
-            <div className="border-t-2 border-dashed border-black my-2"></div>
-
-            <div className="text-center font-black text-xs text-black mb-1.5">
-              ตั๋ว/ใบเสร็จ (รายวัน)
-            </div>
-
-            <div className="space-y-0.5 text-[10px] text-black font-semibold">
-              <p>เลขที่เอกสาร: <span className="font-mono">{bookingObj.id}</span></p>
-              <p>วันที่ทำรายการ: {formattedTransaction}</p>
-              <p>ผู้ทำรายการ: {adminUser?.name || 'Staff'}</p>
-              <p>วันที่ทำการค้า: <span className="font-bold text-black">{tradingDateFormatted}</span></p>
-              <p>ผู้ค้า: <span className="font-bold text-black">{bookingObj.booker_name || '-'}</span></p>
-              {bookingObj.product && <p>สินค้าที่ขาย: {bookingObj.product}</p>}
+              <div className="font-extrabold text-[13px] text-gray-900 leading-tight">ตลาดลาดสวายวินเทจ</div>
+              <div className="text-[8.5px] font-bold text-gray-500 leading-tight mt-0.5">Ladsawai Vintage Market</div>
+              <div className="text-[8.5px] font-bold text-gray-500 leading-tight">เลขที่ 52/34 หมู่ 5</div>
+              <div className="text-[8.5px] font-bold text-gray-500 leading-tight">ต.ลาดสวาย อ.ลำลูกกา จ.ปทุมธานี 12150</div>
+              <div className="text-[8.5px] font-bold text-gray-500 leading-tight">บริการเช่าพื้นที่จองล็อค ตลาดนัดรายวัน-รายเดือน</div>
+              <div className="text-[8.5px] font-bold text-gray-500 leading-tight">โทร: 0-92-869-7774 , 0-92-869-7775</div>
             </div>
 
             <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <div className="text-center py-1.5 bg-amber-50/40 rounded border border-amber-200/80 my-1.5">
-              <span className="text-[10px] text-gray-500 font-bold block">ล็อคที่เช่า</span>
-              <span className="text-xl font-black tracking-wider text-[#8B4513] block">{formattedStallName}</span>
+            {/* 2. Metadata (flex-row: label left, val right) */}
+            <div className="space-y-1 text-[9.5px] text-gray-600 font-bold">
+              <div className="flex justify-between items-center">
+                <span>เลขที่เอกสาร:</span>
+                <span className="font-mono text-gray-900 font-bold">{bookingObj.id}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>ผู้ทำรายการ:</span>
+                <span className="text-gray-900 font-bold">{empCode}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>วันที่ทำรายการ:</span>
+                <span className="font-mono text-gray-900 font-bold">{formattedTransaction}</span>
+              </div>
             </div>
 
             <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <table className="w-full text-left text-[11px] border-collapse font-bold">
+            {/* 3. Trade Details matching receiptPrinter.js */}
+            <div className="space-y-1 text-[10px]">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-bold">วันที่ทำการค้า:</span>
+                <span className={`font-black ${dayColor}`}>{tradingDateFormatted}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-bold">ล็อกที่เช่า:</span>
+                <span className="font-black text-rose-600 text-sm tracking-wide">{formattedStallName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-bold">ผู้ค้า:</span>
+                <span className="font-bold text-[#8B4513]">{bookingObj.booker_name || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-bold">สินค้าที่ขาย:</span>
+                <span className="font-bold text-gray-800">{bookingObj.product || '-'}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-gray-300 my-2"></div>
+
+            {/* 4. Price Table matching receiptPrinter.js */}
+            <table className="w-full text-left text-[10.5px] border-collapse font-bold">
               <thead>
                 <tr className="border-b border-dashed border-gray-400 text-gray-600">
                   <th className="py-1">รายการ</th>
@@ -221,19 +247,19 @@ export default function DailyReceiptPreviewModal() {
               </thead>
               <tbody className="text-gray-800">
                 <tr>
-                  <td className="py-1">1. ค่าเช่าล็อค</td>
-                  <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(stallPriceVal)}</td>
+                  <td className="py-1">ค่าล็อกสะสม</td>
+                  <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(stallPriceVal)} บ.</td>
                 </tr>
                 {elecPriceVal > 0 && (
                   <tr>
-                    <td className="py-1">2. ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
-                    <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(elecPriceVal)}</td>
+                    <td className="py-1 text-amber-700">ค่าไฟ ({bookingObj.elec_unit || 0} หน่วย)</td>
+                    <td className="py-1 text-right font-mono font-bold text-amber-700">{formatPrice(elecPriceVal)} บ.</td>
                   </tr>
                 )}
                 {storageFeeVal > 0 && (
                   <tr>
-                    <td className="py-1">3. ค่าฝากของ</td>
-                    <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(storageFeeVal)}</td>
+                    <td className="py-1 text-blue-700">ค่าฝากของ</td>
+                    <td className="py-1 text-right font-mono font-bold text-blue-700">{formatPrice(storageFeeVal)} บ.</td>
                   </tr>
                 )}
               </tbody>
@@ -241,23 +267,26 @@ export default function DailyReceiptPreviewModal() {
 
             <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <div className="space-y-1 font-bold">
-              <div className="flex justify-between font-black text-sm">
-                <span className="text-gray-800">ยอดรวมทั้งสิ้น:</span>
-                <span className="font-mono text-base text-blue-900">{formatPrice(totalAmountVal)}</span>
+            {/* 5. Total and Payments Breakdown matching receiptPrinter.js */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center font-black text-sm">
+                <span className="text-gray-800">รวมเงินทั้งสิ้น:</span>
+                <span className="font-mono text-blue-900 font-black">{formatPrice(totalAmountVal)} บ.</span>
               </div>
-              
-              <div className="pt-1 space-y-0.5 text-[10px] font-semibold border-t border-dashed border-gray-400">
+
+              <div className="pt-1.5 space-y-1 text-[10px] border-t border-dashed border-gray-300">
                 {paymentLines.map((p, idx) => (
                   <div key={idx} className="flex justify-between items-center">
-                    <span className="text-gray-700">ชำระด้วย [<span className={p.method === 'เงินสด' ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>{p.method}</span>]:</span>
-                    <span className="font-mono font-bold text-green-700">{formatPrice(p.amount)}</span>
+                    <span className="text-gray-600 font-bold">
+                      ชำระด้วย [<span className={p.method === 'เงินสด' ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>{p.method}</span>]:
+                    </span>
+                    <span className="font-mono font-bold text-green-700">{formatPrice(p.amount)} บ.</span>
                   </div>
                 ))}
                 {changeVal > 0 && (
-                  <div className="flex justify-between text-blue-700 font-bold pt-0.5">
+                  <div className="flex justify-between items-center text-blue-700 font-bold pt-0.5">
                     <span>เงินทอน:</span>
-                    <span className="font-mono">{formatPrice(changeVal)}</span>
+                    <span className="font-mono font-bold">{formatPrice(changeVal)} บ.</span>
                   </div>
                 )}
               </div>
@@ -265,10 +294,11 @@ export default function DailyReceiptPreviewModal() {
 
             <div className="border-t border-dashed border-gray-300 my-2"></div>
 
-            <div className="text-center text-[10px] text-black font-bold space-y-0.5">
-              <p>สอบถามค่าล็อค ส่งสลิป ได้ที่</p>
-              <p className="font-black text-[11px]">@ladsawaivintage</p>
-              <p className="text-[8px] text-gray-400 font-normal mt-2">Power by PJMJK</p>
+            {/* 6. Footer matching receiptPrinter.js */}
+            <div className="text-center text-[9.5px] font-bold text-gray-700 space-y-1">
+              <div>Line Official: @ladsawaivintage</div>
+              <div className="text-[11px] font-black text-gray-900 mt-1">ขอบคุณที่ใช้บริการครับ/ค่ะ</div>
+              <div className="text-[8px] text-gray-400 font-normal mt-2.5">Powered by PJMJK</div>
             </div>
           </div>
         </div>
