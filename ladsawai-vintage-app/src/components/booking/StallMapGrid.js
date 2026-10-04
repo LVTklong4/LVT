@@ -109,7 +109,7 @@ export default function StallMapGrid({ hideLegend = false }) {
       )}
 
       {/* The Grid Map Container */}
-      <div className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-4 overflow-x-auto min-h-[600px] custom-scrollbar w-fit mx-auto">
+      <div className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-2 sm:p-4 overflow-x-auto min-h-[500px] sm:min-h-[600px] custom-scrollbar w-full sm:w-fit mx-auto touch-pan-x overscroll-x-contain select-none">
         {loading && (
           <div className="absolute inset-0 z-30 bg-amber-50/80 flex items-center justify-center backdrop-blur-[1px] transition-all duration-300">
             <div className="flex flex-col items-center gap-2">
@@ -224,7 +224,7 @@ export default function StallMapGrid({ hideLegend = false }) {
                     onClick={() => isClickable && handleStallClick(stall)}
                     disabled={!isClickable}
                     className={`stall-box relative p-0.5 rounded-sm border shadow-sm flex flex-col items-center justify-center transition-all ${statusClass} ${
-                      isClickable ? 'clickable cursor-pointer' : 'non-clickable pointer-events-none'
+                      isClickable ? 'clickable cursor-pointer active:scale-95' : 'non-clickable pointer-events-none'
                     } ${isHighlighted ? 'search-highlight' : ''}`}
                   >
                     <span className="text-[11px] font-black leading-none">{displayName}</span>

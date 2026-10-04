@@ -443,7 +443,7 @@ export default function StandardBookingLayout() {
 
       {/* 🚗 KlongThom Booking / Remittance Modal */}
       {showKlongThomModal && (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
           <KlongThomProvider>
             <KlongThomBookingLayout onClose={() => setShowKlongThomModal(false)} />
           </KlongThomProvider>

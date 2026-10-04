@@ -155,8 +155,13 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
+      <div className="bg-[#FAF6EE] rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-sm border-t-2 sm:border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-slide-up sm:animate-pop-in">
+        {/* Mobile Pull Handle */}
+        <div className="pt-2 pb-0.5 bg-[#8B4513] sm:hidden flex justify-center items-center">
+          <div className="w-10 h-1 bg-amber-200/40 rounded-full" />
+        </div>
+
         {/* Header */}
         <div className="bg-[#8B4513] text-white px-4 py-3.5 flex justify-between items-center shrink-0">
           <h3 className="font-extrabold text-sm flex items-center gap-1.5">
@@ -166,7 +171,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
           <button 
             type="button"
             onClick={onClose} 
-            className="text-amber-200 hover:text-white"
+            className="text-amber-200 hover:text-white cursor-pointer p-1"
           >
             <X className="w-5 h-5" />
           </button>

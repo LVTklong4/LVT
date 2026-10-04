@@ -94,8 +94,13 @@ export default function StorageMgmtModal() {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#FAF6EE] rounded-xl shadow-2xl w-full max-w-4xl border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[90vh] animate-pop-in">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
+      <div className="bg-[#FAF6EE] rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl border-t-2 sm:border-2 border-[#8B4513] overflow-hidden flex flex-col h-full sm:h-auto max-h-[95vh] sm:max-h-[90vh] animate-slide-up sm:animate-pop-in">
+        {/* Mobile Pull Handle */}
+        <div className="pt-2 pb-0.5 bg-[#8B4513] sm:hidden flex justify-center items-center">
+          <div className="w-10 h-1 bg-amber-200/40 rounded-full" />
+        </div>
+
         {/* Header */}
         <div className="bg-[#8B4513] text-white px-4 py-3 flex justify-between items-center shrink-0">
           <h3 className="font-extrabold text-sm flex items-center gap-1.5">
@@ -103,21 +108,21 @@ export default function StorageMgmtModal() {
           </h3>
           <button 
             onClick={() => setShowStorageMgmtModal(false)} 
-            className="text-amber-200 hover:text-white"
+            className="text-amber-200 hover:text-white cursor-pointer p-1"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         
         {/* Main Content Area */}
-        <div className="p-5 overflow-y-auto flex flex-col gap-4">
-          <div className="flex justify-between items-center border-b border-[#8B4513]/25 pb-2">
+        <div className="p-3 sm:p-5 overflow-y-auto flex flex-col gap-3.5 flex-1">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#8B4513]/25 pb-2">
             <div>
               <h4 className="font-extrabold text-sm text-[#8B4513]">รายการฝากของทั้งหมด</h4>
               <p className="text-[10px] text-gray-500 font-bold">จัดการข้อมูลฝากของสะสมรายสัปดาห์ (อัตรา 160 บาท / สัปดาห์)</p>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
               {/* Dropdown status filter */}
               <select
                 value={statusFilter}
@@ -166,112 +171,213 @@ export default function StorageMgmtModal() {
                 ไม่พบข้อมูลตรงกับที่ค้นหา
               </div>
             ) : (
-              <div className="overflow-x-auto border border-[#8B4513]/25 rounded-xl bg-white shadow-xs">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-[#FFF8EE] text-[#8B4513] border-b border-[#8B4513]/25 font-bold">
-                    <tr>
-                      <th className="p-3 text-center">เวลาคงเหลือ</th>
-                      <th className="p-3 text-center">ตำแหน่ง / ล็อค</th>
-                      <th className="p-3">ผู้ฝาก / เบอร์ติดต่อ</th>
-                      <th className="p-3">ช่วงเวลาฝาก (สัปดาห์)</th>
-                      <th className="p-3">รายการสิ่งของที่ฝาก</th>
-                      <th className="p-3 text-center">สถานะ</th>
-                      <th className="p-3 text-center">การจัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-amber-100 bg-white font-semibold text-gray-700">
-                    {filteredList.map((item) => (
-                      <tr key={item.id} className="hover:bg-amber-50/20">
-                        <td className="p-3 text-center text-xs font-bold font-mono">
-                          {item.status === 'Active' ? (() => {
-                            const days = getDaysRemaining(item.end_date);
-                            if (days === null) return '-';
-                            if (days > 0) {
-                              const isUrgent = days <= 2;
-                              return (
-                                <span className={`font-bold ${isUrgent ? 'text-amber-600 animate-pulse' : 'text-blue-700'}`}>
-                                  ⏳ เหลืออีก {days} วัน
-                                </span>
-                              );
-                            } else if (days === 0) {
-                              return (
-                                <span className="font-black text-red-650 animate-pulse">
-                                  🚨 หมดวันนี้
-                                </span>
-                              );
-                            } else {
-                              return (
-                                <span className="font-black text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[9px]">
-                                  ⚠️ เกินกำหนด {Math.abs(days)} วัน
-                                </span>
-                              );
-                            }
-                          })() : (
-                            <span className="text-gray-450 font-bold">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 font-extrabold text-[#8B4513] text-sm font-mono text-center">
-                          {cleanStallName(item.stall_name)}
-                        </td>
-                        <td className="p-3">
-                          <div className="font-bold text-gray-800">{item.owner_name}</div>
-                          <div className="text-[10px] text-gray-500 font-bold">โทร: {item.phone || '-'}</div>
-                        </td>
-                        <td className="p-3 text-[10px] font-mono">
-                          <div className="text-green-800">เริ่ม: {item.start_date || '-'}</div>
-                          <div className="text-red-700">สิ้นสุด: {item.end_date || '-'}</div>
-                        </td>
-                        <td className="p-3 text-[11px] max-w-[200px] truncate text-gray-600" title={item.note}>
-                          {item.note || '-'}
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black ${
-                            item.status === 'Active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-500'
+              <>
+                {/* Desktop Table (>= md) */}
+                <div className="hidden md:block overflow-x-auto border border-[#8B4513]/25 rounded-xl bg-white shadow-xs">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-[#FFF8EE] text-[#8B4513] border-b border-[#8B4513]/25 font-bold">
+                      <tr>
+                        <th className="p-3 text-center">เวลาคงเหลือ</th>
+                        <th className="p-3 text-center">ตำแหน่ง / ล็อค</th>
+                        <th className="p-3">ผู้ฝาก / เบอร์ติดต่อ</th>
+                        <th className="p-3">ช่วงเวลาฝาก (สัปดาห์)</th>
+                        <th className="p-3">รายการสิ่งของที่ฝาก</th>
+                        <th className="p-3 text-center">สถานะ</th>
+                        <th className="p-3 text-center">การจัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100 bg-white font-semibold text-gray-700">
+                      {filteredList.map((item) => (
+                        <tr key={item.id} className="hover:bg-amber-50/20">
+                          <td className="p-3 text-center text-xs font-bold font-mono">
+                            {item.status === 'Active' ? (() => {
+                              const days = getDaysRemaining(item.end_date);
+                              if (days === null) return '-';
+                              if (days > 0) {
+                                const isUrgent = days <= 2;
+                                return (
+                                  <span className={`font-bold ${isUrgent ? 'text-amber-600 animate-pulse' : 'text-blue-700'}`}>
+                                    ⏳ เหลืออีก {days} วัน
+                                  </span>
+                                );
+                              } else if (days === 0) {
+                                return (
+                                  <span className="font-black text-red-650 animate-pulse">
+                                    🚨 หมดวันนี้
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="font-black text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[9px]">
+                                    ⚠️ เกินกำหนด {Math.abs(days)} วัน
+                                  </span>
+                                );
+                              }
+                            })() : (
+                              <span className="text-gray-450 font-bold">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 font-extrabold text-[#8B4513] text-sm font-mono text-center">
+                            {cleanStallName(item.stall_name)}
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-gray-800">{item.owner_name}</div>
+                            <div className="text-[10px] text-gray-500 font-bold">โทร: {item.phone || '-'}</div>
+                          </td>
+                          <td className="p-3 text-[10px] font-mono">
+                            <div className="text-green-800">เริ่ม: {item.start_date || '-'}</div>
+                            <div className="text-red-700">สิ้นสุด: {item.end_date || '-'}</div>
+                          </td>
+                          <td className="p-3 text-[11px] max-w-[200px] truncate text-gray-600" title={item.note}>
+                            {item.note || '-'}
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black ${
+                              item.status === 'Active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {item.status === 'Active' ? 'กำลังฝาก' : 'คืนของแล้ว'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="flex gap-1.5 justify-center">
+                              {item.status === 'Active' && (
+                                <button 
+                                  onClick={() => handleOpenRenew(item)}
+                                  className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-[#8B4513]/25 rounded text-[10px] font-black flex items-center gap-0.5 transition-colors cursor-pointer"
+                                >
+                                  <CalendarClock className="w-3.5 h-3.5" /> ต่ออายุ
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => {
+                                  if (item.status === 'Active') {
+                                    handleOpenStorageCheckout(item);
+                                  } else {
+                                    handleToggleStorageStatus(item);
+                                  }
+                                }}
+                                className={`px-2 py-1 border rounded text-[10px] font-black hover:opacity-95 transition-all cursor-pointer ${
+                                  item.status === 'Active' 
+                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
+                                    : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                }`}
+                              >
+                                {item.status === 'Active' ? 'เช็คออก' : 'เช็คอิน'}
+                              </button>
+                              <button 
+                                onClick={() => handleReprintReceipt(item)}
+                                className="px-2 py-1 bg-amber-50 text-[#8B4513] border border-[#8B4513]/25 rounded text-[10px] font-black hover:bg-amber-100 flex items-center gap-0.5 transition-colors cursor-pointer"
+                              >
+                                <Printer className="w-3.5 h-3.5" /> พิมพ์
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card List (< md) */}
+                <div className="flex flex-col gap-2.5 md:hidden">
+                  {filteredList.map((item) => {
+                    const days = getDaysRemaining(item.end_date);
+                    return (
+                      <div key={item.id} className="bg-white border border-[#8B4513]/20 rounded-xl p-3 shadow-2xs flex flex-col gap-2">
+                        <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm text-[#8B4513] font-mono bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                              {cleanStallName(item.stall_name)}
+                            </span>
+                            <span className="font-bold text-xs text-gray-800">{item.owner_name}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                            item.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
                           }`}>
                             {item.status === 'Active' ? 'กำลังฝาก' : 'คืนของแล้ว'}
                           </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex gap-1.5 justify-center">
-                            {item.status === 'Active' && (
-                              <button 
-                                onClick={() => handleOpenRenew(item)}
-                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-[#8B4513]/25 rounded text-[10px] font-black flex items-center gap-0.5 transition-colors cursor-pointer"
-                              >
-                                <CalendarClock className="w-3.5 h-3.5" /> ต่ออายุ
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => {
-                                if (item.status === 'Active') {
-                                  handleOpenStorageCheckout(item);
-                                } else {
-                                  handleToggleStorageStatus(item);
-                                }
-                              }}
-                              className={`px-2 py-1 border rounded text-[10px] font-black hover:opacity-95 transition-all cursor-pointer ${
-                                item.status === 'Active' 
-                                  ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
-                                  : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                              }`}
-                            >
-                              {item.status === 'Active' ? 'เช็คออก' : 'เช็คอิน'}
-                            </button>
-                            <button 
-                              onClick={() => handleReprintReceipt(item)}
-                              className="px-2 py-1 bg-amber-50 text-[#8B4513] border border-[#8B4513]/25 rounded text-[10px] font-black hover:bg-amber-100 flex items-center gap-0.5 transition-colors cursor-pointer"
-                            >
-                              <Printer className="w-3.5 h-3.5" /> พิมพ์
-                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600 bg-amber-50/30 p-2 rounded-lg">
+                          <div>
+                            <span className="text-[10px] text-gray-400 block font-bold">เวลาคงเหลือ:</span>
+                            {item.status === 'Active' ? (
+                              days === null ? '-' :
+                              days > 0 ? (
+                                <span className={`font-bold ${days <= 2 ? 'text-amber-600 animate-pulse' : 'text-blue-700'}`}>
+                                  ⏳ อีก {days} วัน
+                                </span>
+                              ) : days === 0 ? (
+                                <span className="font-black text-red-650 animate-pulse">🚨 หมดวันนี้</span>
+                              ) : (
+                                <span className="font-black text-red-700">⚠️ เกิน {Math.abs(days)} วัน</span>
+                              )
+                            ) : '-'}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          <div>
+                            <span className="text-[10px] text-gray-400 block font-bold">เบอร์ติดต่อ:</span>
+                            {item.phone ? (
+                              <a href={`tel:${item.phone}`} className="text-amber-900 font-bold underline font-mono">
+                                {item.phone}
+                              </a>
+                            ) : '-'}
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-gray-500 font-mono flex justify-between bg-gray-50 px-2 py-1 rounded">
+                          <span>เริ่ม: {item.start_date || '-'}</span>
+                          <span>สิ้นสุด: {item.end_date || '-'}</span>
+                        </div>
+
+                        {item.note && (
+                          <div className="text-[11px] text-gray-600 bg-white p-1.5 rounded border border-gray-100">
+                            <span className="font-bold text-gray-400">ของที่ฝาก: </span>{item.note}
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-3 gap-1.5 pt-1">
+                          {item.status === 'Active' && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRenew(item)}
+                              className="py-1.5 bg-amber-50 hover:bg-amber-100 text-[#8B4513] border border-[#8B4513]/25 rounded-lg text-xs font-black flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
+                            >
+                              <CalendarClock className="w-3.5 h-3.5" /> ต่ออายุ
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (item.status === 'Active') {
+                                handleOpenStorageCheckout(item);
+                              } else {
+                                handleToggleStorageStatus(item);
+                              }
+                            }}
+                            className={`py-1.5 border rounded-lg text-xs font-black active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                              item.status === 'Active'
+                                ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                            } ${item.status !== 'Active' ? 'col-span-2' : ''}`}
+                          >
+                            {item.status === 'Active' ? 'เช็คออก' : 'เช็คอิน'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReprintReceipt(item)}
+                            className="py-1.5 bg-amber-50 text-[#8B4513] border border-[#8B4513]/25 rounded-lg text-xs font-black hover:bg-amber-100 flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <Printer className="w-3.5 h-3.5" /> พิมพ์
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>

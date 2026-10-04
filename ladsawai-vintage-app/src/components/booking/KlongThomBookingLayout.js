@@ -98,8 +98,12 @@ export default function KlongThomBookingLayout({ onClose }) {
   };
 
   return (
-    <div className="flex flex-col bg-[#FAF6F0] text-gray-800 font-sans w-full rounded-xl overflow-hidden shadow-2xl max-w-md border border-amber-800/60 max-h-[95vh] animate-pop-in">
-      
+    <div className="flex flex-col bg-[#FAF6F0] text-gray-800 font-sans w-full rounded-t-2xl sm:rounded-xl overflow-hidden shadow-2xl max-w-md border-t-2 sm:border border-amber-800/60 max-h-[92vh] sm:max-h-[95vh] animate-slide-up sm:animate-pop-in">
+      {/* Mobile Pull Handle */}
+      <div className="pt-2 pb-0.5 bg-amber-800 sm:hidden flex justify-center items-center">
+        <div className="w-10 h-1 bg-amber-200/40 rounded-full" />
+      </div>
+
       {/* Toast Alert */}
       {alertInfo && (
         <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl border text-xs transition-all duration-300 animate-bounce-in max-w-sm ${
@@ -122,7 +126,7 @@ export default function KlongThomBookingLayout({ onClose }) {
         <button 
           type="button"
           onClick={onClose || (() => window.location.href = '/')}
-          className="text-white hover:text-amber-100 transition-colors cursor-pointer"
+          className="text-white hover:text-amber-100 transition-colors cursor-pointer p-1"
         >
           <X className="w-5 h-5" />
         </button>
