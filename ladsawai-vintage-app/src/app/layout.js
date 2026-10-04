@@ -4,6 +4,10 @@ export const metadata = {
   title: "ตลาดนัดลาดสวายวินเทจ - ระบบจัดการการจองและบัญชี",
   description: "Ladsawai Vintage Market Management System",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png"
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
