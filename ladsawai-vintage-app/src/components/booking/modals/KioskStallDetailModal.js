@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { cleanStallName } from '@/utils/numberHelper';
-import { getModalDateFormat } from '@/utils/thaiDateHelper';
+import { getModalDateFormat, getBookingLineDateFormat } from '@/utils/thaiDateHelper';
 import {
   Store, X, Utensils, Shirt, CalendarDays, CheckCircle, AlertCircle,
   Copy, Check, MessageCircle
@@ -24,10 +24,10 @@ export default function KioskStallDetailModal({
     ? getStallStatus(selectedStall, selectedBooking) 
     : { isVacant: !selectedBooking, price: selectedStall.price_sat || 300, product: selectedBooking?.product || '' };
 
-  const formattedDateStr = typeof getModalDateFormat === 'function' ? getModalDateFormat(selectedDate) : selectedDate;
+  const formattedDateStr = typeof getBookingLineDateFormat === 'function' ? getBookingLineDateFormat(selectedDate) : selectedDate;
   const stallNameClean = cleanStallName(selectedStall.name);
 
-  const lineMessage = `จองล็อควันที่ ${formattedDateStr} | ล็อค ${stallNameClean} | ขาย ..... | ไฟ .... | พัดลม ....`;
+  const lineMessage = `จองล็อควัน ${formattedDateStr}\nล็อค: ${stallNameClean} ขาย: .....\nไฟ: .... พัดลม: .... เตาไฟฟ้า: ....`;
   const lineDeepLink = `https://line.me/R/oaMessage/@ladsawaivintage/?${encodeURIComponent(lineMessage)}`;
 
   const handleCopyMessage = () => {
@@ -148,7 +148,7 @@ export default function KioskStallDetailModal({
               </a>
 
               <span className="text-[10px] text-gray-500 font-medium text-center">
-                * ระบบจะเปิดแชท LINE และใส่ข้อความให้อัตโนมัติ สามารถระบุสินค้า, ไฟ, พัดลม หรือพิมพ์เพิ่มล็อคก่อนกดส่งได้ครับ
+                * ระบบจะเปิดแชท LINE และใส่ข้อความให้อัตโนมัติ สามารถระบุสินค้า, ไฟ, พัดลม, เตาไฟฟ้า หรือพิมพ์เพิ่มล็อคก่อนกดส่งได้ครับ
               </span>
             </div>
           )}

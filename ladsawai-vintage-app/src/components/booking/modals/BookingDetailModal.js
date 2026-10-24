@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { cleanStallName, parseNumber, formatPrice } from '@/utils/numberHelper';
-import { getModalDateFormat } from '@/utils/thaiDateHelper';
+import { getModalDateFormat, getBookingLineDateFormat } from '@/utils/thaiDateHelper';
 import {
   Store, X, Utensils, Shirt, CalendarDays, CheckCircle, AlertCircle,
   User, Zap, Banknote, Trash2, Plus, FileText, Move, Printer, Camera,
@@ -138,10 +138,10 @@ export default function BookingDetailModal({
                   )}
 
                   {statusInfo.isVacant && (() => {
-                    const formattedDateStr = typeof getModalDateFormat === 'function' ? getModalDateFormat(selectedDate) : selectedDate;
+                    const formattedDateStr = typeof getBookingLineDateFormat === 'function' ? getBookingLineDateFormat(selectedDate) : selectedDate;
                     const stallNameClean = cleanStallName(selectedStall.name);
 
-                    const lineMessage = `จองล็อควันที่ ${formattedDateStr} | ล็อค ${stallNameClean} | ขาย ..... | ไฟ .... | พัดลม ....`;
+                    const lineMessage = `จองล็อควัน ${formattedDateStr}\nล็อค: ${stallNameClean} ขาย: .....\nไฟ: .... พัดลม: .... เตาไฟฟ้า: ....`;
                     const lineDeepLink = `https://line.me/R/oaMessage/@ladsawaivintage/?${encodeURIComponent(lineMessage)}`;
 
                     const handleCopyMessage = () => {
@@ -188,7 +188,7 @@ export default function BookingDetailModal({
                         </a>
 
                         <span className="text-[10px] text-gray-500 font-medium text-center">
-                          * ระบบจะเปิดแชท LINE และใส่ข้อความให้อัตโนมัติ สามารถระบุสินค้า, ไฟ, พัดลม หรือพิมพ์เพิ่มล็อคก่อนกดส่งได้ครับ
+                          * ระบบจะเปิดแชท LINE และใส่ข้อความให้อัตโนมัติ สามารถระบุสินค้า, ไฟ, พัดลม, เตาไฟฟ้า หรือพิมพ์เพิ่มล็อคก่อนกดส่งได้ครับ
                         </span>
                       </div>
                     );

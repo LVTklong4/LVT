@@ -35,6 +35,26 @@ export const getModalDateFormat = (dateStr) => {
   return `${day} ที่ ${dateNum} ${month} ${year}`;
 };
 
+export const getBookingLineDateFormat = (dateStr) => {
+  if (!dateStr) return '';
+  let d;
+  if (typeof dateStr === 'string' && dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    } else {
+      d = new Date(dateStr);
+    }
+  } else {
+    d = new Date(dateStr);
+  }
+  const day = dayNamesShort[d.getDay()] || '';
+  const dateNum = d.getDate();
+  const month = monthNamesShort[d.getMonth()] || '';
+  const year = String(d.getFullYear() + 543).slice(-2);
+  return `${day} ที่ ${dateNum} ${month} ${year}`;
+};
+
 export const getBookingMonthStr = (startDate) => {
   if (!startDate) return '';
   const d = new Date(startDate);
