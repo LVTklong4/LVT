@@ -309,6 +309,7 @@ export function BookingProvider({ children }) {
 
   useEffect(() => {
     initDates();
+    fetchStandbyList();
   }, [dateOffset]);
 
   const showAlert = (message, title = 'แจ้งเตือน', isError = false) => {
