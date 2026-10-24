@@ -140,9 +140,8 @@ export default function BookingDetailModal({
                   {statusInfo.isVacant && (() => {
                     const formattedDateStr = typeof getModalDateFormat === 'function' ? getModalDateFormat(selectedDate) : selectedDate;
                     const stallNameClean = cleanStallName(selectedStall.name);
-                    const priceVal = statusInfo.price ? `${statusInfo.price} บาท` : 'ตามเรทผังตลาด';
 
-                    const lineMessage = `สวัสดีครับ สนใจจองล็อคตลาดนัดลาดสวายวินเทจ\n📍 ล็อคที่สนใจ: ${stallNameClean}\n📅 วันที่: ${formattedDateStr}\n💰 ราคา: ${priceVal}\n🛒 สินค้าที่ต้องการขาย: \n\n(หากต้องการเพิ่มล็อค สามารถพิมพ์ชื่อล็อคต่อท้ายได้เลยครับ)`;
+                    const lineMessage = `จองล็อควันที่ ${formattedDateStr} | ล็อค ${stallNameClean} | ขาย ..... | ไฟ .... | พัดลม ....`;
                     const lineDeepLink = `https://line.me/R/oaMessage/@ladsawaivintage/?${encodeURIComponent(lineMessage)}`;
 
                     const handleCopyMessage = () => {
@@ -189,7 +188,7 @@ export default function BookingDetailModal({
                         </a>
 
                         <span className="text-[10px] text-gray-500 font-medium text-center">
-                          * ระบบจะเปิดแชท LINE และใส่ข้อความให้อัตโนมัติ สามารถพิมพ์เพิ่มล็อคหรือสินค้าก่อนกดส่งได้ครับ
+                          * ระบบจะเปิดแชท LINE และใส่ข้อความให้อัตโนมัติ สามารถระบุสินค้า, ไฟ, พัดลม หรือพิมพ์เพิ่มล็อคก่อนกดส่งได้ครับ
                         </span>
                       </div>
                     );
