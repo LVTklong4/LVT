@@ -67,13 +67,15 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
   const nextBookingMonthStr = nextDateThai.toString();
   const nextMonthFormatted = formatBookingMonth(nextBookingMonthStr);
 
-  // Safety check: Check if already exists in next month
+  // Safety check: Check if already exists in next month specifically
   const activeKey = getCustomerIdentityKey(activeMonthlyBooking);
   const targetMonthFormatted = formatBookingMonth(nextBookingMonthStr);
 
   const { data: allMonthlyData, error: existError } = await supabase
     .from('monthly_bookings')
-    .select('booking_month, stalls, booker_name, phone, product');
+    .select('id, booking_month, stalls, booker_name, phone, product')
+    .gte('start_date', nextStartDateStr)
+    .lte('start_date', `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-31`);
   if (existError) throw existError;
 
   const isAlreadyExists = (allMonthlyData || []).some(cand => {
@@ -85,8 +87,8 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
     throw new Error(`ผู้เช่า "${activeMonthlyBooking.booker_name}" (${activeMonthlyBooking.product || 'ไม่มีสินค้า'}, ล็อค ${activeMonthlyBooking.stalls}) ได้ต่อสัญญารอบเดือน ${nextMonthFormatted} ไว้แล้ว`);
   }
 
-  // Generate daily rows
-  const newBookingId = `BK-${String(nextYear).substr(-2)}${String(nextMonthVal + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  // Generate daily rows with high-entropy collision-free ID
+  const newBookingId = `BK-${String(nextYear).substr(-2)}${String(nextMonthVal + 1).padStart(2, '0')}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
   const lastDay = new Date(nextYear, nextMonthVal + 1, 0).getDate();
   const dailyBookings = [];
   const details = JSON.parse(activeMonthlyBooking.stall_details || '[]');
@@ -202,12 +204,44 @@ export async function renewBulkMonthlyBookings({
   let successCount = 0;
   let skippedCount = 0;
 
-  const { data: latestMonthlyList, error: existError } = await supabase
+  // 1. Determine target month window from first checked item
+  const firstOldId = bulkRenewCheckedIds[0];
+  const firstItem = monthlyList.find(b => b.id === firstOldId);
+  const refParts = firstItem?.start_date ? firstItem.start_date.split('-') : ['2026', '10', '01'];
+  const refYear = parseInt(refParts[0]);
+  const refMonth = parseInt(refParts[1]) - 1;
+  const refNextDate = new Date(refYear, refMonth + 1, 1);
+  const targetYear = refNextDate.getFullYear();
+  const targetMonthVal = refNextDate.getMonth();
+  const targetStartDateStr = `${targetYear}-${String(targetMonthVal + 1).padStart(2, '0')}-01`;
+  const targetEndDateStr = `${targetYear}-${String(targetMonthVal + 1).padStart(2, '0')}-31`;
+
+  // 2. Fetch all existing bookings specifically for target month without 1000 limit issue
+  const { data: targetMonthRecords, error: existError } = await supabase
     .from('monthly_bookings')
-    .select('id, booker_name, phone, product, stalls, booking_month');
+    .select('id, booker_name, phone, product, stalls, booking_month, start_date')
+    .gte('start_date', targetStartDateStr)
+    .lte('start_date', targetEndDateStr);
   if (existError) throw existError;
 
-  const dynamicMonthlyList = [...(latestMonthlyList || [])];
+  const dynamicMonthlyList = [...(targetMonthRecords || [])];
+
+  // 3. Fetch existing IDs to guarantee 100% collision-free new IDs
+  const { data: allIds } = await supabase.from('monthly_bookings').select('id');
+  const existingIdSet = new Set((allIds || []).map(r => r.id));
+
+  const generateUniqueBookingId = (year, monthVal) => {
+    const prefix = `BK-${String(year).substr(-2)}${String(monthVal + 1).padStart(2, '0')}`;
+    let candidate = '';
+    let attempts = 0;
+    do {
+      attempts++;
+      const randPart = `${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+      candidate = `${prefix}-${randPart}`;
+    } while (existingIdSet.has(candidate) && attempts < 100);
+    existingIdSet.add(candidate);
+    return candidate;
+  };
 
   for (const oldId of bulkRenewCheckedIds) {
     const item = monthlyList.find(b => b.id === oldId);
@@ -253,7 +287,7 @@ export async function renewBulkMonthlyBookings({
     if (customEdit.selected_days) selectedDays = customEdit.selected_days;
     if (customEdit.stall_details) stallDetailsStr = customEdit.stall_details;
 
-    const newBookingId = `BK-${String(nextYear).substr(-2)}${String(nextMonthVal + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newBookingId = generateUniqueBookingId(nextYear, nextMonthVal);
     const lastDay = new Date(nextYear, nextMonthVal + 1, 0).getDate();
     const dailyBookings = [];
 
@@ -307,11 +341,6 @@ export async function renewBulkMonthlyBookings({
       });
     }
 
-    if (dailyBookings.length > 0) {
-      const { error: dbError } = await supabase.from('bookings').insert(dailyBookings);
-      if (dbError) throw dbError;
-    }
-
     const rentTotal = dailyBookings.reduce((sum, b) => sum + b.stall_price, 0);
     const totalElecCharged = Array.from(new Set(dailyBookings.map(b => b.date))).length;
     const totalElecPrice = totalElecCharged * (elecUnitVal * 10);
@@ -351,11 +380,25 @@ export async function renewBulkMonthlyBookings({
       renewal_status: ''
     };
 
-    const { error: mbError } = await supabase.from('monthly_bookings').insert([monthlyData]);
-    if (mbError) throw mbError;
+    try {
+      if (dailyBookings.length > 0) {
+        const { error: dbError } = await supabase.from('bookings').insert(dailyBookings);
+        if (dbError) throw dbError;
+      }
 
-    dynamicMonthlyList.push(monthlyData);
-    successCount++;
+      const { error: mbError } = await supabase.from('monthly_bookings').insert([monthlyData]);
+      if (mbError) {
+        await supabase.from('bookings').delete().eq('master_id', newBookingId);
+        throw mbError;
+      }
+
+      dynamicMonthlyList.push(monthlyData);
+      successCount++;
+    } catch (insertErr) {
+      console.error(`Error inserting renewed booking ${newBookingId} for ${bookerName}:`, insertErr);
+      await supabase.from('bookings').delete().eq('master_id', newBookingId);
+      throw insertErr;
+    }
   }
 
   return { successCount, skippedCount };

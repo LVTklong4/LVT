@@ -184,7 +184,7 @@ export default function BulkRenewModal() {
                     const itemKey = getCustomerIdentityKey(item);
                     return monthlyList.some(mb => {
                       if (formatBookingMonth(mb.booking_month) !== targetMonth) return false;
-                      return getCustomerIdentityKey(mb) === itemKey;
+                      return getCustomerIdentityKey(mb) === itemKey && mb.stalls === item.stalls;
                     });
                   };
 

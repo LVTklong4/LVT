@@ -174,12 +174,31 @@ export function MonthlyBookingProvider({ children }) {
   const fetchMonthlyBookings = useCallback(async () => {
     setLoadingMonthly(true);
     try {
-      const { data, error } = await supabase
-        .from('monthly_bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setMonthlyList(data || []);
+      const pageSize = 1000;
+      let allData = [];
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from('monthly_bookings')
+          .select('*')
+          .range(from, to)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          if (data.length < pageSize) hasMore = false;
+          else page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setMonthlyList(allData);
     } catch (e) {
       console.error('Error fetching monthly bookings:', e);
     } finally {
