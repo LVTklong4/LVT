@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useBooking } from "@/context/BookingContext";
 import StallMapGrid from "@/components/booking/StallMapGrid";
 import KioskStallDetailModal from "@/components/booking/modals/KioskStallDetailModal";
+import { getKioskMarketDates } from "@/utils/thaiDateHelper";
 import { 
-  CalendarDays, Search, RefreshCw, ChevronLeft, ChevronRight,
+  CalendarDays, Search, RefreshCw,
   Sparkles, Leaf, ShoppingBag, Sun, MessageCircle
 } from "lucide-react";
 
@@ -15,9 +16,6 @@ export default function KioskBookingLayout() {
     bookings,
     selectedDate,
     setSelectedDate,
-    quickDates,
-    dateOffset,
-    setDateOffset,
     searchQuery,
     searchResults,
     handleSearch,
@@ -32,6 +30,35 @@ export default function KioskBookingLayout() {
   } = useBooking();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [kioskDates, setKioskDates] = useState(() => getKioskMarketDates());
+
+  // Periodically re-evaluate kiosk market dates (every 30s) and on tab visibility change
+  useEffect(() => {
+    const updateDates = () => {
+      setKioskDates(getKioskMarketDates());
+    };
+    const timer = setInterval(updateDates, 30000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        updateDates();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
+  // Guarantee that selectedDate is strictly one of the active kioskDates
+  useEffect(() => {
+    if (kioskDates.length > 0) {
+      const isAllowed = kioskDates.some(d => d.dateStr === selectedDate);
+      if (!isAllowed) {
+        setSelectedDate(kioskDates[0].dateStr);
+      }
+    }
+  }, [kioskDates, selectedDate, setSelectedDate]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -96,20 +123,10 @@ export default function KioskBookingLayout() {
             </div>
           </div>
 
-          {/* Quick Date Selector (Wed / Sat / Sun Day-themed Pills) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto py-0.5 no-scrollbar justify-center">
-            <button 
-              type="button"
-              onClick={() => setDateOffset(prev => Math.max(0, prev - 1))}
-              className="p-1.5 rounded-full hover:bg-amber-100 text-[#8B4513] transition-colors disabled:opacity-30 cursor-pointer shrink-0"
-              disabled={dateOffset === 0}
-              title="วันก่อนหน้า"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            
+          {/* Quick Date Selector (Wed / Sat / Sun Day-themed Pills - Strictly Current Week Rolling Window) */}
+          <div className="flex items-center overflow-x-auto w-full lg:w-auto py-0.5 no-scrollbar justify-center">
             <div className="flex gap-1.5 sm:gap-2">
-              {quickDates.map((d) => {
+              {kioskDates.map((d) => {
                 const isActive = d.dateStr === selectedDate;
                 let btnStyle = "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100";
                 let Icon = CalendarDays;
@@ -144,15 +161,6 @@ export default function KioskBookingLayout() {
                 );
               })}
             </div>
-
-            <button 
-              type="button"
-              onClick={() => setDateOffset(prev => prev + 1)}
-              className="p-1.5 rounded-full hover:bg-amber-100 text-[#8B4513] transition-colors cursor-pointer shrink-0"
-              title="วันถัดไป"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
           </div>
 
           {/* Search Bar & Desktop Actions */}

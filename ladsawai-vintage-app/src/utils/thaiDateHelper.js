@@ -55,6 +55,67 @@ export const getBookingLineDateFormat = (dateStr) => {
   return `${day} ที่ ${dateNum} ${month} ${year}`;
 };
 
+export const getKioskMarketDates = (now = new Date()) => {
+  const dow = now.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const isAfterCutoff = currentMinutes >= (19 * 60 + 30); // 19:30 cutoff
+
+  const marketDays = [0, 3, 6]; // Sunday=0, Wednesday=3, Saturday=6
+  const isMarketDayToday = marketDays.includes(dow);
+
+  const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const resultDates = [];
+
+  if (isMarketDayToday) {
+    // 1. Current market day is active until midnight (23:59:59)
+    resultDates.push(new Date(baseDate));
+
+    // 2. Next 2 upcoming market days
+    let cur = new Date(baseDate);
+    cur.setDate(cur.getDate() + 1);
+    while (resultDates.length < 3) {
+      if (marketDays.includes(cur.getDay())) {
+        resultDates.push(new Date(cur));
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    // 3. At 19:30, unlock the corresponding market day of next week (today + 7 days)
+    if (isAfterCutoff) {
+      const nextWeekSameDay = new Date(baseDate);
+      nextWeekSameDay.setDate(nextWeekSameDay.getDate() + 7);
+      resultDates.push(nextWeekSameDay);
+    }
+  } else {
+    // Non-market days (Mon, Tue, Thu, Fri): show next 3 upcoming market days
+    let cur = new Date(baseDate);
+    cur.setDate(cur.getDate() + 1);
+    while (resultDates.length < 3) {
+      if (marketDays.includes(cur.getDay())) {
+        resultDates.push(new Date(cur));
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  return resultDates.map(d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${dayNum}`;
+    const day = dayNamesShort[d.getDay()] || '';
+    const dateFormatted = d.getDate();
+    const month = monthNamesShort[d.getMonth()] || '';
+    const year = String(d.getFullYear() + 543).slice(-2);
+    return {
+      dateStr,
+      dayOfWeek: d.getDay(),
+      dayName: day,
+      formattedLabel: `${day} ${dateFormatted} ${month} ${year}`
+    };
+  });
+};
+
 export const getBookingMonthStr = (startDate) => {
   if (!startDate) return '';
   const d = new Date(startDate);
