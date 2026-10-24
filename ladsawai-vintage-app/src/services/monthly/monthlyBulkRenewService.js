@@ -70,12 +70,14 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
   // Safety check: Check if already exists in next month specifically
   const activeKey = getCustomerIdentityKey(activeMonthlyBooking);
   const targetMonthFormatted = formatBookingMonth(nextBookingMonthStr);
+  const nextLastDay = new Date(nextYear, nextMonthVal + 1, 0).getDate();
+  const nextEndDateStr = `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-${String(nextLastDay).padStart(2, '0')}`;
 
   const { data: allMonthlyData, error: existError } = await supabase
     .from('monthly_bookings')
     .select('id, booking_month, stalls, booker_name, phone, product')
     .gte('start_date', nextStartDateStr)
-    .lte('start_date', `${nextYear}-${String(nextMonthVal + 1).padStart(2, '0')}-31`);
+    .lte('start_date', nextEndDateStr);
   if (existError) throw existError;
 
   const isAlreadyExists = (allMonthlyData || []).some(cand => {
@@ -214,7 +216,8 @@ export async function renewBulkMonthlyBookings({
   const targetYear = refNextDate.getFullYear();
   const targetMonthVal = refNextDate.getMonth();
   const targetStartDateStr = `${targetYear}-${String(targetMonthVal + 1).padStart(2, '0')}-01`;
-  const targetEndDateStr = `${targetYear}-${String(targetMonthVal + 1).padStart(2, '0')}-31`;
+  const targetLastDay = new Date(targetYear, targetMonthVal + 1, 0).getDate();
+  const targetEndDateStr = `${targetYear}-${String(targetMonthVal + 1).padStart(2, '0')}-${String(targetLastDay).padStart(2, '0')}`;
 
   // 2. Fetch all existing bookings specifically for target month without 1000 limit issue
   const { data: targetMonthRecords, error: existError } = await supabase
