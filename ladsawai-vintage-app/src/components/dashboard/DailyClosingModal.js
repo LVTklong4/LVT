@@ -137,8 +137,8 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border-2 border-emerald-800 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-4 overflow-y-auto animate-fade-in print:static print:inset-auto print:p-0 print:bg-white print:backdrop-blur-none">
+      <div className="print:hidden bg-white rounded-2xl shadow-2xl w-full max-w-4xl border-2 border-emerald-800 overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-900 to-teal-800 text-white px-5 py-3.5 flex justify-between items-center shrink-0">
