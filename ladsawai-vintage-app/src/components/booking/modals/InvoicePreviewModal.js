@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { X, Info, Printer, Copy, Check, Share2, Loader2 } from 'lucide-react';
 import { copyReceiptImage, shareReceiptImage } from '@/utils/receiptImageHelper';
+import { calculateStallDayPrice, checkIsFullPackage } from '@/services/monthly/monthlyPricingService';
 
 export default function InvoicePreviewModal() {
   const {
@@ -31,10 +32,7 @@ export default function InvoicePreviewModal() {
       details = JSON.parse(invoicePreviewItem.stall_details || '[]');
     } catch (e) {}
 
-    const isFullPackage = invoicePreviewItem.selected_days?.toLowerCase().includes('wed') &&
-                          invoicePreviewItem.selected_days?.toLowerCase().includes('sat') &&
-                          invoicePreviewItem.selected_days?.toLowerCase().includes('sun');
-
+    const isFullPackage = checkIsFullPackage(invoicePreviewItem);
     const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
     const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
 
@@ -48,23 +46,7 @@ export default function InvoicePreviewModal() {
       const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
       [3, 6, 0].forEach((dNum) => {
         if (stallDays.includes(dNum)) {
-          let price = sMaster.price_wed;
-          if (dNum === 6) price = sMaster.price_sat;
-          if (dNum === 0) price = sMaster.price_sun;
-
-          if (invoicePreviewItem.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
-            const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
-            const packageSum = 3 * parseNumber(sMaster.price_month);
-            const weeklyDiscount = Math.max(0, normalSum - packageSum);
-            const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
-            const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
-
-            if (dNum === 3) price = sMaster.price_wed;
-            else if (dNum === 6) price = sMaster.price_sat - satDiscount;
-            else if (dNum === 0) price = sMaster.price_sun - sunDiscount;
-          }
-          if (invoicePreviewItem.customer_type === 'VIP') price = 0;
-
+          const price = calculateStallDayPrice(sMaster, dNum, invoicePreviewItem.customer_type, isFullPackage);
           dayGroups[dNum].push({
             name: stallName,
             price: price,
@@ -474,10 +456,7 @@ export default function InvoicePreviewModal() {
                         details = JSON.parse(invoicePreviewItem.stall_details || '[]');
                       } catch (e) {}
 
-                      const isFullPackage = invoicePreviewItem.selected_days?.toLowerCase().includes('wed') &&
-                                            invoicePreviewItem.selected_days?.toLowerCase().includes('sat') &&
-                                            invoicePreviewItem.selected_days?.toLowerCase().includes('sun');
-
+                      const isFullPackage = checkIsFullPackage(invoicePreviewItem);
                       const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
                       let itemsHtml = [];
                       let totalNadsCount = 0;
@@ -494,23 +473,7 @@ export default function InvoicePreviewModal() {
                         const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
                         [3, 6, 0].forEach((dNum) => {
                           if (stallDays.includes(dNum)) {
-                            let price = sMaster.price_wed;
-                            if (dNum === 6) price = sMaster.price_sat;
-                            if (dNum === 0) price = sMaster.price_sun;
-
-                            if (invoicePreviewItem.customer_type === 'Standard' && isFullPackage && sMaster.price_month > 0) {
-                              const normalSum = parseNumber(sMaster.price_wed) + parseNumber(sMaster.price_sat) + parseNumber(sMaster.price_sun);
-                              const packageSum = 3 * parseNumber(sMaster.price_month);
-                              const weeklyDiscount = Math.max(0, normalSum - packageSum);
-                              const satDiscount = weeklyDiscount >= 100 ? 50 : weeklyDiscount;
-                              const sunDiscount = weeklyDiscount >= 100 ? (weeklyDiscount - 50) : 0;
-
-                              if (dNum === 3) price = sMaster.price_wed;
-                              else if (dNum === 6) price = sMaster.price_sat - satDiscount;
-                              else if (dNum === 0) price = sMaster.price_sun - sunDiscount;
-                            }
-                            if (invoicePreviewItem.customer_type === 'VIP') price = 0;
-
+                            const price = calculateStallDayPrice(sMaster, dNum, invoicePreviewItem.customer_type, isFullPackage);
                             dayGroups[dNum].push({
                               name: stallName,
                               price: price,

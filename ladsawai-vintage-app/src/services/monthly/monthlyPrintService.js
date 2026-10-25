@@ -1,6 +1,6 @@
 import { formatPrice, formatPriceInt, parseNumber } from '@/utils/numberHelper';
 import { monthNamesFull, formatBookingMonth } from '@/utils/thaiDateHelper';
-import { calculateStallDayPrice } from './monthlyPricingService';
+import { calculateStallDayPrice, checkIsFullPackage } from './monthlyPricingService';
 import { normalizePaymentMethodThai } from '@/utils/receiptImageHelper';
 
 /**
@@ -37,9 +37,7 @@ export function generateMonthlyReceiptHTML({
     details = JSON.parse(item.stall_details || '[]');
   } catch (e) {}
 
-  const isFullPackage = item.selected_days?.toLowerCase().includes('wed') &&
-                        item.selected_days?.toLowerCase().includes('sat') &&
-                        item.selected_days?.toLowerCase().includes('sun');
+  const isFullPackage = checkIsFullPackage(item);
 
   const elecRate = item.elec_unit !== undefined && item.elec_unit !== null
     ? parseNumber(item.elec_unit) * 10

@@ -1,6 +1,41 @@
 import { parseNumber } from '@/utils/numberHelper';
 
 /**
+ * Determines whether a booking or day selection is a full 3-day package (Wed, Sat, Sun).
+ * Handles Thai strings ("พุธ,เสาร์,อาทิตย์"), English strings ("wed,sat,sun"), object format, and stall_details JSON.
+ */
+export function checkIsFullPackage(booking) {
+  if (!booking) return false;
+
+  // 1. Check stall_details array
+  try {
+    const details = Array.isArray(booking.stall_details)
+      ? booking.stall_details
+      : JSON.parse(booking.stall_details || '[]');
+    const allDays = new Set();
+    details.forEach(st => {
+      if (Array.isArray(st.days)) {
+        st.days.forEach(d => allDays.add(d));
+      }
+    });
+    if (allDays.has(3) && allDays.has(6) && allDays.has(0)) return true;
+  } catch (e) {}
+
+  // 2. Check selected_days object format
+  if (typeof booking.selected_days === 'object' && booking.selected_days !== null) {
+    return Boolean(booking.selected_days.wed && booking.selected_days.sat && booking.selected_days.sun);
+  }
+
+  // 3. Check selected_days string or day arrays
+  const daysStr = String(booking.selected_days || '').toLowerCase();
+  const hasWed = daysStr.includes('wed') || daysStr.includes('พุธ') || (Array.isArray(booking.stalls_wed) && booking.stalls_wed.length > 0);
+  const hasSat = daysStr.includes('sat') || daysStr.includes('เสาร์') || (Array.isArray(booking.stalls_sat) && booking.stalls_sat.length > 0);
+  const hasSun = daysStr.includes('sun') || daysStr.includes('อาทิตย์') || (Array.isArray(booking.stalls_sun) && booking.stalls_sun.length > 0);
+
+  return hasWed && hasSat && hasSun;
+}
+
+/**
  * Calculates stall price for a specific day of week considering monthly customer type and packages.
  * @param {Object} stall - Stall master record (price_wed, price_sat, price_sun, price_month)
  * @param {number} dayOfWeek - 3: Wed, 6: Sat, 0: Sun
