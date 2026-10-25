@@ -19,16 +19,17 @@ export function normalizePaymentMethodThai(method) {
 /**
  * Copies receipt image directly to the clipboard (works seamlessly on Desktop/Chrome/Edge/Mac).
  */
-export async function copyReceiptImage(element) {
-  if (!element) throw new Error('ไม่พบข้อมูลใบเสร็จ');
+export async function copyReceiptImage(element, options = {}) {
+  if (!element) throw new Error(options.notFoundMessage || 'ไม่พบข้อมูลเอกสาร');
 
   const blob = await toBlob(element, {
-    pixelRatio: 2.5, // Crisp 2.5x resolution for 80mm receipts
-    backgroundColor: '#ffffff',
-    cacheBust: true
+    pixelRatio: options.pixelRatio || 2.5, // Crisp 2.5x resolution
+    backgroundColor: options.backgroundColor || '#ffffff',
+    cacheBust: true,
+    ...options
   });
 
-  if (!blob) throw new Error('ไม่สามารถแปลงใบเสร็จเป็นรูปภาพได้');
+  if (!blob) throw new Error('ไม่สามารถแปลงเอกสารเป็นรูปภาพได้');
 
   // Clipboard API
   if (typeof window !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
@@ -36,7 +37,10 @@ export async function copyReceiptImage(element) {
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': blob })
       ]);
-      return { type: 'clipboard', message: 'คัดลอกรูปใบเสร็จแล้ว สามารถกดวาง (Ctrl+V) ใน Line ได้ทันที' };
+      return { 
+        type: 'clipboard', 
+        message: options.successMessage || 'คัดลอกรูปภาพแล้ว สามารถกดวาง (Ctrl+V) ใน Line ได้ทันที' 
+      };
     } catch (err) {
       console.warn('Clipboard write error:', err);
       throw new Error('ไม่สามารถเข้าถึงคลิปบอร์ดได้: ' + (err.message || 'กรุณาลองใหม่อีกครั้ง'));
@@ -50,13 +54,14 @@ export async function copyReceiptImage(element) {
  * Shares receipt image via native Web Share API (Mobile Line, WhatsApp, Photos, AirDrop).
  * NOTE: Per user request, this does NOT download files to disk on fallback to save device storage.
  */
-export async function shareReceiptImage(element, filename = `receipt-${Date.now()}.png`) {
-  if (!element) throw new Error('ไม่พบข้อมูลใบเสร็จ');
+export async function shareReceiptImage(element, filename = `receipt-${Date.now()}.png`, options = {}) {
+  if (!element) throw new Error(options.notFoundMessage || 'ไม่พบข้อมูลเอกสาร');
 
   const blob = await toBlob(element, {
-    pixelRatio: 2.5,
-    backgroundColor: '#ffffff',
-    cacheBust: true
+    pixelRatio: options.pixelRatio || 2.5,
+    backgroundColor: options.backgroundColor || '#ffffff',
+    cacheBust: true,
+    ...options
   });
 
   if (!blob) throw new Error('ไม่สามารถแปลงรูปภาพได้');
@@ -68,10 +73,10 @@ export async function shareReceiptImage(element, filename = `receipt-${Date.now(
     try {
       await navigator.share({
         files: [file],
-        title: 'ใบเสร็จรับเงิน ลาดสวายวินเทจ',
-        text: 'ใบเสร็จรับเงิน ตลาดลาดสวายวินเทจ'
+        title: options.title || 'ใบแจ้งหนี้ / ใบเสร็จรับเงิน ลาดสวายวินเทจ',
+        text: options.text || 'ใบแจ้งหนี้ / ใบเสร็จรับเงิน ตลาดลาดสวายวินเทจ'
       });
-      return { type: 'share', message: 'แชร์รูปภาพใบเสร็จเรียบร้อย' };
+      return { type: 'share', message: 'แชร์รูปภาพเรียบร้อย' };
     } catch (err) {
       if (err.name === 'AbortError') {
         return { type: 'cancelled', message: 'ยกเลิกการแชร์' };

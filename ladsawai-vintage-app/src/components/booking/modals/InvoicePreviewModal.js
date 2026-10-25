@@ -1,13 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
-import { X, Info } from 'lucide-react';
+import { X, Info, Printer, Copy, Check, Share2, Loader2 } from 'lucide-react';
+import { copyReceiptImage, shareReceiptImage } from '@/utils/receiptImageHelper';
 
 export default function InvoicePreviewModal() {
   const {
-    cleanStallName,    formatBookingMonth,    getDayOccurrences,    invoicePreviewItem,    parseNumber,    product,    setInvoicePreviewItem,    stalls
+    cleanStallName,
+    formatBookingMonth,
+    getDayOccurrences,
+    invoicePreviewItem,
+    parseNumber,
+    product,
+    setInvoicePreviewItem,
+    stalls,
+    showAlert
   } = useMonthlyBooking();
+
+  const invoiceRef = useRef(null);
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   if (!invoicePreviewItem) return null;
 
@@ -312,30 +326,119 @@ export default function InvoicePreviewModal() {
     printWindow.document.close();
   };
 
+  const filename = `invoice-${cleanStallName(invoicePreviewItem?.stalls || 'stall')}-${invoicePreviewItem?.booker_name || ''}-${formatBookingMonth(invoicePreviewItem?.booking_month)}.png`;
+
+  const handleCopy = async () => {
+    if (!invoiceRef.current) return;
+    setCopying(true);
+    try {
+      const res = await copyReceiptImage(invoiceRef.current, {
+        backgroundColor: '#FFFDF9',
+        successMessage: 'คัดลอกรูปใบแจ้งหนี้แล้ว สามารถกดวาง (Ctrl+V) ส่งใน Line ได้ทันที'
+      });
+      setCopied(true);
+      if (typeof showAlert === 'function') {
+        showAlert(res.message, "สำเร็จ");
+      }
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.error('Invoice copy error:', err);
+      if (typeof showAlert === 'function') {
+        showAlert(err.message, "แจ้งเตือน", true);
+      }
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!invoiceRef.current) return;
+    setSharing(true);
+    try {
+      const res = await shareReceiptImage(invoiceRef.current, filename, {
+        backgroundColor: '#FFFDF9',
+        title: `ใบแจ้งยอดชำระเงิน - ${invoicePreviewItem?.booker_name || ''}`,
+        text: `ใบแจ้งยอดชำระเงิน ตลาดลาดสวายวินเทจ ประจำเดือน ${formatBookingMonth(invoicePreviewItem?.booking_month)}`
+      });
+      if (typeof showAlert === 'function' && res.type !== 'cancelled') {
+        showAlert(res.message, "สำเร็จ");
+      }
+    } catch (err) {
+      console.error('Invoice share error:', err);
+      if (typeof showAlert === 'function') {
+        showAlert(err.message, "ข้อผิดพลาด", true);
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-[#FFFDF9] rounded-xl shadow-2xl w-full max-w-sm border border-[#8B4513]/30 overflow-hidden flex flex-col animate-pop-in text-gray-800 font-sans text-xs">
               {/* Modal Actions Header */}
-              <div className="bg-[#5D4037] text-white px-4 py-2 flex justify-between items-center shrink-0 border-b border-[#8B4513] text-xs">
-                <span className="font-bold">พรีวิวใบแจ้งยอดชำระเงิน</span>
-                <div className="flex gap-2">
+              <div className="bg-[#5D4037] text-white px-3.5 py-2 flex justify-between items-center shrink-0 border-b border-[#8B4513] text-xs">
+                <span className="font-extrabold text-xs truncate mr-2">พรีวิวใบแจ้งยอดชำระเงิน</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Copy Image Button */}
                   <button
-                    onClick={handlePrintInvoice}
-                    className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer"
+                    type="button"
+                    disabled={copying}
+                    onClick={handleCopy}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 ${
+                      copied 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
+                    title="คัดลอกรูปภาพส่งใน Line"
                   >
-                    พิมพ์
+                    {copying ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : copied ? (
+                      <Check className="w-3 h-3" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>{copied ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}</span>
                   </button>
-                  <button 
-                    onClick={() => setInvoicePreviewItem(null)} 
-                    className="p-0.5 rounded-full hover:bg-white/10 text-white cursor-pointer"
+
+                  {/* Share Button */}
+                  <button
+                    type="button"
+                    disabled={sharing}
+                    onClick={handleShare}
+                    className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                    title="แชร์รูปภาพ"
                   >
-                    <X className="w-4 h-4" />
+                    {sharing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Share2 className="w-3 h-3" />}
+                    <span>แชร์</span>
+                  </button>
+
+                  {/* Print Button */}
+                  <button
+                    type="button"
+                    onClick={handlePrintInvoice}
+                    className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                    title="พิมพ์ใบแจ้งหนี้"
+                  >
+                    <Printer className="w-3 h-3" />
+                    <span>พิมพ์</span>
+                  </button>
+
+                  {/* Close Button */}
+                  <button 
+                    type="button"
+                    onClick={() => setInvoicePreviewItem(null)} 
+                    className="p-1 rounded-full hover:bg-white/10 text-white cursor-pointer ml-0.5"
+                    title="ปิด"
+                  >
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
 
               {/* Printable Area */}
-              <div id="lvt-invoice-print-area" className="p-6 bg-[#FFFDF9] text-left flex flex-col gap-4">
+              <div ref={invoiceRef} id="lvt-invoice-print-area" className="p-6 bg-[#FFFDF9] text-left flex flex-col gap-4">
                 {/* Header Info */}
                 <div className="flex flex-col items-center text-center gap-1">
                   <img src="/logo.png" alt="Logo" className="h-16 w-16 object-contain drop-shadow-sm" />
