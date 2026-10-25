@@ -6,7 +6,30 @@ import { X, Sun, Printer } from 'lucide-react';
 
 export default function MonthlyPrintModal() {
   const {
-    cleanStallName,    handlePrintMonthlyReceipt,    handleShowMonthlyReceiptPreview,    monthlyPrintItem,    monthlyPrintMonth,    monthlyPrintPayments,    monthlyPrintProduct,    monthlyPrintSatCount,    monthlyPrintSunCount,    monthlyPrintTxnNo,    monthlyPrintWedCount,    parseNumber,    setMonthlyPrintMonth,    setMonthlyPrintPayments,    setMonthlyPrintProduct,    setMonthlyPrintSatCount,    setMonthlyPrintSunCount,    setMonthlyPrintTxnNo,    setMonthlyPrintWedCount,    setShowMonthlyPrintModal,    showMonthlyPrintModal,    stalls
+    cleanStallName,
+    handlePrintMonthlyReceipt,
+    handleShowMonthlyReceiptPreview,
+    monthlyPrintItem,
+    monthlyPrintMonth,
+    monthlyPrintPayments,
+    monthlyPrintProduct,
+    monthlyPrintSatCount,
+    monthlyPrintSunCount,
+    monthlyPrintTxnNo,
+    monthlyPrintWedCount,
+    monthlyPrintFriCount,
+    parseNumber,
+    setMonthlyPrintMonth,
+    setMonthlyPrintPayments,
+    setMonthlyPrintProduct,
+    setMonthlyPrintSatCount,
+    setMonthlyPrintSunCount,
+    setMonthlyPrintTxnNo,
+    setMonthlyPrintWedCount,
+    setMonthlyPrintFriCount,
+    setShowMonthlyPrintModal,
+    showMonthlyPrintModal,
+    stalls
   } = useMonthlyBooking();
 
   if (!showMonthlyPrintModal && !monthlyPrintItem) return null;
@@ -63,9 +86,9 @@ export default function MonthlyPrintModal() {
               {/* Days Count */}
               <div className="border-t pt-2.5">
                 <span className="font-bold text-gray-800 block mb-1.5">จำนวนวันค้าขายในเดือน (คำนวณสูตร):</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-gray-500 font-bold">วันเสาร์ (วัน)</label>
+                    <label className="text-[10px] text-gray-500 font-bold">วันเสาร์</label>
                     <input 
                       type="number"
                       value={monthlyPrintSatCount}
@@ -74,7 +97,7 @@ export default function MonthlyPrintModal() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-gray-500 font-bold">วันอาทิตย์ (วัน)</label>
+                    <label className="text-[10px] text-gray-500 font-bold">วันอาทิตย์</label>
                     <input 
                       type="number"
                       value={monthlyPrintSunCount}
@@ -83,11 +106,20 @@ export default function MonthlyPrintModal() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-gray-500 font-bold">วันพุธ (วัน)</label>
+                    <label className="text-[10px] text-gray-500 font-bold">วันพุธ</label>
                     <input 
                       type="number"
                       value={monthlyPrintWedCount}
                       onChange={(e) => setMonthlyPrintWedCount(parseNumber(e.target.value))}
+                      className="p-2 border rounded text-center text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-500 font-bold">วันศุกร์</label>
+                    <input 
+                      type="number"
+                      value={monthlyPrintFriCount}
+                      onChange={(e) => setMonthlyPrintFriCount(parseNumber(e.target.value))}
                       className="p-2 border rounded text-center text-xs"
                     />
                   </div>

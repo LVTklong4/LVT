@@ -6,6 +6,7 @@ import { Info } from 'lucide-react';
 
 export default function MonthlyStallSelection() {
   const {
+    addStallDropdownRefFri,
     addStallDropdownRefSat,
     addStallDropdownRefSun,
     addStallDropdownRefWed,
@@ -14,21 +15,27 @@ export default function MonthlyStallSelection() {
     isEditingMonthlyMode,
     newMonthlyCustomerType,
     newMonthlyDays,
+    newMonthlyStallsFri,
     newMonthlyStallsSat,
     newMonthlyStallsSun,
     newMonthlyStallsWed,
+    setNewMonthlyStallsFri,
     setNewMonthlyStallsSat,
     setNewMonthlyStallsSun,
     setNewMonthlyStallsWed,
+    setShowAddStallSelectFri,
     setShowAddStallSelectSat,
     setShowAddStallSelectSun,
     setShowAddStallSelectWed,
+    setStallFilterFri,
     setStallFilterSat,
     setStallFilterSun,
     setStallFilterWed,
+    showAddStallSelectFri,
     showAddStallSelectSat,
     showAddStallSelectSun,
     showAddStallSelectWed,
+    stallFilterFri,
     stallFilterSat,
     stallFilterSun,
     stallFilterWed,
@@ -85,6 +92,7 @@ export default function MonthlyStallSelection() {
                 disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
                 onClick={() => {
                   setShowAddStallSelectWed(!showAddStallSelectWed);
+                  setShowAddStallSelectFri(false);
                   setShowAddStallSelectSat(false);
                   setShowAddStallSelectSun(false);
                   setStallFilterWed('');
@@ -143,6 +151,92 @@ export default function MonthlyStallSelection() {
         </div>
       )}
 
+      {newMonthlyCustomerType !== 'Room' && newMonthlyDays.fri && (
+        <div className="flex flex-wrap gap-2 items-center bg-blue-50/40 p-2 rounded border border-blue-100">
+          <span className="w-12 font-bold text-blue-700 shrink-0">วันศุกร์</span>
+          <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+            {newMonthlyStallsFri.map((stName) => (
+              <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-xs px-2 py-0.5 rounded-md shadow-xs">
+                {cleanStallName(stName)}
+                <button
+                  type="button"
+                  disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
+                  onClick={() => setNewMonthlyStallsFri(newMonthlyStallsFri.filter(s => s !== stName))}
+                  className={`font-black ml-1 text-[10px] transition-colors ${
+                    isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? 'text-gray-400 cursor-not-allowed' : 'text-amber-700 hover:text-red-700 cursor-pointer'
+                  }`}
+                  title={isEditingMonthlyMode || newMonthlyCustomerType === 'Room' ? "" : "ลบออก"}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+            
+            <div className="relative" ref={addStallDropdownRefFri}>
+              <button
+                type="button"
+                disabled={isEditingMonthlyMode || newMonthlyCustomerType === 'Room'}
+                onClick={() => {
+                  setShowAddStallSelectFri(!showAddStallSelectFri);
+                  setShowAddStallSelectWed(false);
+                  setShowAddStallSelectSat(false);
+                  setShowAddStallSelectSun(false);
+                  setStallFilterFri('');
+                }}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm transition-all flex items-center ${
+                  isEditingMonthlyMode || newMonthlyCustomerType === 'Room'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                }`}
+              >
+                + เพิ่มล็อค
+              </button>
+              
+              {showAddStallSelectFri && (
+                <div className="absolute left-0 mt-1.5 w-48 bg-white border border-blue-200 rounded-lg shadow-xl z-50 p-2 flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                  <input
+                    type="text"
+                    value={stallFilterFri}
+                    onChange={(e) => setStallFilterFri(e.target.value)}
+                    placeholder="ค้นหาชื่อล็อค..."
+                    className="p-1.5 border border-blue-500 rounded text-xs text-gray-800 bg-blue-50/10 focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold mb-1"
+                    autoFocus
+                  />
+                  {(() => {
+                    const occupiedStalls = getOccupiedStallsInRound(5);
+                    const filtered = (stalls || []).filter(s => 
+                      s.type !== 'ทางเดิน' && 
+                      s.type !== 'อื่นๆ' && 
+                      !newMonthlyStallsFri.includes(s.name) && 
+                      !occupiedStalls.includes(s.name) &&
+                      s.name.toLowerCase().includes(stallFilterFri.toLowerCase())
+                    );
+                    
+                    if (filtered.length === 0) {
+                        return <span className="text-[10px] text-gray-400 text-center py-2">ไม่พบชื่อล็อค</span>;
+                    }
+                    
+                    return filtered.map((vSt) => (
+                      <button
+                        key={vSt.name}
+                        type="button"
+                        onClick={() => {
+                          setNewMonthlyStallsFri([...newMonthlyStallsFri, vSt.name]);
+                          setShowAddStallSelectFri(false);
+                        }}
+                        className="text-left w-full px-2 py-1.5 text-xs hover:bg-blue-50 rounded text-gray-700 font-bold border-b border-gray-100 last:border-b-0 cursor-pointer"
+                      >
+                        {cleanStallName(vSt.name)}{vSt.zone ? ` (${vSt.zone})` : ''}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {newMonthlyCustomerType !== 'Room' && newMonthlyDays.sat && (
         <div className="flex flex-wrap gap-2 items-center bg-purple-50/40 p-2 rounded border border-purple-100">
           <span className="w-12 font-bold text-purple-700 shrink-0">วันเสาร์</span>
@@ -171,6 +265,7 @@ export default function MonthlyStallSelection() {
                 onClick={() => {
                   setShowAddStallSelectSat(!showAddStallSelectSat);
                   setShowAddStallSelectWed(false);
+                  setShowAddStallSelectFri(false);
                   setShowAddStallSelectSun(false);
                   setStallFilterSat('');
                 }}
@@ -256,6 +351,7 @@ export default function MonthlyStallSelection() {
                 onClick={() => {
                   setShowAddStallSelectSun(!showAddStallSelectSun);
                   setShowAddStallSelectWed(false);
+                  setShowAddStallSelectFri(false);
                   setShowAddStallSelectSat(false);
                   setStallFilterSun('');
                 }}

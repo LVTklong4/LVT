@@ -297,7 +297,7 @@ export default function KioskBookingLayout() {
       {/* 4. Footer */}
       <footer className="bg-[#5D4037] text-amber-100 text-center py-2.5 px-4 text-xs border-t-2 border-[#8B4513]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 text-[11px]">
-          <p className="font-bold">ตลาดนัดลาดสวายวินเทจ • เปิดทุกวันพุธ เสาร์ อาทิตย์</p>
+          <p className="font-bold">ตลาดนัดลาดสวายวินเทจ • เปิดทุกวันพุธ ศุกร์ เสาร์ อาทิตย์</p>
           <p className="text-amber-200/80 font-medium">LINE Official: <strong className="text-amber-200">@ladsawaivintage</strong></p>
         </div>
       </footer>

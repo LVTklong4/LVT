@@ -37,14 +37,18 @@ export function checkIsFullPackage(booking) {
 
 /**
  * Calculates stall price for a specific day of week considering monthly customer type and packages.
- * @param {Object} stall - Stall master record (price_wed, price_sat, price_sun, price_month)
- * @param {number} dayOfWeek - 3: Wed, 6: Sat, 0: Sun
+ * @param {Object} stall - Stall master record (price_wed, price_fri, price_sat, price_sun, price_month)
+ * @param {number} dayOfWeek - 3: Wed, 5: Fri, 6: Sat, 0: Sun
  * @param {string} customerType - 'Standard' | 'Regular' | 'VIP' | 'Room'
- * @param {boolean} isFullPackage - true if all 3 days (Wed, Sat, Sun) are selected
+ * @param {boolean} isFullPackage - true if all 3 core days (Wed, Sat, Sun) are selected
  */
 export function calculateStallDayPrice(stall, dayOfWeek, customerType = 'Standard', isFullPackage = false) {
   if (!stall) return 0;
   if (customerType === 'VIP' || customerType === 'Room') return 0;
+
+  if (dayOfWeek === 5) {
+    return stall.price_fri !== undefined && stall.price_fri !== null ? parseNumber(stall.price_fri) : 0;
+  }
 
   let price = parseNumber(stall.price_wed);
   if (dayOfWeek === 6) price = parseNumber(stall.price_sat);
@@ -70,8 +74,9 @@ export function calculateStallDayPrice(stall, dayOfWeek, customerType = 'Standar
  */
 export function calculateMonthlySummary({
   startDate,
-  selectedDays = { wed: true, sat: true, sun: true },
+  selectedDays = { wed: true, fri: false, sat: true, sun: true },
   stallsWed = [],
+  stallsFri = [],
   stallsSat = [],
   stallsSun = [],
   stallsMaster = [],
@@ -86,6 +91,7 @@ export function calculateMonthlySummary({
       grandTotal: 0,
       rawStallTotal: 0,
       wedCount: 0,
+      friCount: 0,
       satCount: 0,
       sunCount: 0,
       totalElecCharged: 0,
@@ -94,9 +100,11 @@ export function calculateMonthlySummary({
       totalStorageFee: 0,
       storageFeeVal: 0,
       wedStallsPrice: 0,
+      friStallsPrice: 0,
       satStallsPrice: 0,
       sunStallsPrice: 0,
       wedTotal: 0,
+      friTotal: 0,
       satTotal: 0,
       sunTotal: 0,
       isFullPackage: false
@@ -109,6 +117,7 @@ export function calculateMonthlySummary({
   const lastDay = new Date(year, month + 1, 0).getDate();
 
   let wedCount = 0;
+  let friCount = 0;
   let satCount = 0;
   let sunCount = 0;
   let totalElecCharged = 0;
@@ -122,6 +131,10 @@ export function calculateMonthlySummary({
       wedCount++;
       hasTradingDay = true;
     }
+    if (dayOfWeek === 5 && selectedDays.fri) {
+      friCount++;
+      hasTradingDay = true;
+    }
     if (dayOfWeek === 6 && selectedDays.sat) {
       satCount++;
       hasTradingDay = true;
@@ -131,7 +144,7 @@ export function calculateMonthlySummary({
       hasTradingDay = true;
     }
 
-    if (hasTradingDay && (stallsWed.length > 0 || stallsSat.length > 0 || stallsSun.length > 0)) {
+    if (hasTradingDay && (stallsWed.length > 0 || stallsFri.length > 0 || stallsSat.length > 0 || stallsSun.length > 0)) {
       totalElecCharged++;
     }
   }
@@ -146,14 +159,16 @@ export function calculateMonthlySummary({
   };
 
   const wedPricePerDay = sumStallPrices(stallsWed, 3);
+  const friPricePerDay = sumStallPrices(stallsFri, 5);
   const satPricePerDay = sumStallPrices(stallsSat, 6);
   const sunPricePerDay = sumStallPrices(stallsSun, 0);
 
   const wedTotal = wedCount * wedPricePerDay;
+  const friTotal = friCount * friPricePerDay;
   const satTotal = satCount * satPricePerDay;
   const sunTotal = sunCount * sunPricePerDay;
 
-  const rawStallTotal = wedTotal + satTotal + sunTotal;
+  const rawStallTotal = wedTotal + friTotal + satTotal + sunTotal;
   const totalElecFee = totalElecCharged * parseNumber(elecUnit) * 10;
   const totalStorageFee = parseNumber(storageFee);
 
@@ -167,6 +182,7 @@ export function calculateMonthlySummary({
     grandTotal: finalPrice,
     rawStallTotal,
     wedCount,
+    friCount,
     satCount,
     sunCount,
     totalElecCharged,
@@ -175,9 +191,11 @@ export function calculateMonthlySummary({
     totalStorageFee,
     storageFeeVal: totalStorageFee,
     wedStallsPrice: wedPricePerDay,
+    friStallsPrice: friPricePerDay,
     satStallsPrice: satPricePerDay,
     sunStallsPrice: sunPricePerDay,
     wedTotal,
+    friTotal,
     satTotal,
     sunTotal,
     isFullPackage

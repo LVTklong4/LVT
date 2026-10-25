@@ -66,6 +66,7 @@ export async function createMonthlyBooking({
   startDate,
   days,
   stallsWed = [],
+  stallsFri = [],
   stallsSat = [],
   stallsSun = [],
   stallsMaster = [],
@@ -87,10 +88,11 @@ export async function createMonthlyBooking({
   }
 
   const hasWed = days.wed && stallsWed.length > 0;
+  const hasFri = days.fri && stallsFri.length > 0;
   const hasSat = days.sat && stallsSat.length > 0;
   const hasSun = days.sun && stallsSun.length > 0;
 
-  if (customerType !== 'Room' && !hasWed && !hasSat && !hasSun) {
+  if (customerType !== 'Room' && !hasWed && !hasFri && !hasSat && !hasSun) {
     throw new Error("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ");
   }
 
@@ -107,11 +109,12 @@ export async function createMonthlyBooking({
   const bookingMonthStr = dateThai.toString();
   const newBookingId = `BK-${String(year).substr(-2)}${String(monthVal + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  const allSelectedStallNames = Array.from(new Set([...stallsWed, ...stallsSat, ...stallsSun]));
+  const allSelectedStallNames = Array.from(new Set([...stallsWed, ...stallsFri, ...stallsSat, ...stallsSun]));
 
   const stallDetails = allSelectedStallNames.map(stallName => {
     const dList = [];
     if (days.wed && stallsWed.includes(stallName)) dList.push(3);
+    if (days.fri && stallsFri.includes(stallName)) dList.push(5);
     if (days.sat && stallsSat.includes(stallName)) dList.push(6);
     if (days.sun && stallsSun.includes(stallName)) dList.push(0);
     return { name: stallName, days: dList };
@@ -193,7 +196,7 @@ export async function createMonthlyBooking({
     paid_amount: 0,
     note: (note || '').trim() || `จองรายเดือนใหม่ [${customerType}]`,
     payment_method: 'Cash',
-    selected_days: Object.keys(days).filter(d => days[d]).map(d => d === 'wed' ? 'Wed' : d === 'sat' ? 'Sat' : 'Sun').join(', '),
+    selected_days: Object.keys(days).filter(d => days[d]).map(d => d === 'wed' ? 'Wed' : d === 'fri' ? 'Fri' : d === 'sat' ? 'Sat' : 'Sun').join(', '),
     booking_month: bookingMonthStr,
     phone: cleanPhone,
     stall_details: JSON.stringify(stallDetails),
@@ -218,6 +221,7 @@ export async function updateMonthlyBooking({
   startDate,
   days,
   stallsWed = [],
+  stallsFri = [],
   stallsSat = [],
   stallsSun = [],
   stallsMaster = [],
@@ -242,10 +246,11 @@ export async function updateMonthlyBooking({
   }
 
   const hasWed = days.wed && stallsWed.length > 0;
+  const hasFri = days.fri && stallsFri.length > 0;
   const hasSat = days.sat && stallsSat.length > 0;
   const hasSun = days.sun && stallsSun.length > 0;
 
-  if (customerType !== 'Room' && !hasWed && !hasSat && !hasSun) {
+  if (customerType !== 'Room' && !hasWed && !hasFri && !hasSat && !hasSun) {
     throw new Error("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ");
   }
 
@@ -257,11 +262,12 @@ export async function updateMonthlyBooking({
   const dateThai = new Date(year + 543, monthVal, 1);
   const bookingMonthStr = dateThai.toString();
 
-  const allSelectedStallNames = Array.from(new Set([...stallsWed, ...stallsSat, ...stallsSun]));
+  const allSelectedStallNames = Array.from(new Set([...stallsWed, ...stallsFri, ...stallsSat, ...stallsSun]));
 
   const stallDetails = allSelectedStallNames.map(stallName => {
     const dList = [];
     if (days.wed && stallsWed.includes(stallName)) dList.push(3);
+    if (days.fri && stallsFri.includes(stallName)) dList.push(5);
     if (days.sat && stallsSat.includes(stallName)) dList.push(6);
     if (days.sun && stallsSun.includes(stallName)) dList.push(0);
     return { name: stallName, days: dList };
@@ -345,7 +351,7 @@ export async function updateMonthlyBooking({
     total_price: monthlyTotal,
     paid_amount: parseNumber(editPaidAmount),
     note: (note || '').trim(),
-    selected_days: Object.keys(days).filter(d => days[d]).map(d => d === 'wed' ? 'Wed' : d === 'sat' ? 'Sat' : 'Sun').join(', '),
+    selected_days: Object.keys(days).filter(d => days[d]).map(d => d === 'wed' ? 'Wed' : d === 'fri' ? 'Fri' : d === 'sat' ? 'Sat' : 'Sun').join(', '),
     booking_month: bookingMonthStr,
     phone: cleanPhone,
     stall_details: JSON.stringify(stallDetails),

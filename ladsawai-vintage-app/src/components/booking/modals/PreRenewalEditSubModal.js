@@ -105,6 +105,7 @@ export default function PreRenewalEditSubModal() {
                     <div className="flex gap-2 mt-1">
                       {[
                         { key: 'Wed', num: 3, label: 'พุธ' },
+                        { key: 'Fri', num: 5, label: 'ศุกร์' },
                         { key: 'Sat', num: 6, label: 'เสาร์' },
                         { key: 'Sun', num: 0, label: 'อาทิตย์' }
                       ].map(dayOpt => {
@@ -131,12 +132,14 @@ export default function PreRenewalEditSubModal() {
                                 }
                                 const ordered = [];
                                 if (newArr.includes('wed')) ordered.push('Wed');
+                                if (newArr.includes('fri')) ordered.push('Fri');
                                 if (newArr.includes('sat')) ordered.push('Sat');
                                 if (newArr.includes('sun')) ordered.push('Sun');
                                 const selStr = ordered.join(', ');
                                 
                                 const orderedNums = [];
                                 if (ordered.includes('Wed')) orderedNums.push(3);
+                                if (ordered.includes('Fri')) orderedNums.push(5);
                                 if (ordered.includes('Sat')) orderedNums.push(6);
                                 if (ordered.includes('Sun')) orderedNums.push(0);
 
@@ -167,8 +170,8 @@ export default function PreRenewalEditSubModal() {
                 {bulkRenewEditingItem.customer_type !== 'Room' && (
                   <div ref={dropdownRef} className="flex flex-col gap-2 p-3 bg-purple-50/40 rounded-lg border border-purple-100 text-left">
                     <span className="font-bold text-purple-950 block mb-0.5">ระบุแผงค้าของแต่ละวัน</span>
-                    {['Wed', 'Sat', 'Sun'].map(dayName => {
-                      const dayNum = dayName === 'Wed' ? 3 : dayName === 'Sat' ? 6 : 0;
+                    {['Wed', 'Fri', 'Sat', 'Sun'].map(dayName => {
+                      const dayNum = dayName === 'Wed' ? 3 : dayName === 'Fri' ? 5 : dayName === 'Sat' ? 6 : 0;
                       const daysArr = bulkRenewEditingItem.selected_days.split(',').map(s => s.trim().toLowerCase());
                       const isActive = daysArr.includes(dayName.toLowerCase());
                       if (!isActive) return null;
@@ -179,7 +182,7 @@ export default function PreRenewalEditSubModal() {
 
                       return (
                         <div key={dayName} className="flex flex-wrap gap-2 items-center bg-white p-2 rounded border border-purple-100">
-                          <span className="w-12 font-bold text-purple-700 shrink-0">วัน{dayName === 'Wed' ? 'พุธ' : dayName === 'Sat' ? 'เสาร์' : 'อาทิตย์'}</span>
+                          <span className="w-12 font-bold text-purple-700 shrink-0">วัน{dayName === 'Wed' ? 'พุธ' : dayName === 'Fri' ? 'ศุกร์' : dayName === 'Sat' ? 'เสาร์' : 'อาทิตย์'}</span>
                           <div className="flex-1 flex flex-wrap gap-1.5 items-center">
                             {dayStalls.map((stName) => (
                               <span key={stName} className="inline-flex items-center gap-1 bg-[#F5E6D3] border border-[#8B4513]/30 text-[#5D4037] font-mono font-extrabold text-[10px] px-1.5 py-0.5 rounded shadow-xs">

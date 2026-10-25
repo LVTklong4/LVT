@@ -43,7 +43,7 @@ export function generateMonthlyReceiptHTML({
     ? parseNumber(item.elec_unit) * 10
     : 20;
 
-  const dayGroups = { 3: [], 6: [], 0: [] };
+  const dayGroups = { 3: [], 5: [], 6: [], 0: [] };
 
   details.forEach((stallDetail) => {
     const stallName = stallDetail.name;
@@ -51,7 +51,7 @@ export function generateMonthlyReceiptHTML({
     if (!sMaster) return;
 
     const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
-    [3, 6, 0].forEach((dNum) => {
+    [3, 5, 6, 0].forEach((dNum) => {
       if (stallDays.includes(dNum)) {
         const price = calculateStallDayPrice(sMaster, dNum, item.customer_type, isFullPackage);
         dayGroups[dNum].push({ name: stallName, price });
@@ -80,6 +80,7 @@ export function generateMonthlyReceiptHTML({
 
   const activeDays = [];
   if (item.selected_days?.toLowerCase().includes('wed') || item.selected_days?.includes('พุธ') || (item.stalls_wed && item.stalls_wed.length > 0)) activeDays.push(3);
+  if (item.selected_days?.toLowerCase().includes('fri') || item.selected_days?.includes('ศุกร์') || (item.stalls_fri && item.stalls_fri.length > 0)) activeDays.push(5);
   if (item.selected_days?.toLowerCase().includes('sat') || item.selected_days?.includes('เสาร์') || (item.stalls_sat && item.stalls_sat.length > 0)) activeDays.push(6);
   if (item.selected_days?.toLowerCase().includes('sun') || item.selected_days?.includes('อาทิตย์') || (item.stalls_sun && item.stalls_sun.length > 0)) activeDays.push(0);
 
@@ -88,17 +89,19 @@ export function generateMonthlyReceiptHTML({
       if (name.startsWith('ส') && !activeDays.includes(6)) activeDays.push(6);
       if (name.startsWith('อ') && !activeDays.includes(0)) activeDays.push(0);
       if (name.startsWith('พ') && !activeDays.includes(3)) activeDays.push(3);
+      if (name.startsWith('ศ') && !activeDays.includes(5)) activeDays.push(5);
     });
   }
   if (activeDays.length === 0) activeDays.push(6);
 
-  if (dayGroups[6].length === 0 && dayGroups[0].length === 0 && dayGroups[3].length === 0) {
+  if (dayGroups[6].length === 0 && dayGroups[0].length === 0 && dayGroups[3].length === 0 && dayGroups[5].length === 0) {
     rawStallNames.forEach(stallName => {
       const sMaster = stalls.find(m => m.name === stallName);
       const daysForStall = [];
-      if (stallName.startsWith('ส') || (activeDays.includes(6) && !stallName.startsWith('อ') && !stallName.startsWith('พ'))) daysForStall.push(6);
-      if (stallName.startsWith('อ') || (activeDays.includes(0) && !stallName.startsWith('ส') && !stallName.startsWith('พ'))) daysForStall.push(0);
-      if (stallName.startsWith('พ') || (activeDays.includes(3) && !stallName.startsWith('ส') && !stallName.startsWith('อ'))) daysForStall.push(3);
+      if (stallName.startsWith('ส') || (activeDays.includes(6) && !stallName.startsWith('อ') && !stallName.startsWith('พ') && !stallName.startsWith('ศ'))) daysForStall.push(6);
+      if (stallName.startsWith('อ') || (activeDays.includes(0) && !stallName.startsWith('ส') && !stallName.startsWith('พ') && !stallName.startsWith('ศ'))) daysForStall.push(0);
+      if (stallName.startsWith('พ') || (activeDays.includes(3) && !stallName.startsWith('ส') && !stallName.startsWith('อ') && !stallName.startsWith('ศ'))) daysForStall.push(3);
+      if (stallName.startsWith('ศ') || (activeDays.includes(5) && !stallName.startsWith('ส') && !stallName.startsWith('อ') && !stallName.startsWith('พ'))) daysForStall.push(5);
       if (daysForStall.length === 0) daysForStall.push(6);
 
       daysForStall.forEach(d => {
@@ -111,14 +114,16 @@ export function generateMonthlyReceiptHTML({
   const satCount = customCounts ? customCounts.satCount : getDayOccurrences(item.start_date, 6, activeDays);
   const sunCount = customCounts ? customCounts.sunCount : getDayOccurrences(item.start_date, 0, activeDays);
   const wedCount = customCounts ? customCounts.wedCount : getDayOccurrences(item.start_date, 3, activeDays);
+  const friCount = customCounts ? (customCounts.friCount || 0) : getDayOccurrences(item.start_date, 5, activeDays);
 
   const totalTradingDays = (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6)) ? satCount : 0) +
                            (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0)) ? sunCount : 0) +
-                           (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3)) ? wedCount : 0);
+                           (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3)) ? wedCount : 0) +
+                           (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5)) ? friCount : 0);
 
   let calculatedStallTotal = 0;
-  [6, 0, 3].forEach(d => {
-    const count = d === 6 ? satCount : d === 0 ? sunCount : wedCount;
+  [6, 0, 3, 5].forEach(d => {
+    const count = d === 6 ? satCount : d === 0 ? sunCount : d === 3 ? wedCount : friCount;
     if (count > 0 && dayGroups[d].length > 0) {
       calculatedStallTotal += dayGroups[d].reduce((sum, s) => sum + s.price, 0) * count;
     }
@@ -173,6 +178,21 @@ export function generateMonthlyReceiptHTML({
       </tr>
       <tr class="calc-row">
         <td>${formatPriceInt(wedStallPrice)} x ${wedCount} วัน</td>
+        <td></td>
+      </tr>
+    `;
+  }
+  if (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5))) {
+    const friStalls = dayGroups[5].length > 0 ? dayGroups[5].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const friStallPrice = dayGroups[5].reduce((sum, x) => sum + x.price, 0);
+    const friTotal = friStallPrice * friCount;
+    dayDetailsHtml += `
+      <tr>
+        <td class="bold">วันศุกร์ ล็อค : ${friStalls}</td>
+        <td class="val" style="text-align: right;">${formatPrice(friTotal)}</td>
+      </tr>
+      <tr class="calc-row">
+        <td>${formatPriceInt(friStallPrice)} x ${friCount} วัน</td>
         <td></td>
       </tr>
     `;

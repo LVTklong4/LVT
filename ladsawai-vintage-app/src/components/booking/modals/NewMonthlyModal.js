@@ -116,15 +116,21 @@ export default function NewMonthlyModal() {
                   <div className="flex flex-col gap-1">
                     <label className="font-bold text-gray-700">วันลงขาย</label>
                     <div className="flex gap-2 mt-1">
-                      {['wed', 'sat', 'sun'].map(day => {
-                        const label = day === 'wed' ? 'พ' : day === 'sat' ? 'ส' : 'อา';
+                      {['wed', 'fri', 'sat', 'sun'].map(day => {
+                        const label = day === 'wed' ? 'พ' : day === 'fri' ? 'ศ' : day === 'sat' ? 'ส' : 'อา';
                         const checked = newMonthlyDays[day];
+                        const activeClass = 
+                          day === 'wed' ? 'bg-green-700 text-white border-green-800 shadow-sm' :
+                          day === 'fri' ? 'bg-blue-600 text-white border-blue-700 shadow-sm' :
+                          day === 'sat' ? 'bg-purple-700 text-white border-purple-800 shadow-sm' :
+                          'bg-rose-600 text-white border-rose-700 shadow-sm';
+
                         return (
                           <label 
                             key={day} 
                             className={`flex-1 py-1.5 text-center rounded border font-bold text-xs cursor-pointer select-none transition-all ${
                               checked 
-                                ? 'bg-amber-600 text-white border-amber-700 shadow-sm' 
+                                ? activeClass 
                                 : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
                             }`}
                           >

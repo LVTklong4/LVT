@@ -65,6 +65,7 @@ export default function MonthlyReceiptPreviewModal() {
   // Active days
   const activeDays = [];
   if (item.selected_days?.toLowerCase().includes('wed') || item.selected_days?.includes('พุธ') || (item.stalls_wed && item.stalls_wed.length > 0)) activeDays.push(3);
+  if (item.selected_days?.toLowerCase().includes('fri') || item.selected_days?.includes('ศุกร์') || (item.stalls_fri && item.stalls_fri.length > 0)) activeDays.push(5);
   if (item.selected_days?.toLowerCase().includes('sat') || item.selected_days?.includes('เสาร์') || (item.stalls_sat && item.stalls_sat.length > 0)) activeDays.push(6);
   if (item.selected_days?.toLowerCase().includes('sun') || item.selected_days?.includes('อาทิตย์') || (item.stalls_sun && item.stalls_sun.length > 0)) activeDays.push(0);
 
@@ -73,6 +74,7 @@ export default function MonthlyReceiptPreviewModal() {
       if (name.startsWith('ส') && !activeDays.includes(6)) activeDays.push(6);
       if (name.startsWith('อ') && !activeDays.includes(0)) activeDays.push(0);
       if (name.startsWith('พ') && !activeDays.includes(3)) activeDays.push(3);
+      if (name.startsWith('ศ') && !activeDays.includes(5)) activeDays.push(5);
     });
   }
   if (activeDays.length === 0) activeDays.push(6);
@@ -83,8 +85,9 @@ export default function MonthlyReceiptPreviewModal() {
   const satCount = customCounts?.satCount !== undefined ? customCounts.satCount : getDayOccurrences(item.start_date, 6, activeDays);
   const sunCount = customCounts?.sunCount !== undefined ? customCounts.sunCount : getDayOccurrences(item.start_date, 0, activeDays);
   const wedCount = customCounts?.wedCount !== undefined ? customCounts.wedCount : getDayOccurrences(item.start_date, 3, activeDays);
+  const friCount = customCounts?.friCount !== undefined ? customCounts.friCount : getDayOccurrences(item.start_date, 5, activeDays);
 
-  const dayGroups = { 6: [], 0: [], 3: [] }; // Sat, Sun, Wed
+  const dayGroups = { 6: [], 0: [], 3: [], 5: [] }; // Sat, Sun, Wed, Fri
   if (stallDetailsList && stallDetailsList.length > 0) {
     stallDetailsList.forEach(s => {
       const sMaster = stalls.find(m => m.name === s.name);
@@ -97,13 +100,14 @@ export default function MonthlyReceiptPreviewModal() {
     });
   }
 
-  if (dayGroups[6].length === 0 && dayGroups[0].length === 0 && dayGroups[3].length === 0) {
+  if (dayGroups[6].length === 0 && dayGroups[0].length === 0 && dayGroups[3].length === 0 && dayGroups[5].length === 0) {
     rawStallNames.forEach(stallName => {
       const sMaster = stalls.find(m => m.name === stallName);
       const daysForStall = [];
-      if (stallName.startsWith('ส') || (activeDays.includes(6) && !stallName.startsWith('อ') && !stallName.startsWith('พ'))) daysForStall.push(6);
-      if (stallName.startsWith('อ') || (activeDays.includes(0) && !stallName.startsWith('ส') && !stallName.startsWith('พ'))) daysForStall.push(0);
-      if (stallName.startsWith('พ') || (activeDays.includes(3) && !stallName.startsWith('ส') && !stallName.startsWith('อ'))) daysForStall.push(3);
+      if (stallName.startsWith('ส') || (activeDays.includes(6) && !stallName.startsWith('อ') && !stallName.startsWith('พ') && !stallName.startsWith('ศ'))) daysForStall.push(6);
+      if (stallName.startsWith('อ') || (activeDays.includes(0) && !stallName.startsWith('ส') && !stallName.startsWith('พ') && !stallName.startsWith('ศ'))) daysForStall.push(0);
+      if (stallName.startsWith('พ') || (activeDays.includes(3) && !stallName.startsWith('ส') && !stallName.startsWith('อ') && !stallName.startsWith('ศ'))) daysForStall.push(3);
+      if (stallName.startsWith('ศ') || (activeDays.includes(5) && !stallName.startsWith('ส') && !stallName.startsWith('อ') && !stallName.startsWith('พ'))) daysForStall.push(5);
       if (daysForStall.length === 0) daysForStall.push(6);
 
       daysForStall.forEach(d => {
@@ -121,11 +125,12 @@ export default function MonthlyReceiptPreviewModal() {
 
   const totalTradingDays = (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6)) ? satCount : 0) +
                            (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0)) ? sunCount : 0) +
-                           (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3)) ? wedCount : 0);
+                           (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3)) ? wedCount : 0) +
+                           (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5)) ? friCount : 0);
 
   let calculatedStallTotal = 0;
-  [6, 0, 3].forEach(d => {
-    const count = d === 6 ? satCount : d === 0 ? sunCount : wedCount;
+  [6, 0, 3, 5].forEach(d => {
+    const count = d === 6 ? satCount : d === 0 ? sunCount : d === 3 ? wedCount : friCount;
     if (count > 0 && dayGroups[d].length > 0) {
       calculatedStallTotal += dayGroups[d].reduce((sum, s) => sum + s.price, 0) * count;
     }
@@ -182,6 +187,20 @@ export default function MonthlyReceiptPreviewModal() {
       dayColor: 'text-emerald-700',
       stallName: sName,
       calc: `${formatPriceInt(dayPrice)} x ${wedCount} วัน`,
+      total: sTotal
+    });
+  }
+
+  if (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5))) {
+    const sName = dayGroups[5].length > 0 ? dayGroups[5].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+    const dayPrice = dayGroups[5].reduce((sum, x) => sum + x.price, 0);
+    const sTotal = dayPrice * friCount;
+    dayBreakdownRows.push({
+      type: 'fri',
+      dayLabel: 'วันศุกร์',
+      dayColor: 'text-blue-700',
+      stallName: sName,
+      calc: `${formatPriceInt(dayPrice)} x ${friCount} วัน`,
       total: sTotal
     });
   }

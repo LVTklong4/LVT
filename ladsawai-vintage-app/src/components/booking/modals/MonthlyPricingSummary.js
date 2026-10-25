@@ -12,6 +12,7 @@ export default function MonthlyPricingSummary() {
     getNewMonthlyPricing,
     newMonthlyDays,
     newMonthlyStallsWed,
+    newMonthlyStallsFri,
     newMonthlyStallsSat,
     newMonthlyStallsSun,
     cleanStallName,
@@ -63,6 +64,7 @@ export default function MonthlyPricingSummary() {
 
   const pricing = getNewMonthlyPricing() || {};
   const totalNads = (newMonthlyDays.wed && newMonthlyStallsWed.length > 0 ? (pricing.wedCount || 0) : 0) +
+                    (newMonthlyDays.fri && newMonthlyStallsFri.length > 0 ? (pricing.friCount || 0) : 0) +
                     (newMonthlyDays.sat && newMonthlyStallsSat.length > 0 ? (pricing.satCount || 0) : 0) +
                     (newMonthlyDays.sun && newMonthlyStallsSun.length > 0 ? (pricing.sunCount || 0) : 0);
 
@@ -83,6 +85,24 @@ export default function MonthlyPricingSummary() {
             </div>
             <div className="text-[11px] text-gray-500 font-medium pl-0.5">
               {pricing.wedCount || 0} วัน x {(pricing.wedStallsPrice || 0).toLocaleString()}.-
+            </div>
+          </div>
+        )}
+
+        {newMonthlyDays.fri && newMonthlyStallsFri.length > 0 && (
+          <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100 flex flex-col gap-0.5">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-blue-950 font-extrabold flex items-center gap-1.5 flex-wrap">
+                <span>ศุกร์:</span>
+                <span className="text-blue-900 font-mono bg-blue-100/90 px-1.5 py-0.5 rounded border border-blue-200 text-[11px]">
+                  ล็อค {newMonthlyStallsFri.map(cleanStallName).join(', ')}
+                </span>
+                <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded font-bold">ฟรีค่าล็อค</span>
+              </span>
+              <span className="font-black text-blue-950 text-xs">{(pricing.friTotal || 0).toLocaleString()}.-</span>
+            </div>
+            <div className="text-[11px] text-gray-500 font-medium pl-0.5">
+              {pricing.friCount || 0} วัน x {(pricing.friStallsPrice || 0).toLocaleString()}.-
             </div>
           </div>
         )}

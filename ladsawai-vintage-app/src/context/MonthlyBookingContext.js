@@ -119,8 +119,9 @@ export function MonthlyBookingProvider({ children }) {
   const [newMonthlyStorageFee, setNewMonthlyStorageFee] = useState('');
   const [newMonthlyElecUnit, setNewMonthlyElecUnit] = useState('');
   const [newMonthlyCustomPrice, setNewMonthlyCustomPrice] = useState('');
-  const [newMonthlyDays, setNewMonthlyDays] = useState({ wed: true, sat: true, sun: true });
+  const [newMonthlyDays, setNewMonthlyDays] = useState({ wed: true, fri: false, sat: true, sun: true });
   const [newMonthlyStallsWed, setNewMonthlyStallsWed] = useState([]);
+  const [newMonthlyStallsFri, setNewMonthlyStallsFri] = useState([]);
   const [newMonthlyStallsSat, setNewMonthlyStallsSat] = useState([]);
   const [newMonthlyStallsSun, setNewMonthlyStallsSun] = useState([]);
   const [editMonthlyPaidAmount, setEditMonthlyPaidAmount] = useState('0');
@@ -129,13 +130,16 @@ export function MonthlyBookingProvider({ children }) {
 
   // Dropdown Filter States for Stalls in NewMonthlyModal
   const [showAddStallSelectWed, setShowAddStallSelectWed] = useState(false);
+  const [showAddStallSelectFri, setShowAddStallSelectFri] = useState(false);
   const [showAddStallSelectSat, setShowAddStallSelectSat] = useState(false);
   const [showAddStallSelectSun, setShowAddStallSelectSun] = useState(false);
   const [stallFilterWed, setStallFilterWed] = useState('');
+  const [stallFilterFri, setStallFilterFri] = useState('');
   const [stallFilterSat, setStallFilterSat] = useState('');
   const [stallFilterSun, setStallFilterSun] = useState('');
 
   const addStallDropdownRefWed = useRef(null);
+  const addStallDropdownRefFri = useRef(null);
   const addStallDropdownRefSat = useRef(null);
   const addStallDropdownRefSun = useRef(null);
 
@@ -165,6 +169,7 @@ export function MonthlyBookingProvider({ children }) {
   const [monthlyPrintSatCount, setMonthlyPrintSatCount] = useState(4);
   const [monthlyPrintSunCount, setMonthlyPrintSunCount] = useState(4);
   const [monthlyPrintWedCount, setMonthlyPrintWedCount] = useState(0);
+  const [monthlyPrintFriCount, setMonthlyPrintFriCount] = useState(0);
   const [monthlyPrintTxnNo, setMonthlyPrintTxnNo] = useState('');
   const [monthlyPrintPayments, setMonthlyPrintPayments] = useState([]);
   const [showMonthlyReceiptPreviewModal, setShowMonthlyReceiptPreviewModal] = useState(false);
@@ -296,6 +301,7 @@ export function MonthlyBookingProvider({ children }) {
       startDate: newMonthlyStartDate,
       selectedDays: newMonthlyDays,
       stallsWed: newMonthlyStallsWed,
+      stallsFri: newMonthlyStallsFri,
       stallsSat: newMonthlyStallsSat,
       stallsSun: newMonthlyStallsSun,
       stallsMaster: stalls,
@@ -305,7 +311,7 @@ export function MonthlyBookingProvider({ children }) {
       customPrice: newMonthlyCustomPrice
     });
   }, [
-    newMonthlyStartDate, newMonthlyDays, newMonthlyStallsWed, newMonthlyStallsSat,
+    newMonthlyStartDate, newMonthlyDays, newMonthlyStallsWed, newMonthlyStallsFri, newMonthlyStallsSat,
     newMonthlyStallsSun, stalls, newMonthlyCustomerType, newMonthlyElecUnit,
     newMonthlyStorageFee, newMonthlyCustomPrice
   ]);
@@ -380,9 +386,10 @@ export function MonthlyBookingProvider({ children }) {
     setIsEditingMonthlyMode(false);
     setEditingMonthlyId(null);
     setNewMonthlyStartDate(new Date().toISOString().split('T')[0]);
-    setNewMonthlyDays({ wed: true, sat: true, sun: true });
+    setNewMonthlyDays({ wed: true, fri: false, sat: true, sun: true });
     setNewMonthlyCustomerType('Standard');
     setNewMonthlyStallsWed([]);
+    setNewMonthlyStallsFri([]);
     setNewMonthlyStallsSat([]);
     setNewMonthlyStallsSun([]);
     setNewMonthlyStorageFee('');
@@ -393,9 +400,11 @@ export function MonthlyBookingProvider({ children }) {
     setNewMonthlyPhone('');
     setNewMonthlyNote('');
     setShowAddStallSelectWed(false);
+    setShowAddStallSelectFri(false);
     setShowAddStallSelectSat(false);
     setShowAddStallSelectSun(false);
     setStallFilterWed('');
+    setStallFilterFri('');
     setStallFilterSat('');
     setStallFilterSun('');
     setShowNewMonthlyModal(true);
@@ -419,6 +428,7 @@ export function MonthlyBookingProvider({ children }) {
     const daysStr = String(item.selected_days || '').toLowerCase();
     setNewMonthlyDays({
       wed: daysStr.includes('wed') || daysStr.includes('พุธ'),
+      fri: daysStr.includes('fri') || daysStr.includes('ศุกร์'),
       sat: daysStr.includes('sat') || daysStr.includes('เสาร์'),
       sun: daysStr.includes('sun') || daysStr.includes('อาทิตย์')
     });
@@ -429,15 +439,18 @@ export function MonthlyBookingProvider({ children }) {
     } catch (e) {}
 
     const wedStalls = [];
+    const friStalls = [];
     const satStalls = [];
     const sunStalls = [];
     details.forEach(st => {
       const dList = st.days || [];
       if (dList.includes(3)) wedStalls.push(st.name);
+      if (dList.includes(5)) friStalls.push(st.name);
       if (dList.includes(6)) satStalls.push(st.name);
       if (dList.includes(0)) sunStalls.push(st.name);
     });
     setNewMonthlyStallsWed(wedStalls);
+    setNewMonthlyStallsFri(friStalls);
     setNewMonthlyStallsSat(satStalls);
     setNewMonthlyStallsSun(sunStalls);
 
@@ -446,9 +459,11 @@ export function MonthlyBookingProvider({ children }) {
     setEditMonthlyRenewalStatus(item.renewal_status || '');
 
     setShowAddStallSelectWed(false);
+    setShowAddStallSelectFri(false);
     setShowAddStallSelectSat(false);
     setShowAddStallSelectSun(false);
     setStallFilterWed('');
+    setStallFilterFri('');
     setStallFilterSat('');
     setStallFilterSun('');
     setShowNewMonthlyModal(true);
@@ -506,6 +521,7 @@ export function MonthlyBookingProvider({ children }) {
         startDate: newMonthlyStartDate,
         days: newMonthlyDays,
         stallsWed: newMonthlyStallsWed,
+        stallsFri: newMonthlyStallsFri,
         stallsSat: newMonthlyStallsSat,
         stallsSun: newMonthlyStallsSun,
         stallsMaster: stalls,
@@ -528,7 +544,7 @@ export function MonthlyBookingProvider({ children }) {
     }
   }, [
     adminUser, newMonthlyBookerName, newMonthlyPhone, newMonthlyStartDate, newMonthlyDays,
-    newMonthlyStallsWed, newMonthlyStallsSat, newMonthlyStallsSun, stalls, newMonthlyCustomerType,
+    newMonthlyStallsWed, newMonthlyStallsFri, newMonthlyStallsSat, newMonthlyStallsSun, stalls, newMonthlyCustomerType,
     newMonthlyProduct, newMonthlyNote, newMonthlyElecUnit, newMonthlyStorageFee,
     newMonthlyCustomPrice, showAlert, fetchMonthlyBookings
   ]);
@@ -543,6 +559,7 @@ export function MonthlyBookingProvider({ children }) {
         startDate: newMonthlyStartDate,
         days: newMonthlyDays,
         stallsWed: newMonthlyStallsWed,
+        stallsFri: newMonthlyStallsFri,
         stallsSat: newMonthlyStallsSat,
         stallsSun: newMonthlyStallsSun,
         stallsMaster: stalls,
@@ -571,7 +588,7 @@ export function MonthlyBookingProvider({ children }) {
     }
   }, [
     editingMonthlyId, newMonthlyBookerName, newMonthlyPhone, newMonthlyStartDate, newMonthlyDays,
-    newMonthlyStallsWed, newMonthlyStallsSat, newMonthlyStallsSun, stalls, newMonthlyCustomerType,
+    newMonthlyStallsWed, newMonthlyStallsFri, newMonthlyStallsSat, newMonthlyStallsSun, stalls, newMonthlyCustomerType,
     newMonthlyProduct, newMonthlyNote, newMonthlyElecUnit, newMonthlyStorageFee,
     newMonthlyCustomPrice, editMonthlyStatus, editMonthlyPaidAmount, editMonthlyRenewalStatus,
     activeMonthlyBooking, showAlert, fetchMonthlyBookings
@@ -794,6 +811,7 @@ export function MonthlyBookingProvider({ children }) {
         satCount: monthlyPrintSatCount,
         sunCount: monthlyPrintSunCount,
         wedCount: monthlyPrintWedCount,
+        friCount: monthlyPrintFriCount,
         month: monthlyPrintMonth,
         product: monthlyPrintProduct,
         txnNo: monthlyPrintTxnNo,
@@ -804,7 +822,7 @@ export function MonthlyBookingProvider({ children }) {
     setShowMonthlyPrintModal(false);
   }, [
     monthlyPrintItem, stalls, adminUser, monthlyPrintSatCount, monthlyPrintSunCount,
-    monthlyPrintWedCount, monthlyPrintMonth, monthlyPrintProduct, monthlyPrintTxnNo,
+    monthlyPrintWedCount, monthlyPrintFriCount, monthlyPrintMonth, monthlyPrintProduct, monthlyPrintTxnNo,
     monthlyPrintPayments
   ]);
 
@@ -932,6 +950,8 @@ export function MonthlyBookingProvider({ children }) {
       setNewMonthlyDays,
       newMonthlyStallsWed,
       setNewMonthlyStallsWed,
+      newMonthlyStallsFri,
+      setNewMonthlyStallsFri,
       newMonthlyStallsSat,
       setNewMonthlyStallsSat,
       newMonthlyStallsSun,
@@ -947,16 +967,21 @@ export function MonthlyBookingProvider({ children }) {
 
       // Stall Selector helper states
       addStallDropdownRefWed,
+      addStallDropdownRefFri,
       addStallDropdownRefSat,
       addStallDropdownRefSun,
       showAddStallSelectWed,
       setShowAddStallSelectWed,
+      showAddStallSelectFri,
+      setShowAddStallSelectFri,
       showAddStallSelectSat,
       setShowAddStallSelectSat,
       showAddStallSelectSun,
       setShowAddStallSelectSun,
       stallFilterWed,
       setStallFilterWed,
+      stallFilterFri,
+      setStallFilterFri,
       stallFilterSat,
       setStallFilterSat,
       stallFilterSun,
@@ -995,6 +1020,8 @@ export function MonthlyBookingProvider({ children }) {
       setMonthlyPrintSunCount,
       monthlyPrintWedCount,
       setMonthlyPrintWedCount,
+      monthlyPrintFriCount,
+      setMonthlyPrintFriCount,
       monthlyPrintTxnNo,
       setMonthlyPrintTxnNo,
       monthlyPrintPayments,

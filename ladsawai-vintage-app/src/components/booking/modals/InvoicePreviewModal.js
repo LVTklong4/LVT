@@ -34,9 +34,9 @@ export default function InvoicePreviewModal() {
 
     const isFullPackage = checkIsFullPackage(invoicePreviewItem);
     const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
-    const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
+    const dayNames = { 3: 'วันพุธ', 5: 'วันศุกร์', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
 
-    const dayGroups = { 3: [], 6: [], 0: [] };
+    const dayGroups = { 3: [], 5: [], 6: [], 0: [] };
 
     details.forEach((stallDetail) => {
       const stallName = stallDetail.name;
@@ -44,7 +44,7 @@ export default function InvoicePreviewModal() {
       if (!sMaster) return;
 
       const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
-      [3, 6, 0].forEach((dNum) => {
+      [3, 5, 6, 0].forEach((dNum) => {
         if (stallDays.includes(dNum)) {
           const price = calculateStallDayPrice(sMaster, dNum, invoicePreviewItem.customer_type, isFullPackage);
           dayGroups[dNum].push({
@@ -59,7 +59,7 @@ export default function InvoicePreviewModal() {
     let itemsHtml = '';
     let totalNadsCount = 0;
 
-    [3, 6, 0].forEach((dNum) => {
+    [3, 5, 6, 0].forEach((dNum) => {
       const group = dayGroups[dNum];
       if (group.length > 0) {
         const count = getDayOccurrences(invoicePreviewItem.start_date, dNum, [dNum]);
@@ -460,10 +460,10 @@ export default function InvoicePreviewModal() {
                       const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
                       let itemsHtml = [];
                       let totalNadsCount = 0;
-                      const dayNames = { 3: 'วันพุธ', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
+                      const dayNames = { 3: 'วันพุธ', 5: 'วันศุกร์', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
 
                       // Group by day of week
-                      const dayGroups = { 3: [], 6: [], 0: [] };
+                      const dayGroups = { 3: [], 5: [], 6: [], 0: [] };
 
                       details.forEach((stallDetail) => {
                         const stallName = stallDetail.name;
@@ -471,7 +471,7 @@ export default function InvoicePreviewModal() {
                         if (!sMaster) return;
 
                         const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
-                        [3, 6, 0].forEach((dNum) => {
+                        [3, 5, 6, 0].forEach((dNum) => {
                           if (stallDays.includes(dNum)) {
                             const price = calculateStallDayPrice(sMaster, dNum, invoicePreviewItem.customer_type, isFullPackage);
                             dayGroups[dNum].push({
@@ -484,7 +484,7 @@ export default function InvoicePreviewModal() {
                       });
 
                       // Process each day group
-                      [3, 6, 0].forEach((dNum) => {
+                      [3, 5, 6, 0].forEach((dNum) => {
                         const group = dayGroups[dNum];
                         if (group.length > 0) {
                           const count = getDayOccurrences(invoicePreviewItem.start_date, dNum, [dNum]);
