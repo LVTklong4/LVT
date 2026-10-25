@@ -156,7 +156,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
-      <div className="bg-[#FAF6EE] rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-sm border-t-2 sm:border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-slide-up sm:animate-pop-in">
+      <div className="bg-[#FAF6EE] rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-md border-t-2 sm:border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] my-auto animate-slide-up sm:animate-pop-in">
         {/* Mobile Pull Handle */}
         <div className="pt-2 pb-0.5 bg-[#8B4513] sm:hidden flex justify-center items-center">
           <div className="w-10 h-1 bg-amber-200/40 rounded-full" />
@@ -178,7 +178,7 @@ export default function StorageDepositModal({ isOpen, onClose, renewItem = null 
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 overflow-y-auto flex flex-col gap-3.5 text-xs text-[#5D4037]">
+        <form onSubmit={handleSubmit} className="p-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3.5 text-xs text-[#5D4037]">
           {/* Stall Name Searchable Dropdown */}
           <div className="flex flex-col gap-1 relative">
             <label className="font-bold text-gray-700">เลือกตำแหน่งฝาก (ล็อค/จุดพัก) *</label>

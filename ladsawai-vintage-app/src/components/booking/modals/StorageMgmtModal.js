@@ -94,9 +94,10 @@ export default function StorageMgmtModal() {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
-      <div className="bg-[#FAF6EE] rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl border-t-2 sm:border-2 border-[#8B4513] overflow-hidden flex flex-col h-full sm:h-auto max-h-[95vh] sm:max-h-[90vh] animate-slide-up sm:animate-pop-in">
-        {/* Mobile Pull Handle */}
+    <>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
+        <div className="bg-[#FAF6EE] rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl border-t-2 sm:border-2 border-[#8B4513] overflow-hidden flex flex-col h-full sm:h-auto max-h-[95vh] sm:max-h-[90vh] my-auto animate-slide-up sm:animate-pop-in">
+          {/* Mobile Pull Handle */}
         <div className="pt-2 pb-0.5 bg-[#8B4513] sm:hidden flex justify-center items-center">
           <div className="w-10 h-1 bg-amber-200/40 rounded-full" />
         </div>
@@ -381,14 +382,15 @@ export default function StorageMgmtModal() {
             )}
           </div>
         </div>
-
-        {/* Nested Deposit / Renewal Form Modal */}
-        <StorageDepositModal 
-          isOpen={isDepositOpen} 
-          onClose={() => setIsDepositOpen(false)} 
-          renewItem={renewItem} 
-        />
       </div>
     </div>
-  );
+
+    {/* Sibling Deposit / Renewal Form Modal (Rendered outside to prevent CSS transform and overflow clipping) */}
+    <StorageDepositModal 
+      isOpen={isDepositOpen} 
+      onClose={() => setIsDepositOpen(false)} 
+      renewItem={renewItem} 
+    />
+  </>
+);
 }
