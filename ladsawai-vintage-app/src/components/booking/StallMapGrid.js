@@ -161,6 +161,7 @@ export default function StallMapGrid({ hideLegend = false }) {
                 let price = stall.price_wed;
                 if (dayOfWeek === 6) price = stall.price_sat;
                 if (dayOfWeek === 0) price = stall.price_sun;
+                if (dayOfWeek === 5) price = stall.price_fri !== undefined && stall.price_fri !== null ? stall.price_fri : 0;
                 priceText = `${price}.-`;
 
                 const isFood = stall.type.includes('อาหาร') || stall.name.startsWith('F');

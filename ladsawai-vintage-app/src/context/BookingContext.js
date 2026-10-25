@@ -265,14 +265,14 @@ export function BookingProvider({ children }) {
       today.setDate(today.getDate() + 1);
     }
     
-    // Find next market days (Wed=3, Sat=6, Sun=0)
-    const marketDays = [0, 3, 6];
+    // Find next market days (Sun=0, Wed=3, Fri=5, Sat=6)
+    const marketDays = [0, 3, 5, 6];
     const dates = [];
     let d = new Date(today);
     let count = 0;
     let loopLimit = 0;
     
-    while (count < 3 + dateOffset && loopLimit < 100) {
+    while (count < 4 + dateOffset && loopLimit < 100) {
       loopLimit++;
       if (marketDays.includes(d.getDay())) {
         const offset = d.getTimezoneOffset() * 60000;
@@ -297,8 +297,8 @@ export function BookingProvider({ children }) {
       d.setDate(d.getDate() + 1);
     }
     
-    // Filter to take only 3 dates starting from offset
-    const activeDates = dates.slice(dateOffset, dateOffset + 3);
+    // Filter to take 4 dates starting from offset (full 4-day market cycle)
+    const activeDates = dates.slice(dateOffset, dateOffset + 4);
     setQuickDates(activeDates);
     
     // Set initial date if not set
@@ -418,6 +418,7 @@ export function BookingProvider({ children }) {
     let price = stall.price_wed;
     if (day === 6) price = stall.price_sat;
     if (day === 0) price = stall.price_sun;
+    if (day === 5) price = stall.price_fri !== undefined && stall.price_fri !== null ? stall.price_fri : 0;
 
     if (booking) {
       if (booking.status === 'ลา') {
@@ -500,6 +501,10 @@ export function BookingProvider({ children }) {
       }
     } else if (effectiveDateStr) {
       day = new Date(effectiveDateStr).getDay();
+    }
+
+    if (day === 5) {
+      return stall.price_fri !== undefined && stall.price_fri !== null ? parseNumber(stall.price_fri) : 0;
     }
 
     let price = 0;

@@ -94,6 +94,11 @@ export default function StandardBookingTopBar({
                   ? "bg-green-700 text-white border-green-800 shadow-md font-bold scale-105" 
                   : "bg-green-50 text-green-800 border-green-200 hover:bg-green-100";
                 Icon = Leaf;
+              } else if (d.dayOfWeek === 5) { // Friday (Blue)
+                btnStyle = isActive 
+                  ? "bg-blue-600 text-white border-blue-700 shadow-md font-bold scale-105" 
+                  : "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100";
+                Icon = Store;
               } else if (d.dayOfWeek === 6) { // Saturday (Purple)
                 btnStyle = isActive 
                   ? "bg-purple-700 text-white border-purple-800 shadow-md font-bold scale-105" 

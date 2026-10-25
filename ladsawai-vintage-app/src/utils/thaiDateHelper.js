@@ -60,7 +60,7 @@ export const getKioskMarketDates = (now = new Date()) => {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const isAfterCutoff = currentMinutes >= (19 * 60 + 30); // 19:30 cutoff
 
-  const marketDays = [0, 3, 6]; // Sunday=0, Wednesday=3, Saturday=6
+  const marketDays = [0, 3, 5, 6]; // Sunday=0, Wednesday=3, Friday=5, Saturday=6
   const isMarketDayToday = marketDays.includes(dow);
 
   const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -70,10 +70,10 @@ export const getKioskMarketDates = (now = new Date()) => {
     // 1. Current market day is active until midnight (23:59:59)
     resultDates.push(new Date(baseDate));
 
-    // 2. Next 2 upcoming market days
+    // 2. Next 3 upcoming market days (to complete 4-day market cycle)
     let cur = new Date(baseDate);
     cur.setDate(cur.getDate() + 1);
-    while (resultDates.length < 3) {
+    while (resultDates.length < 4) {
       if (marketDays.includes(cur.getDay())) {
         resultDates.push(new Date(cur));
       }
@@ -87,10 +87,10 @@ export const getKioskMarketDates = (now = new Date()) => {
       resultDates.push(nextWeekSameDay);
     }
   } else {
-    // Non-market days (Mon, Tue, Thu, Fri): show next 3 upcoming market days
+    // Non-market days (Mon, Tue, Thu): show next 4 upcoming market days
     let cur = new Date(baseDate);
     cur.setDate(cur.getDate() + 1);
-    while (resultDates.length < 3) {
+    while (resultDates.length < 4) {
       if (marketDays.includes(cur.getDay())) {
         resultDates.push(new Date(cur));
       }
