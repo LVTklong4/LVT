@@ -109,7 +109,10 @@ export default function StallMapGrid({ hideLegend = false }) {
       )}
 
       {/* The Grid Map Container */}
-      <div className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-2 sm:p-4 overflow-x-auto min-h-[500px] sm:min-h-[600px] custom-scrollbar w-full sm:w-fit mx-auto touch-pan-x overscroll-x-contain select-none">
+      <div 
+        className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-2 sm:p-4 overflow-x-auto min-h-[500px] sm:min-h-[600px] custom-scrollbar w-full sm:w-fit mx-auto touch-pan-x touch-pan-y overscroll-x-contain select-none"
+        style={{ touchAction: 'pan-x pan-y' }}
+      >
         {loading && (
           <div className="absolute inset-0 z-30 bg-amber-50/80 flex items-center justify-center backdrop-blur-[1px] transition-all duration-300">
             <div className="flex flex-col items-center gap-2">
