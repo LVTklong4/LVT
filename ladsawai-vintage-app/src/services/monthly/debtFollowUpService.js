@@ -617,8 +617,11 @@ export function generateDebtFollowUpA4HTML({
         </div>
 
         <script>
-          // Automatic trigger print on load if preferred, or allow user preview
-          // window.onload = function() { window.print(); };
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          });
         </script>
       </body>
     </html>
@@ -626,15 +629,69 @@ export function generateDebtFollowUpA4HTML({
 }
 
 /**
- * Opens a popup print window with the A4 debt follow-up HTML checklist.
+ * Opens a print window with the A4 debt follow-up HTML checklist.
+ * Uses a real Blob URL (instead of empty about:blank) to ensure 100% compatibility
+ * with Arc Browser, Chrome, Safari, and Electron webviews without "This page couldn't load" errors.
  */
 export function printDebtFollowUpA4(htmlContent) {
   if (typeof window === 'undefined') return;
-  const printWindow = window.open('', '_blank', 'width=950,height=900,scrollbars=yes');
-  if (!printWindow) {
-    alert('กรุณาอนุญาตให้เปิดป๊อปอัป (Pop-up) เพื่อสั่งพิมพ์ใบตรวจติดตามยอดค้างชำระ');
-    return;
+
+  // 1. Primary Method: Blob URL via window.open (fixes Arc Browser and Chromium empty tab crash)
+  try {
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const printWindow = window.open(blobUrl, '_blank', 'width=1000,height=900,scrollbars=yes,resizable=yes');
+
+    if (printWindow) {
+      printWindow.focus();
+      setTimeout(() => {
+        try { URL.revokeObjectURL(blobUrl); } catch (e) {}
+      }, 120000);
+      return;
+    }
+  } catch (err) {
+    console.warn('Blob window.open error:', err);
   }
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+
+  // 2. Secondary Fallback: Standard document.write with document.open()
+  try {
+    const fallbackWin = window.open('', '_blank', 'width=1000,height=900,scrollbars=yes,resizable=yes');
+    if (fallbackWin) {
+      fallbackWin.document.open();
+      fallbackWin.document.write(htmlContent);
+      fallbackWin.document.close();
+      fallbackWin.focus();
+      return;
+    }
+  } catch (err2) {
+    console.warn('Fallback window.open error:', err2);
+  }
+
+  // 3. Tertiary Fallback: Hidden iframe printing (bypasses all popup blockers completely)
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    iframe.contentWindow.focus();
+    setTimeout(() => {
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        try { document.body.removeChild(iframe); } catch (e) {}
+      }, 2000);
+    }, 500);
+  } catch (err3) {
+    console.error('All print methods failed:', err3);
+    alert('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาตรวจสอบการอนุญาต Pop-up ในเบราว์เซอร์');
+  }
 }
