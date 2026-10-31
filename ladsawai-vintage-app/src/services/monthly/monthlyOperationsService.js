@@ -100,9 +100,21 @@ export async function createMonthlyBooking({
     throw new Error("กรุณาระบุยอดค่าใช้จ่ายที่ตกลงกันให้ถูกต้อง");
   }
 
-  const startD = new Date(startDate);
-  const year = startD.getFullYear();
-  const monthVal = startD.getMonth();
+  let year, monthVal, startDay;
+  if (typeof startDate === 'string' && startDate.includes('-')) {
+    const parts = startDate.split('T')[0].split('-');
+    if (parts.length === 3 && !isNaN(parseInt(parts[0], 10))) {
+      year = parseInt(parts[0], 10);
+      monthVal = parseInt(parts[1], 10) - 1;
+      startDay = parseInt(parts[2], 10);
+    }
+  }
+  if (year === undefined || isNaN(year)) {
+    const startD = new Date(startDate);
+    year = startD.getFullYear();
+    monthVal = startD.getMonth();
+    startDay = startD.getDate();
+  }
   const lastDay = new Date(year, monthVal + 1, 0).getDate();
 
   const dateThai = new Date(year + 543, monthVal, 1);
@@ -124,7 +136,7 @@ export async function createMonthlyBooking({
   const timestamp = new Date().toISOString();
   const isFullPackage = days.wed && days.sat && days.sun;
 
-  for (let d = startD.getDate(); d <= lastDay; d++) {
+  for (let d = (startDay || 1); d <= lastDay; d++) {
     const currentD = new Date(year, monthVal, d);
     const dayOfWeek = currentD.getDay();
 
@@ -254,9 +266,21 @@ export async function updateMonthlyBooking({
     throw new Error("กรุณาเลือกวันลงขายและระบุแผงค้าอย่างน้อย 1 รายการ");
   }
 
-  const startD = new Date(startDate);
-  const year = startD.getFullYear();
-  const monthVal = startD.getMonth();
+  let year, monthVal, startDay;
+  if (typeof startDate === 'string' && startDate.includes('-')) {
+    const parts = startDate.split('T')[0].split('-');
+    if (parts.length === 3 && !isNaN(parseInt(parts[0], 10))) {
+      year = parseInt(parts[0], 10);
+      monthVal = parseInt(parts[1], 10) - 1;
+      startDay = parseInt(parts[2], 10);
+    }
+  }
+  if (year === undefined || isNaN(year)) {
+    const startD = new Date(startDate);
+    year = startD.getFullYear();
+    monthVal = startD.getMonth();
+    startDay = startD.getDate();
+  }
   const lastDay = new Date(year, monthVal + 1, 0).getDate();
 
   const dateThai = new Date(year + 543, monthVal, 1);
@@ -276,7 +300,7 @@ export async function updateMonthlyBooking({
   const dailyBookings = [];
   const isFullPackage = days.wed && days.sat && days.sun;
 
-  for (let d = startD.getDate(); d <= lastDay; d++) {
+  for (let d = (startDay || 1); d <= lastDay; d++) {
     const currentD = new Date(year, monthVal, d);
     const dayOfWeek = currentD.getDay();
 

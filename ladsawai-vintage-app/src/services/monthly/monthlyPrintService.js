@@ -8,12 +8,24 @@ import { normalizePaymentMethodThai } from '@/utils/receiptImageHelper';
  */
 export function getDayOccurrences(startDateStr, dayOfWeek, daysActive) {
   if (!daysActive || !daysActive.includes(dayOfWeek)) return 0;
-  const startD = new Date(startDateStr);
-  const year = startD.getFullYear();
-  const monthVal = startD.getMonth();
+  let year, monthVal, startDay;
+  if (typeof startDateStr === 'string' && startDateStr.includes('-')) {
+    const parts = startDateStr.split('T')[0].split('-');
+    if (parts.length === 3 && !isNaN(parseInt(parts[0], 10))) {
+      year = parseInt(parts[0], 10);
+      monthVal = parseInt(parts[1], 10) - 1;
+      startDay = parseInt(parts[2], 10);
+    }
+  }
+  if (year === undefined || isNaN(year)) {
+    const startD = new Date(startDateStr);
+    year = startD.getFullYear();
+    monthVal = startD.getMonth();
+    startDay = startD.getDate();
+  }
   const lastDay = new Date(year, monthVal + 1, 0).getDate();
   let count = 0;
-  for (let d = startD.getDate(); d <= lastDay; d++) {
+  for (let d = (startDay || 1); d <= lastDay; d++) {
     const currentD = new Date(year, monthVal, d);
     if (currentD.getDay() === dayOfWeek) count++;
   }

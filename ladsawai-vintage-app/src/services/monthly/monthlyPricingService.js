@@ -111,9 +111,21 @@ export function calculateMonthlySummary({
     };
   }
 
-  const start = new Date(startDate);
-  const year = start.getFullYear();
-  const month = start.getMonth();
+  let year, month, startDay;
+  if (typeof startDate === 'string' && startDate.includes('-')) {
+    const parts = startDate.split('T')[0].split('-');
+    if (parts.length === 3 && !isNaN(parseInt(parts[0], 10))) {
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+      startDay = parseInt(parts[2], 10);
+    }
+  }
+  if (year === undefined || isNaN(year)) {
+    const start = new Date(startDate);
+    year = start.getFullYear();
+    month = start.getMonth();
+    startDay = start.getDate();
+  }
   const lastDay = new Date(year, month + 1, 0).getDate();
 
   let wedCount = 0;
@@ -122,7 +134,7 @@ export function calculateMonthlySummary({
   let sunCount = 0;
   let totalElecCharged = 0;
 
-  for (let d = 1; d <= lastDay; d++) {
+  for (let d = (startDay || 1); d <= lastDay; d++) {
     const currentD = new Date(year, month, d);
     const dayOfWeek = currentD.getDay();
     let hasTradingDay = false;
