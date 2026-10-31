@@ -48,16 +48,41 @@ export default function NewMonthlyModal() {
                 <h3 className="font-bold text-sm flex items-center gap-1.5">
                   {isEditingMonthlyMode ? "🗓️ จัดการข้อมูลรายเดือน (แก้ไขการจอง)" : "🗓️ จัดการข้อมูลรายเดือน (จองล็อคใหม่)"}
                 </h3>
-                <p className="text-[10px] text-amber-200 font-bold mt-0.5">
-                  เริ่ม: {(() => {
-                    if (!newMonthlyStartDate) return '-';
-                    const d = new Date(newMonthlyStartDate);
-                    const day = d.getDate();
-                    const month = monthNamesFull[d.getMonth()];
-                    const year = d.getFullYear() + 543;
-                    return `${day} ${month} ${year}`;
+                <div className="text-[11px] text-amber-200 font-bold mt-0.5 flex items-center gap-1.5 flex-wrap">
+                  {(() => {
+                    if (!newMonthlyStartDate) return <span>-</span>;
+                    let y, m, sd;
+                    if (typeof newMonthlyStartDate === 'string' && newMonthlyStartDate.includes('-')) {
+                      const parts = newMonthlyStartDate.split('T')[0].split('-');
+                      if (parts.length === 3) {
+                        y = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        sd = parseInt(parts[2], 10);
+                      }
+                    }
+                    if (!y || isNaN(y)) {
+                      const d = new Date(newMonthlyStartDate);
+                      y = d.getFullYear();
+                      m = d.getMonth();
+                      sd = d.getDate();
+                    }
+                    const ld = new Date(y, m + 1, 0).getDate();
+                    const startStr = `${sd} ${monthNamesFull[m]} ${y + 543}`;
+                    const endStr = `${ld} ${monthNamesFull[m]} ${y + 543}`;
+                    const isMidMonth = sd > 1;
+
+                    return (
+                      <>
+                        <span>ช่วงสัญญา: {startStr} - {endStr}</span>
+                        {isMidMonth && (
+                          <span className="bg-amber-400/20 text-amber-200 text-[10px] px-1.5 py-0.5 rounded border border-amber-300/30">
+                            เริ่มกลางเดือน
+                          </span>
+                        )}
+                      </>
+                    );
                   })()}
-                </p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] bg-[#3E2723] px-2.5 py-1 rounded-full font-bold text-amber-100 flex items-center gap-1 border border-amber-900/30">
@@ -85,6 +110,48 @@ export default function NewMonthlyModal() {
               className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs"
             >
               
+              {isEditingMonthlyMode && (
+                <div className="bg-[#F5E6D3]/60 border border-[#D7CCC8] p-3 rounded-lg flex items-center justify-between text-xs">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-gray-500 font-bold">ช่วงเวลาสัญญาประจำรอบเดือน</span>
+                    <span className="font-extrabold text-[#5D4037] text-sm">
+                      {(() => {
+                        if (!newMonthlyStartDate) return '-';
+                        let y, m, sd;
+                        if (typeof newMonthlyStartDate === 'string' && newMonthlyStartDate.includes('-')) {
+                          const parts = newMonthlyStartDate.split('T')[0].split('-');
+                          if (parts.length === 3) {
+                            y = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10) - 1;
+                            sd = parseInt(parts[2], 10);
+                          }
+                        }
+                        if (!y || isNaN(y)) {
+                          const d = new Date(newMonthlyStartDate);
+                          y = d.getFullYear();
+                          m = d.getMonth();
+                          sd = d.getDate();
+                        }
+                        const ld = new Date(y, m + 1, 0).getDate();
+                        return `${sd} ${monthNamesFull[m]} ${y + 543} ถึง ${ld} ${monthNamesFull[m]} ${y + 543}`;
+                      })()}
+                    </span>
+                  </div>
+                  {(() => {
+                    const sd = parseInt(String(newMonthlyStartDate).split('T')[0].split('-')[2] || '1', 10);
+                    return sd > 1 ? (
+                      <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-300">
+                        จองเริ่มกลางเดือน (คิดตามวันจริง)
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-300">
+                        จองเต็มเดือน
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+
               {!isEditingMonthlyMode && (
                 <>
                   {/* Date & Days Row */}

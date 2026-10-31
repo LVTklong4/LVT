@@ -17,7 +17,8 @@ export default function MonthlyPricingSummary() {
     newMonthlyStallsSun,
     cleanStallName,
     newMonthlyElecUnit,
-    newMonthlyStorageFee
+    newMonthlyStorageFee,
+    newMonthlyStartDate
   } = useMonthlyBooking();
 
   if (newMonthlyCustomerType === 'Regular') {
@@ -156,9 +157,30 @@ export default function MonthlyPricingSummary() {
         )}
 
         {totalNads > 0 && (
-          <div className="flex justify-between border-t border-dashed border-gray-200 pt-1.5 mt-1 text-slate-700 text-xs text-left">
-            <span>จำนวนวันลงขายรวม:</span>
-            <span className="font-extrabold">{totalNads} นัด (ครั้ง)</span>
+          <div className="flex flex-col gap-1 border-t border-dashed border-gray-200 pt-1.5 mt-1">
+            <div className="flex justify-between text-slate-700 text-xs text-left">
+              <span>จำนวนวันลงขายรวม:</span>
+              <span className="font-extrabold">{totalNads} นัด (ครั้ง)</span>
+            </div>
+            {(() => {
+              if (!newMonthlyStartDate) return null;
+              let sd;
+              if (typeof newMonthlyStartDate === 'string' && newMonthlyStartDate.includes('-')) {
+                const parts = newMonthlyStartDate.split('T')[0].split('-');
+                if (parts.length === 3) sd = parseInt(parts[2], 10);
+              }
+              if (!sd || isNaN(sd)) {
+                sd = new Date(newMonthlyStartDate).getDate();
+              }
+              if (sd > 1) {
+                return (
+                  <div className="text-[10px] text-amber-900 bg-amber-50/80 px-2 py-1 rounded border border-amber-200/80 font-semibold leading-relaxed">
+                    * คำนวณวันลงขายตั้งแต่วันที่ {sd} ถึงสิ้นเดือนตามสัญญา
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         )}
       </div>
