@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Printer, X, Search, Calendar, AlertTriangle, CheckCircle2,
-  DollarSign, MapPin, Phone, Layers, ShieldAlert, ChevronRight
+  Printer, X, Search, Calendar, CheckCircle2,
+  Phone
 } from 'lucide-react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
@@ -77,25 +77,6 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
     });
     return extractDistinctZones(monthItems);
   }, [monthlyList, selectedMilestoneId, selectedMonth]);
-
-  // Summary Metrics
-  const summaryMetrics = useMemo(() => {
-    const totalCount = filteredItems.length;
-    const behindCount = filteredItems.filter(it => it.shortfall > 0).length;
-    const totalShortfall = filteredItems.reduce((acc, it) => acc + it.shortfall, 0);
-    const totalRemaining = filteredItems.reduce((acc, it) => acc + it.remainingDebt, 0);
-    const totalPaid = filteredItems.reduce((acc, it) => acc + it.paidAmount, 0);
-    const totalRent = filteredItems.reduce((acc, it) => acc + it.totalPrice, 0);
-
-    return {
-      totalCount,
-      behindCount,
-      totalShortfall,
-      totalRemaining,
-      totalPaid,
-      totalRent
-    };
-  }, [filteredItems]);
 
   const activeMilestone = MILESTONES[selectedMilestoneId] || MILESTONES.W1;
 
@@ -196,19 +177,6 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
           })}
         </div>
 
-        {/* Milestone Policy Info Banner */}
-        <div className="bg-amber-50/70 border-b border-amber-200/60 px-4 py-2 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-amber-950 gap-1 shrink-0">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-            <span>
-              <strong>{activeMilestone.name}:</strong> {activeMilestone.description}
-            </span>
-          </div>
-          <span className="text-[11px] text-amber-800 font-semibold">
-            ช่วงเวลา: {activeMilestone.dayRange}
-          </span>
-        </div>
-
         {/* Filter Controls Bar */}
         <div className="p-3 sm:p-4 bg-white border-b border-stone-200 flex flex-wrap gap-2.5 items-center justify-between shrink-0">
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
@@ -276,45 +244,6 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Summary Metrics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:px-6 bg-[#FAF7F2]/60 border-b border-stone-200 shrink-0">
-          <div className="bg-white border border-stone-200 rounded-xl p-2.5 shadow-2xs">
-            <div className="text-[10px] font-black text-stone-500 uppercase flex items-center gap-1">
-              <Layers className="w-3 h-3 text-stone-400" /> แผงในรายการ
-            </div>
-            <div className="text-base sm:text-lg font-black text-stone-800 mt-0.5">
-              {summaryMetrics.totalCount} <span className="text-xs font-normal text-stone-500">แผง</span>
-            </div>
-          </div>
-
-          <div className="bg-red-50/60 border border-red-200 rounded-xl p-2.5 shadow-2xs">
-            <div className="text-[10px] font-black text-red-700 uppercase flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3 text-red-600" /> ยอดต้องตามเก็บสัปดาห์นี้
-            </div>
-            <div className="text-base sm:text-lg font-black text-red-700 mt-0.5">
-              ฿{formatPriceInt(summaryMetrics.totalShortfall)}
-            </div>
-          </div>
-
-          <div className="bg-white border border-stone-200 rounded-xl p-2.5 shadow-2xs">
-            <div className="text-[10px] font-black text-stone-500 uppercase flex items-center gap-1">
-              <DollarSign className="w-3 h-3 text-stone-400" /> หนี้ค้างชำระรวมทั้งสิ้น
-            </div>
-            <div className="text-base sm:text-lg font-black text-stone-800 mt-0.5">
-              ฿{formatPriceInt(summaryMetrics.totalRemaining)}
-            </div>
-          </div>
-
-          <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-2.5 shadow-2xs">
-            <div className="text-[10px] font-black text-emerald-800 uppercase flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> รับชำระแล้วสะสม
-            </div>
-            <div className="text-base sm:text-lg font-black text-emerald-800 mt-0.5">
-              ฿{formatPriceInt(summaryMetrics.totalPaid)}
-            </div>
           </div>
         </div>
 

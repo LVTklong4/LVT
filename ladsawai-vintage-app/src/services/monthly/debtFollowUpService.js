@@ -252,13 +252,6 @@ export function generateDebtFollowUpA4HTML({
 
   const adminName = adminUser?.name || 'เจ้าหน้าที่ตลาด';
 
-  // Compute summary totals for header
-  const totalCount = items.length;
-  const totalShortfall = items.reduce((sum, it) => sum + it.shortfall, 0);
-  const totalRemaining = items.reduce((sum, it) => sum + it.remainingDebt, 0);
-  const totalRent = items.reduce((sum, it) => sum + it.totalPrice, 0);
-  const totalPaid = items.reduce((sum, it) => sum + it.paidAmount, 0);
-
   const statusLabel = statusFilter === 'BEHIND_TARGET'
     ? 'เฉพาะที่ยังไม่ถึงเกณฑ์ (ต้องตามเก็บ)'
     : statusFilter === 'ALL_OVERDUE'
@@ -408,68 +401,7 @@ export function generateDebtFollowUpA4HTML({
             color: #555;
             line-height: 1.4;
           }
-          
-          /* Policy Banner */
-          .policy-strip {
-            display: flex;
-            justify-content: space-between;
-            background: #fbf6f0;
-            border: 1px solid #e8d7c3;
-            border-radius: 5px;
-            padding: 5px 8px;
-            margin-bottom: 8px;
-            font-size: 10.5px;
-          }
-          .policy-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-          .policy-label {
-            font-weight: bold;
-            color: #5c3a21;
-          }
-          .policy-val {
-            font-weight: 600;
-            color: #1f2937;
-          }
 
-          /* Summary Metric Cards */
-          .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            margin-bottom: 8px;
-          }
-          .summary-card {
-            border: 1px solid #d1d5db;
-            border-radius: 5px;
-            padding: 5px 8px;
-            background: #fafafa;
-          }
-          .summary-card.highlight {
-            background: #fef2f2;
-            border-color: #fca5a5;
-          }
-          .summary-card-title {
-            font-size: 9.5px;
-            font-weight: bold;
-            color: #6b7280;
-            text-transform: uppercase;
-          }
-          .summary-card.highlight .summary-card-title {
-            color: #b91c1c;
-          }
-          .summary-card-value {
-            font-size: 14px;
-            font-weight: 900;
-            color: #111827;
-            margin-top: 2px;
-          }
-          .summary-card.highlight .summary-card-value {
-            color: #dc2626;
-          }
-          
           /* Main Checklist Table */
           table.checklist-table {
             width: 100%;
@@ -634,47 +566,10 @@ export function generateDebtFollowUpA4HTML({
                 <div class="report-subtitle">ใบตรวจติดตามยอดค้างชำระค่าเช่ารายเดือน (Ground Inspection Sheet)</div>
               </div>
               <div class="meta-info">
-                <div><strong>รอบประจำเดือน:</strong> ${selectedMonth}</div>
-                <div><strong>เกณฑ์ติดตาม:</strong> ${milestone.name}</div>
-                <div><strong>พิมพ์เมื่อ:</strong> ${printDateStr}</div>
-                <div><strong>ผู้พิมพ์รายงาน:</strong> ${adminName}</div>
+                <div><strong>รอบประจำเดือน:</strong> ${selectedMonth} | <strong>เกณฑ์:</strong> ${milestone.name}</div>
+                <div><strong>โซน:</strong> ${zoneFilter} | <strong>สถานะ:</strong> ${statusLabel} (${items.length} ล็อค)</div>
+                <div><strong>พิมพ์เมื่อ:</strong> ${printDateStr} | <strong>ผู้พิมพ์:</strong> ${adminName}</div>
               </div>
-            </div>
-          </div>
-
-          <!-- Policy & Filter Strip -->
-          <div class="policy-strip">
-            <div class="policy-item">
-              <span class="policy-label">เงื่อนไขเกณฑ์:</span>
-              <span class="policy-val">${milestone.description}</span>
-            </div>
-            <div class="policy-item">
-              <span class="policy-label">โซน:</span>
-              <span class="policy-val">${zoneFilter}</span>
-            </div>
-            <div class="policy-item">
-              <span class="policy-label">สถานะที่กรอง:</span>
-              <span class="policy-val">${statusLabel}</span>
-            </div>
-          </div>
-
-          <!-- Metric Summary -->
-          <div class="summary-grid">
-            <div class="summary-card">
-              <div class="summary-card-title">จำนวนล็อคในใบตรวจ</div>
-              <div class="summary-card-value">${totalCount} ล็อค</div>
-            </div>
-            <div class="summary-card highlight">
-              <div class="summary-card-title">ยอดขั้นต่ำที่ต้องชำระเพิ่มสัปดาห์นี้</div>
-              <div class="summary-card-value">฿${formatPriceInt(totalShortfall)}</div>
-            </div>
-            <div class="summary-card">
-              <div class="summary-card-title">หนี้ค้างชำระรวมทั้งสิ้น</div>
-              <div class="summary-card-value" style="color:#b91c1c;">฿${formatPriceInt(totalRemaining)}</div>
-            </div>
-            <div class="summary-card">
-              <div class="summary-card-title">ยอดชำระสะสมแล้ว</div>
-              <div class="summary-card-value" style="color:#15803d;">฿${formatPriceInt(totalPaid)} / ฿${formatPriceInt(totalRent)}</div>
             </div>
           </div>
 
