@@ -25,12 +25,12 @@ export default function DailyClosingRemittancePrint({
   };
 
   return (
-    <div className="hidden print:block w-full max-w-[210mm] mx-auto bg-white text-black p-2 font-sans text-xs leading-normal">
+    <div className="hidden print:block w-full max-w-[210mm] mx-auto bg-white text-black p-1 font-sans text-xs leading-tight">
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm 10mm 8mm 10mm;
+            margin: 6mm 8mm 6mm 8mm;
           }
           body {
             -webkit-print-color-adjust: exact !important;
@@ -356,48 +356,48 @@ export default function DailyClosingRemittancePrint({
           )}
 
           {/* 4. Signature Area (3 Columns - Dual Control Chain) */}
-          <div className="pt-3 mt-1 border-t-2 border-black">
-            <p className="text-xs font-black text-gray-800 text-center mb-3 tracking-wide uppercase">
+          <div className="pt-2 mt-1 border-t-2 border-black break-inside-avoid [page-break-inside:avoid]">
+            <p className="text-[11px] font-black text-gray-800 text-center mb-2 tracking-wide uppercase">
               การลงนามรับรองความถูกต้อง (Sign-off & Dual Control Chain)
             </p>
-            <div className="grid grid-cols-3 gap-6 text-center text-xs">
+            <div className="grid grid-cols-3 gap-4 text-center text-xs">
               
               {/* 1. Cashier */}
               <div className="flex flex-col items-center">
-                <div className="h-8 flex flex-col justify-start">
+                <div className="flex flex-col justify-start">
                   <p className="font-bold text-gray-900 text-xs">1. เจ้าหน้าที่ผู้นำส่งเงิน</p>
                   <p className="text-[10px] text-gray-600">(ผู้จัดทำ / Cashier)</p>
                 </div>
-                <div className="w-48 border-b-2 border-dashed border-gray-500 my-3"></div>
+                <div className="w-40 border-b-2 border-dashed border-gray-500 my-2"></div>
                 <div>
                   <p className="text-xs text-gray-800">( ................................................................ )</p>
-                  <p className="text-[10px] text-gray-600 mt-1">วันที่ .......... / .......... / ................</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">วันที่ .......... / .......... / ................</p>
                 </div>
               </div>
 
               {/* 2. Accountant / Receiver */}
               <div className="flex flex-col items-center">
-                <div className="h-8 flex flex-col justify-start">
+                <div className="flex flex-col justify-start">
                   <p className="font-bold text-gray-900 text-xs">2. ฝ่ายการเงิน / บัญชี</p>
                   <p className="text-[10px] text-gray-600">(ผู้ตรวจนับรับเงินสด / Receiver)</p>
                 </div>
-                <div className="w-48 border-b-2 border-dashed border-gray-500 my-3"></div>
+                <div className="w-40 border-b-2 border-dashed border-gray-500 my-2"></div>
                 <div>
                   <p className="text-xs text-gray-800">( ................................................................ )</p>
-                  <p className="text-[10px] text-gray-600 mt-1">วันที่ .......... / .......... / ................</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">วันที่ .......... / .......... / ................</p>
                 </div>
               </div>
 
               {/* 3. Market Manager / Owner */}
               <div className="flex flex-col items-center">
-                <div className="h-8 flex flex-col justify-start">
+                <div className="flex flex-col justify-start">
                   <p className="font-bold text-gray-900 text-xs">3. ผู้ตรวจสอบ / ผู้จัดการตลาด</p>
                   <p className="text-[10px] text-gray-600">(ผู้อนุมัติ / Approved by)</p>
                 </div>
-                <div className="w-48 border-b-2 border-dashed border-gray-500 my-3"></div>
+                <div className="w-40 border-b-2 border-dashed border-gray-500 my-2"></div>
                 <div>
                   <p className="text-xs text-gray-800">( ................................................................ )</p>
-                  <p className="text-[10px] text-gray-600 mt-1">วันที่ .......... / .......... / ................</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">วันที่ .......... / .......... / ................</p>
                 </div>
               </div>
 

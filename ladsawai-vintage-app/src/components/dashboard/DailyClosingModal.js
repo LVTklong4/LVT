@@ -5,6 +5,7 @@ import { useFinance } from '@/context/FinanceContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet, Printer } from 'lucide-react';
 import DailyClosingRemittancePrint from './DailyClosingRemittancePrint';
+import { generateDailyClosingRemittanceHTML, printDailyRemittanceA4 } from '@/services/finance/dailyClosingPrintService';
 
 export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const { fetchDailySummary, saveDailyClosing, loading } = useFinance();
@@ -136,6 +137,27 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
     }
   };
 
+  const handlePrintRemittance = () => {
+    if (!summary) {
+      alert('ไม่พบข้อมูลการปิดยอดประจำวันสำหรับพิมพ์');
+      return;
+    }
+    const html = generateDailyClosingRemittanceHTML({
+      summary,
+      selectedDate,
+      floatVal,
+      cashIn,
+      cashOut,
+      expectedCashInDrawer,
+      countedCashVal,
+      shortageSurplus,
+      denominations,
+      discrepancyNote,
+      officerName: adminUser?.name || 'Admin'
+    });
+    printDailyRemittanceA4(html);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-4 overflow-y-auto animate-fade-in print:static print:inset-auto print:p-0 print:bg-white print:backdrop-blur-none">
       <div className="print:hidden bg-white rounded-2xl shadow-2xl w-full max-w-4xl border-2 border-emerald-800 overflow-hidden flex flex-col max-h-[92vh]">
@@ -183,9 +205,10 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.print()}
+              type="button"
+              onClick={handlePrintRemittance}
               className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-              title="พิมพ์ใบนำส่งเงินประจำวัน"
+              title="พิมพ์ใบนำส่งเงินประจำวัน (A4)"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>พิมพ์ใบนำส่งเงิน</span>

@@ -31,31 +31,33 @@ function FinanceWorkplaceContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF5E6] py-5 px-3 sm:px-6 pb-20 font-sans selection:bg-amber-200">
+    <div className="min-h-screen bg-[#FDF5E6] py-5 px-3 sm:px-6 pb-20 font-sans selection:bg-amber-200 print:bg-white print:p-0">
       <div className="max-w-[1400px] mx-auto flex flex-col gap-5">
         
-        {/* 1. Dedicated Finance Header */}
-        <FinanceHeader
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          isClosed={isClosed}
-          onOpenDailyClosing={() => setShowDailyClosingModal(true)}
-          onRefresh={handleRefresh}
-          loading={loading}
-        />
+        <div className="print:hidden flex flex-col gap-5">
+          {/* 1. Dedicated Finance Header */}
+          <FinanceHeader
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            isClosed={isClosed}
+            onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+            onRefresh={handleRefresh}
+            loading={loading}
+          />
 
-        {/* 2. Operational Cashflow Summary Cards */}
-        <FinanceSummaryCards
-          incomeList={incomeList}
-          expenseList={expenseList}
-          selectedDate={selectedDate}
-        />
+          {/* 2. Operational Cashflow Summary Cards */}
+          <FinanceSummaryCards
+            incomeList={incomeList}
+            expenseList={expenseList}
+            selectedDate={selectedDate}
+          />
 
-        {/* 3. General Ledger Workplace (Forms & Table) */}
-        <FinanceLedger
-          defaultDate={selectedDate}
-          onOpenDailyClosing={() => setShowDailyClosingModal(true)}
-        />
+          {/* 3. General Ledger Workplace (Forms & Table) */}
+          <FinanceLedger
+            defaultDate={selectedDate}
+            onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+          />
+        </div>
 
         {/* 4. Daily Closing Modal */}
         <DailyClosingModal

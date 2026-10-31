@@ -117,7 +117,7 @@ export default function StandardBookingLayout() {
     <div className="flex-1 flex flex-col min-h-screen">
       {/* Toast Alert */}
       {alertInfo && (
-        <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in max-w-md ${
+        <div className={`print:hidden fixed top-4 right-4 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl border text-sm transition-all duration-300 animate-bounce-in max-w-md ${
           alertInfo.isError 
             ? 'bg-red-50 border-red-200 text-red-800' 
             : 'bg-green-50 border-green-200 text-green-800'
@@ -139,7 +139,7 @@ export default function StandardBookingLayout() {
 
       {/* Custom Confirmation Modal */}
       {confirmInfo && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
+        <div className="print:hidden fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
             <div className={`px-5 py-4 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
               {confirmInfo.isDanger ? <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" /> : <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />}
@@ -175,18 +175,19 @@ export default function StandardBookingLayout() {
       )}
 
       {/* Header & Controls Toolbar */}
-      <StandardBookingTopBar
-        onOpenOffGrid={() => {
-          setSelectedOffGridBookingObj(null);
-          setShowOffGridBooking(true);
-        }}
-        onOpenKlongThom={() => setShowKlongThomModal(true)}
-        onOpenDailyClosing={() => setShowDailyClosingModal(true)}
-      />
-
+      <div className="print:hidden">
+        <StandardBookingTopBar
+          onOpenOffGrid={() => {
+            setSelectedOffGridBookingObj(null);
+            setShowOffGridBooking(true);
+          }}
+          onOpenKlongThom={() => setShowKlongThomModal(true)}
+          onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+        />
+      </div>
 
       {/* Main content grid area */}
-      <main className="flex-1 max-w-[1360px] mx-auto w-full px-4 py-1 mb-24">
+      <main className="print:hidden flex-1 max-w-[1360px] mx-auto w-full px-4 py-1 mb-24">
         
         {/* Stall Map Grid Component */}
         <StallMapGrid />
@@ -194,7 +195,7 @@ export default function StandardBookingLayout() {
       </main>
 
       {/* Floating Bottom Info bar (Desktop >= md) */}
-      <footer className="hidden md:block fixed bottom-0 left-0 right-0 bg-[#FAEBD7] border-t-3 border-[#8B4513] p-2.5 z-30 shadow-lg">
+      <footer className="print:hidden hidden md:block fixed bottom-0 left-0 right-0 bg-[#FAEBD7] border-t-3 border-[#8B4513] p-2.5 z-30 shadow-lg">
         <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row justify-between items-center text-xs text-gray-700 font-bold gap-2">
           <div className="flex items-center gap-1">
             <CalendarDays className="w-4 h-4 text-[#8B4513]" />
@@ -212,14 +213,16 @@ export default function StandardBookingLayout() {
       </footer>
 
       {/* Mobile Bottom Navigation Bar (< md) */}
-      <MobileBottomNav
-        onOpenOffGrid={() => {
-          setSelectedOffGridBookingObj(null);
-          setShowOffGridBooking(true);
-        }}
-        onOpenKlongThom={() => setShowKlongThomModal(true)}
-        onOpenDailyClosing={() => setShowDailyClosingModal(true)}
-      />
+      <div className="print:hidden">
+        <MobileBottomNav
+          onOpenOffGrid={() => {
+            setSelectedOffGridBookingObj(null);
+            setShowOffGridBooking(true);
+          }}
+          onOpenKlongThom={() => setShowKlongThomModal(true)}
+          onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+        />
+      </div>
 
       {/* login modal */}
       
