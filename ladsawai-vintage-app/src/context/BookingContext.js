@@ -37,13 +37,18 @@ import {
   fetchVacantStalls as getVacantStallsService,
   executeMoveLock
 } from '@/services/booking/moveLockService';
+import {
+  broadcastBookingSync,
+  SYNC_EVENT_TYPES,
+  BROADCAST_CHANNEL_NAME
+} from '@/utils/broadcastSync';
 
 const BookingContext = createContext();
 
 export function BookingProvider({ children }) {
   // Use MonthlyBookingContext for monthly state and logic
   const monthlyBooking = useMonthlyBooking();
-  const { monthlyList } = monthlyBooking;
+  const { monthlyList, fetchAllMonthly } = monthlyBooking;
 
   // Use AuthAdminContext for authentication state
   const {
@@ -257,6 +262,39 @@ export function BookingProvider({ children }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [selectedDate]);
+
+  // Cross-tab Synchronization via BroadcastChannel (Zero Quota Multi-Monitor / Kiosk Screen 2)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+
+    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    let lastHandledTime = 0;
+
+    channel.onmessage = (event) => {
+      const data = event.data;
+      if (!data) return;
+
+      const now = Date.now();
+      if (now - lastHandledTime < 1000) return;
+
+      if (data.type === SYNC_EVENT_TYPES.BOOKING_MUTATION || data.type === SYNC_EVENT_TYPES.MANUAL_REFRESH) {
+        if (!data.date || data.date === selectedDate) {
+          lastHandledTime = now;
+          fetchBookingsAndStorage({ silent: true });
+        }
+      } else if (data.type === SYNC_EVENT_TYPES.MONTHLY_MUTATION) {
+        lastHandledTime = now;
+        if (typeof fetchAllMonthly === 'function') {
+          fetchAllMonthly();
+        }
+        fetchBookingsAndStorage({ silent: true });
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, [selectedDate, fetchAllMonthly]);
 
   const initDates = () => {
     const today = new Date();
@@ -597,6 +635,7 @@ export function BookingProvider({ children }) {
       showAlert("คืนล็อคเฉพาะวันนี้สำเร็จ! แผงค้าจะเปลี่ยนเป็นสีว่างเพื่อให้จองรายวันได้แล้วครับ", "สำเร็จ");
       setShowMonthlyStallMapModal(false);
       fetchBookingsAndStorage();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
     } catch (err) {
       console.error(err);
       showAlert("เกิดข้อผิดพลาดในการคืนล็อค: " + err.message, "ข้อผิดพลาด", true);
@@ -938,6 +977,7 @@ export function BookingProvider({ children }) {
       showAlert("บันทึกการจองสำเร็จ", "สำเร็จ");
       setShowBookingModal(false);
       fetchBookingsAndStorage();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
       if (autoPrint) {
         handleShowReceiptPreview(bookingData, selectedStall);
       }
@@ -1004,6 +1044,7 @@ export function BookingProvider({ children }) {
       setShowBookingModal(false);
       setBookings(prev => prev.filter(b => !idsToDelete.includes(b.id)));
       fetchBookingsAndStorage();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
     } catch (e) {
       console.error(e);
       showAlert("เกิดข้อผิดพลาดในการลบ: " + e.message, "ข้อผิดพลาด", true);
@@ -1085,6 +1126,7 @@ export function BookingProvider({ children }) {
       const savedIds = new Set(savedBookings.map(b => b.id));
       setBookings(prev => [...prev.filter(b => !savedIds.has(b.id)), ...savedBookings]);
       fetchBookingsAndStorage();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
     } catch (e) {
       console.error(e);
       showAlert("เกิดข้อผิดพลาดในการบันทึกการลา: " + e.message, "ข้อผิดพลาด", true);
@@ -1136,6 +1178,7 @@ export function BookingProvider({ children }) {
       setShowMoveLockModal(false);
       setShowBookingModal(false);
       fetchBookingsAndStorage();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
     } catch (e) {
       console.error(e);
       showAlert(e.message, "ข้อผิดพลาด", true);
@@ -1366,6 +1409,7 @@ export function BookingProvider({ children }) {
       showAlert("บันทึกค่าไฟเพิ่มเติมสำเร็จ", "สำเร็จ");
       setShowAddUtilityModal(false);
       fetchBookingsAndStorage();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
     } catch (e) {
       console.error(e);
       showAlert("เกิดข้อผิดพลาดในการเพิ่มค่าไฟ: " + e.message, "ข้อผิดพลาด", true);
@@ -1582,6 +1626,7 @@ export function BookingProvider({ children }) {
       bookings,
       setBookings,
       fetchBookingsAndStorage,
+      broadcastBookingSync,
       loading,
       setLoading,
       selectedDate,

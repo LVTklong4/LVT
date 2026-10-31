@@ -37,6 +37,7 @@ import {
 } from '@/services/monthly/monthlyPrintService';
 import { syncMonthlyAndFinanceFromSheets } from '@/services/monthly/monthlyArchiveService';
 import { calculateMonthlySummary } from '@/services/monthly/monthlyPricingService';
+import { broadcastBookingSync, SYNC_EVENT_TYPES } from '@/utils/broadcastSync';
 
 const MonthlyBookingContext = createContext();
 
@@ -232,6 +233,7 @@ export function MonthlyBookingProvider({ children }) {
       .channel('monthly_bookings_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_bookings' }, () => {
         fetchMonthlyBookings();
+        broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
       })
       .subscribe();
 
@@ -535,6 +537,7 @@ export function MonthlyBookingProvider({ children }) {
       showAlert(`จองล็อครายเดือนสำเร็จ สำหรับคุณ "${newMonthlyBookerName}"`, "สำเร็จ");
       setShowNewMonthlyModal(false);
       fetchMonthlyBookings();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
       return res;
     } catch (err) {
       console.error(err);
@@ -580,6 +583,7 @@ export function MonthlyBookingProvider({ children }) {
         setActiveMonthlyTransactions([]);
       }
       fetchMonthlyBookings();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
     } catch (err) {
       console.error(err);
       showAlert("เกิดข้อผิดพลาดในการบันทึกการแก้ไข: " + err.message, "ข้อผิดพลาด", true);
@@ -606,6 +610,7 @@ export function MonthlyBookingProvider({ children }) {
       }
       setSelectedMonthlyItem(null);
       fetchMonthlyBookings();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
     } catch (err) {
       console.error(err);
       showAlert("เกิดข้อผิดพลาดในการอัปเดต: " + err.message, "ข้อผิดพลาด", true);
@@ -625,6 +630,7 @@ export function MonthlyBookingProvider({ children }) {
           setActiveMonthlyTransactions([]);
         }
         fetchMonthlyBookings();
+        broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
       }
     } catch (err) {
       console.error(err);
@@ -643,6 +649,7 @@ export function MonthlyBookingProvider({ children }) {
         setActiveMonthlyBooking({ ...activeMonthlyBooking, renewal_status: newStatus });
       }
       fetchMonthlyBookings();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
     } catch (err) {
       console.error(err);
       showAlert("เกิดข้อผิดพลาดในการบันทึกสถานะ: " + err.message, "ข้อผิดพลาด", true);
@@ -670,6 +677,7 @@ export function MonthlyBookingProvider({ children }) {
       });
       showAlert(`ต่อสัญญาผู้เช่า "${activeMonthlyBooking.booker_name}" ไปยังรอบเดือน ${nextMonthFormatted} เรียบร้อยแล้ว`, "สำเร็จ");
       fetchMonthlyBookings();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
     } catch (err) {
       console.error(err);
       showAlert("เกิดข้อผิดพลาดในการต่อสัญญา: " + err.message, "ข้อผิดพลาด", true);
@@ -692,6 +700,7 @@ export function MonthlyBookingProvider({ children }) {
       setBulkRenewCheckedIds([]);
       setBulkRenewEditData({});
       fetchMonthlyBookings();
+      broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
     } catch (err) {
       console.error(err);
       showAlert("เกิดข้อผิดพลาดในการต่อสัญญากลุ่ม: " + err.message, "ข้อผิดพลาด", true);

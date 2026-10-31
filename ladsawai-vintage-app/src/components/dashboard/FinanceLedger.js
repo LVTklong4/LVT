@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useFinance } from '@/context/FinanceContext';
-import { useDashboard } from '@/context/DashboardContext';
+import { DashboardContext } from '@/context/DashboardContext';
 import { useBooking } from '@/context/BookingContext';
-import { Trash2, TrendingUp, TrendingDown, Loader2, RefreshCw, AlertCircle, Lock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { 
+  Trash2, TrendingUp, TrendingDown, Loader2, RefreshCw, AlertCircle, 
+  Lock, ListFilter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight 
+} from 'lucide-react';
 import DailyClosingModal from './DailyClosingModal';
 import FinanceTransactionForm from './FinanceTransactionForm';
 import FinanceTransactionFilter from './FinanceTransactionFilter';
 
-export default function FinanceLedger() {
+export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
   const { 
     incomeList, 
     expenseList, 
@@ -21,14 +24,13 @@ export default function FinanceLedger() {
   } = useFinance();
 
   const { showConfirm } = useBooking();
-
-  const { calculateDashboard } = useDashboard();
+  const dashboardContext = useContext(DashboardContext);
 
   // Daily Closing Modal state
   const [showDailyClosingModal, setShowDailyClosingModal] = useState(false);
 
-  // Local state for tabs
-  const [activeTab, setActiveTab] = useState('income'); // 'income' or 'expense'
+  // Local state for tabs: 'all', 'income', or 'expense'
+  const [activeTab, setActiveTab] = useState('all');
 
   // Filter states
   const [startDate, setStartDate] = useState('');
@@ -55,11 +57,12 @@ export default function FinanceLedger() {
   // Handle transaction creation success
   const handleTransactionSuccess = () => {
     loadData();
-    calculateDashboard();
+    dashboardContext?.calculateDashboard?.();
   };
 
   // Delete handlers
-  const handleDeleteItem = async (id, type) => {
+  const handleDeleteItem = async (id, itemType) => {
+    const type = itemType || activeTab;
     const targetItem = (type === 'income' ? incomeList : expenseList).find(x => x.id === id);
     if (targetItem?.date && isDateClosed(targetItem.date)) {
       alert(`⚠️ วันที่ ${targetItem.date} ได้ทำการปิดยอดประจำวันเรียบร้อยแล้ว ข้อมูลถูกล็อคไม่สามารถลบรายการได้`);
@@ -84,9 +87,9 @@ export default function FinanceLedger() {
 
     if (res.success) {
       loadData();
-      calculateDashboard(); // refresh dashboard KPIs
+      dashboardContext?.calculateDashboard?.();
     } else {
-      alert('ไม่สามารถลบรายการได้: ' + res.error.message);
+      alert('ไม่สามารถลบรายการได้: ' + (res?.error?.message || 'ข้อผิดพลาด'));
     }
   };
 
@@ -104,10 +107,31 @@ export default function FinanceLedger() {
     setCurrentPage(1);
   };
 
-
   // Calculations for display list
-  const currentList = activeTab === 'income' ? incomeList : expenseList;
-  const listTotalAmount = currentList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const currentList = useMemo(() => {
+    if (activeTab === 'income') {
+      return incomeList.map(item => ({ ...item, entryType: 'income' }));
+    }
+    if (activeTab === 'expense') {
+      return expenseList.map(item => ({ ...item, entryType: 'expense' }));
+    }
+    // Combined list for 'all'
+    const combined = [
+      ...incomeList.map(item => ({ ...item, entryType: 'income' })),
+      ...expenseList.map(item => ({ ...item, entryType: 'expense' }))
+    ];
+    return combined.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      const timeA = a.timestamp || '';
+      const timeB = b.timestamp || '';
+      return timeB.localeCompare(timeA);
+    });
+  }, [activeTab, incomeList, expenseList]);
+
+  const totalInc = useMemo(() => incomeList.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0), [incomeList]);
+  const totalExp = useMemo(() => expenseList.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0), [expenseList]);
 
   // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(currentList.length / pageSize));
@@ -123,50 +147,67 @@ export default function FinanceLedger() {
   };
 
   return (
-    <div className="bg-white border-2 border-[#8B4513]/30 rounded-xl p-5 shadow-sm flex flex-col gap-5">
+    <div className="bg-white border-2 border-[#8B4513]/25 rounded-2xl p-4 md:p-5 shadow-sm flex flex-col gap-5">
       
       {/* Tab Switcher & Title */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#8B4513]/10 pb-4">
         <div>
-          <h2 className="text-base md:text-lg font-extrabold text-gray-800 flex items-center gap-2">
-            บันทึกการเงินและสมุดบัญชี (General Ledger)
+          <h2 className="text-base md:text-lg font-black text-[#4A3B32] flex items-center gap-2">
+            สมุดบัญชีรายรับ-รายจ่าย (General Ledger)
           </h2>
           <p className="text-[10px] md:text-xs text-gray-500 font-bold">
-            ระบบบันทึกรายรับเบ็ดเตล็ด รายจ่ายบริหาร และค่าจ้างพนักงานรายวัน/ประจำ
+            บันทึกรายรับเบ็ดเตล็ด รายจ่ายบริหาร และตรวจสอบบัญชีย้อนหลัง
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto">
           <button
-            onClick={() => setShowDailyClosingModal(true)}
-            className="px-3.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-900 hover:to-teal-900 text-white rounded-lg text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            onClick={() => {
+              if (typeof onOpenDailyClosing === 'function') {
+                onOpenDailyClosing();
+              } else {
+                setShowDailyClosingModal(true);
+              }
+            }}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-900 hover:to-teal-900 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
           >
-            <Lock className="w-4 h-4 text-emerald-300" />
+            <Lock className="w-3.5 h-3.5 text-emerald-300" />
             <span>🔒 ปิดยอดประจำวัน</span>
           </button>
 
-          <div className="flex bg-[#FDF5E6] p-1 rounded-lg border border-[#8B4513]/20 flex-1 md:flex-initial">
+          <div className="flex bg-[#FDF5E6] p-1 rounded-xl border border-[#8B4513]/20 flex-1 md:flex-initial">
+            <button
+              onClick={() => { setActiveTab('all'); handleResetFilters(); }}
+              className={`flex-1 md:flex-initial px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                activeTab === 'all' 
+                  ? 'bg-amber-800 text-white shadow-xs' 
+                  : 'text-amber-950 hover:bg-amber-100'
+              }`}
+            >
+              <ListFilter className="w-3.5 h-3.5" />
+              <span>ทั้งหมด ({incomeList.length + expenseList.length})</span>
+            </button>
             <button
               onClick={() => { setActiveTab('income'); handleResetFilters(); }}
-              className={`flex-1 md:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 md:flex-initial px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 activeTab === 'income' 
-                  ? 'bg-emerald-700 text-white shadow-sm' 
-                  : 'text-gray-600 hover:text-emerald-700'
+                  ? 'bg-emerald-700 text-white shadow-xs' 
+                  : 'text-gray-600 hover:text-emerald-700 hover:bg-emerald-50'
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>รายรับอื่นๆ</span>
+              <span>รายรับ ({incomeList.length})</span>
             </button>
             <button
               onClick={() => { setActiveTab('expense'); handleResetFilters(); }}
-              className={`flex-1 md:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 md:flex-initial px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 activeTab === 'expense' 
-                  ? 'bg-red-700 text-white shadow-sm' 
-                  : 'text-gray-600 hover:text-red-700'
+                  ? 'bg-rose-700 text-white shadow-xs' 
+                  : 'text-gray-600 hover:text-rose-700 hover:bg-rose-50'
               }`}
             >
               <TrendingDown className="w-3.5 h-3.5" />
-              <span>รายจ่ายทั้งหมด</span>
+              <span>รายจ่าย ({expenseList.length})</span>
             </button>
           </div>
         </div>
@@ -178,6 +219,7 @@ export default function FinanceLedger() {
         {/* Transaction Input Form */}
         <FinanceTransactionForm
           activeTab={activeTab}
+          defaultDate={defaultDate || startDate}
           onSuccess={handleTransactionSuccess}
         />
 
@@ -202,24 +244,40 @@ export default function FinanceLedger() {
 
           {/* Ledger Table */}
           <div className="flex-1 flex flex-col min-h-[300px]">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-gray-600">
-                พบทั้งหมด {currentList.length} รายการ | ยอดรวมในตาราง: <strong className={activeTab === 'income' ? 'text-emerald-700' : 'text-red-700'}>{listTotalAmount.toLocaleString()} ฿</strong>
-              </span>
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+              <div className="text-xs font-bold text-gray-600 flex items-center gap-2 flex-wrap">
+                <span>พบทั้งหมด <strong>{currentList.length}</strong> รายการ</span>
+                <span className="text-gray-300">|</span>
+                {activeTab === 'all' ? (
+                  <span className="flex items-center gap-2">
+                    <span className="text-emerald-700">รับ: +{totalInc.toLocaleString()} ฿</span>
+                    <span className="text-rose-700">จ่าย: -{totalExp.toLocaleString()} ฿</span>
+                    <span className="font-extrabold text-blue-900">สุทธิ: {(totalInc - totalExp).toLocaleString()} ฿</span>
+                  </span>
+                ) : activeTab === 'income' ? (
+                  <span>ยอดรับรวม: <strong className="text-emerald-700">+{totalInc.toLocaleString()} ฿</strong></span>
+                ) : (
+                  <span>ยอดจ่ายรวม: <strong className="text-rose-700">-{totalExp.toLocaleString()} ฿</strong></span>
+                )}
+              </div>
               <button 
                 onClick={loadData}
-                className="p-1 border hover:bg-amber-50 rounded-lg text-gray-500 transition-colors"
+                className="p-1.5 border border-amber-200 hover:bg-amber-50 rounded-lg text-amber-900 transition-colors cursor-pointer"
                 title="รีเฟรชรายการ"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner flex-1 flex flex-col bg-white">
+            <div className="border border-amber-200/60 rounded-xl overflow-hidden shadow-xs flex-1 flex flex-col bg-white">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className={`border-b font-extrabold uppercase ${
-                    activeTab === 'income' ? 'bg-emerald-50/50 text-emerald-950' : 'bg-red-50/40 text-red-950'
+                  <thead className={`border-b font-black ${
+                    activeTab === 'income' 
+                      ? 'bg-emerald-50 text-emerald-950 border-emerald-200' 
+                      : activeTab === 'expense' 
+                      ? 'bg-rose-50 text-rose-950 border-rose-200'
+                      : 'bg-amber-50/70 text-amber-950 border-amber-200'
                   }`}>
                     <tr>
                       <th className="p-3">วันที่</th>
@@ -231,7 +289,7 @@ export default function FinanceLedger() {
                       <th className="p-3 text-center">จัดการ</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y font-semibold text-gray-700">
+                  <tbody className="divide-y divide-gray-100 font-semibold text-gray-700">
                     {loadingFinance ? (
                       <tr>
                         <td colSpan="7" className="p-8 text-center text-gray-400">
@@ -248,6 +306,7 @@ export default function FinanceLedger() {
                       </tr>
                     ) : (
                       paginatedList.map((item) => {
+                        const isInc = item.entryType === 'income';
                         const isSystemOrigin = Boolean(
                           item.booking_ref || 
                           item.bill_type === 'Bookings' || 
@@ -262,7 +321,7 @@ export default function FinanceLedger() {
                         const isClosed = isDateClosed(item.date);
                         
                         let originLabel = '✍️ คีย์ผ่านสมุดบัญชี';
-                        let originBg = 'bg-gray-100 text-gray-700';
+                        let originBg = 'bg-gray-100 text-gray-700 border-gray-200';
                         if (item.booking_ref?.startsWith('BK-') || item.category?.includes('รายเดือน') || item.bill_type === 'Monthly') {
                           originLabel = '📋 สัญญารายเดือน';
                           originBg = 'bg-purple-100 text-purple-800 border-purple-200';
@@ -275,34 +334,42 @@ export default function FinanceLedger() {
                         }
 
                         return (
-                          <tr key={item.id} className="hover:bg-amber-50/10">
-                            <td className="p-3 whitespace-nowrap">{item.date}</td>
+                          <tr key={`${item.id}-${item.entryType}`} className="hover:bg-amber-50/20 transition-colors">
+                            <td className="p-3 whitespace-nowrap text-gray-800 font-bold">{item.date}</td>
                             <td className="p-3">
-                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                activeTab === 'income' 
+                              <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                isInc 
                                 ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
-                                : 'bg-red-100 text-red-900 border border-red-200'
+                                : 'bg-rose-100 text-rose-900 border border-rose-200'
                               }`}>
                                 {item.category}
                               </span>
                             </td>
-                            <td className="p-3 max-w-[200px]">
+                            <td className="p-3 max-w-[220px]">
                               <div className="flex flex-col gap-1">
-                                <span className="font-bold text-gray-800 break-words">
-                                  {activeTab === 'income' ? item.description : item.item}
+                                <span className="font-extrabold text-gray-800 break-words">
+                                  {item.description || item.item || '-'}
                                 </span>
                                 <span className={`inline-block w-fit text-[9px] px-1.5 py-0.2 rounded border font-semibold ${originBg}`}>
                                   {originLabel}
                                 </span>
                               </div>
                             </td>
-                            <td className={`p-3 text-right font-black ${
-                              activeTab === 'income' ? 'text-emerald-700' : 'text-red-700'
+                            <td className={`p-3 text-right font-black whitespace-nowrap ${
+                              isInc ? 'text-emerald-700' : 'text-rose-700'
                             }`}>
-                              {activeTab === 'income' ? '+' : '-'}{item.amount.toLocaleString()}.-
+                              {isInc ? '+' : '-'}{item.amount.toLocaleString()}.-
                             </td>
-                            <td className="p-3 text-center text-[10px] text-gray-500">{item.method}</td>
-                            <td className="p-3 text-[10px] text-gray-500 whitespace-nowrap">{item.officer}</td>
+                            <td className="p-3 text-center whitespace-nowrap">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                item.method?.includes('สด') 
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-200' 
+                                  : 'bg-blue-50 text-blue-800 border border-blue-200'
+                              }`}>
+                                {item.method?.includes('สด') ? '💵 เงินสด' : '📱 โอนเงิน'}
+                              </span>
+                            </td>
+                            <td className="p-3 text-[10px] text-gray-500 whitespace-nowrap font-medium">{item.officer}</td>
                             <td className="p-3 text-center">
                               {isSystemOrigin ? (
                                 <span 
@@ -321,8 +388,8 @@ export default function FinanceLedger() {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteItem(item.id, activeTab)}
-                                  className="p-1.5 hover:bg-red-50 text-red-600 hover:text-red-800 rounded-lg transition-all active:scale-95 cursor-pointer border border-transparent hover:border-red-200"
+                                  onClick={() => handleDeleteItem(item.id, item.entryType)}
+                                  className="p-1.5 hover:bg-rose-50 text-rose-600 hover:text-rose-800 rounded-lg transition-all active:scale-95 cursor-pointer border border-transparent hover:border-rose-200"
                                   title="ลบรายการที่คีย์ผ่านสมุดบัญชีนี้"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -365,42 +432,38 @@ export default function FinanceLedger() {
                   {/* Right: Page Navigation Buttons */}
                   <div className="flex items-center gap-1">
                     <button
-                      type="button"
                       onClick={() => handlePageChange(1)}
                       disabled={safeCurrentPage === 1}
-                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      className="p-1 rounded hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
                       title="หน้าแรก"
                     >
                       <ChevronsLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      type="button"
                       onClick={() => handlePageChange(safeCurrentPage - 1)}
                       disabled={safeCurrentPage === 1}
-                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      className="p-1 rounded hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
                       title="หน้าก่อนหน้า"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
 
-                    <span className="px-2.5 py-1 text-[11px] font-bold text-gray-800 bg-amber-100/60 rounded-md border border-amber-300">
+                    <span className="px-2 font-bold text-[11px] text-gray-700">
                       หน้า {safeCurrentPage} / {totalPages}
                     </span>
 
                     <button
-                      type="button"
                       onClick={() => handlePageChange(safeCurrentPage + 1)}
                       disabled={safeCurrentPage === totalPages}
-                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      className="p-1 rounded hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
                       title="หน้าถัดไป"
                     >
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      type="button"
                       onClick={() => handlePageChange(totalPages)}
                       disabled={safeCurrentPage === totalPages}
-                      className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-amber-50 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 transition-all cursor-pointer"
+                      className="p-1 rounded hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
                       title="หน้าสุดท้าย"
                     >
                       <ChevronsRight className="w-3.5 h-3.5" />
@@ -409,7 +472,6 @@ export default function FinanceLedger() {
                 </div>
               )}
             </div>
-
           </div>
 
         </div>
@@ -417,9 +479,13 @@ export default function FinanceLedger() {
       </div>
 
       {/* Daily Closing Modal */}
-      <DailyClosingModal 
+      <DailyClosingModal
         isOpen={showDailyClosingModal}
-        onClose={() => setShowDailyClosingModal(false)}
+        onClose={() => {
+          setShowDailyClosingModal(false);
+          loadData();
+        }}
+        defaultDate={defaultDate || startDate || new Date().toISOString().split('T')[0]}
       />
 
     </div>

@@ -1,66 +1,71 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AuthAdminProvider } from '@/context/AuthAdminContext';
 import { MonthlyBookingProvider } from '@/context/MonthlyBookingContext';
 import { BookingProvider } from '@/context/BookingContext';
 import { StorageProvider } from '@/context/StorageContext';
-import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
-import { FinanceProvider } from '@/context/FinanceContext';
-import { RefreshCw } from 'lucide-react';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import DashboardFinanceKpis from '@/components/dashboard/DashboardFinanceKpis';
-import DebtRisks from '@/components/dashboard/DebtRisks';
-import PrimeCustomers from '@/components/dashboard/PrimeCustomers';
-import FinanceInsights from '@/components/dashboard/FinanceInsights';
+import { FinanceProvider, useFinance } from '@/context/FinanceContext';
+import FinanceHeader from '@/components/dashboard/FinanceHeader';
+import FinanceSummaryCards from '@/components/dashboard/FinanceSummaryCards';
 import FinanceLedger from '@/components/dashboard/FinanceLedger';
-
+import DailyClosingModal from '@/components/dashboard/DailyClosingModal';
 import DashboardAuthGuard from '@/components/dashboard/DashboardAuthGuard';
 
-function DashboardFinanceContent() {
-  const { loading } = useDashboard();
+function FinanceWorkplaceContent() {
+  const { 
+    incomeList, 
+    expenseList, 
+    loading, 
+    isDateClosed, 
+    fetchFinanceData 
+  } = useFinance();
+
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [showDailyClosingModal, setShowDailyClosingModal] = useState(false);
+
+  const isClosed = isDateClosed(selectedDate);
+
+  const handleRefresh = () => {
+    fetchFinanceData();
+  };
 
   return (
-    <div className="min-h-screen bg-[#FDF5E6] py-6 px-4 pb-20">
-      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="min-h-screen bg-[#FDF5E6] py-5 px-3 sm:px-6 pb-20 font-sans selection:bg-amber-200">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-5">
         
-        {/* Navigation & Header */}
-        <DashboardHeader />
+        {/* 1. Dedicated Finance Header */}
+        <FinanceHeader
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          isClosed={isClosed}
+          onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+          onRefresh={handleRefresh}
+          loading={loading}
+        />
 
-        {loading ? (
-          <div className="h-96 flex flex-col items-center justify-center gap-2">
-            <RefreshCw className="w-10 h-10 text-amber-800 animate-spin" />
-            <span className="text-xs font-bold text-amber-900">กำลังประมวลผลข้อมูลการเงินจาก Supabase...</span>
-          </div>
-        ) : (
-          <>
-            {/* KPI Cards (Finance-focused) */}
-            <DashboardFinanceKpis />
+        {/* 2. Operational Cashflow Summary Cards */}
+        <FinanceSummaryCards
+          incomeList={incomeList}
+          expenseList={expenseList}
+          selectedDate={selectedDate}
+        />
 
-            {/* Core Analytics Split */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Left & Middle Column: Debt Risks */}
-              <div className="lg:col-span-2 flex flex-col gap-6">
-                {/* Overdue Debt Risk List */}
-                <DebtRisks />
-              </div>
+        {/* 3. General Ledger Workplace (Forms & Table) */}
+        <FinanceLedger
+          defaultDate={selectedDate}
+          onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+        />
 
-              {/* Right Column: Early Payers & Insights */}
-              <div className="flex flex-col gap-6">
-                {/* Prime early-paying Customers */}
-                <PrimeCustomers />
-
-                {/* Insights and tips */}
-                <FinanceInsights />
-              </div>
-
-            </div>
-
-            {/* General Ledger Management */}
-            <FinanceLedger />
-          </>
-        )}
+        {/* 4. Daily Closing Modal */}
+        <DailyClosingModal
+          isOpen={showDailyClosingModal}
+          onClose={() => {
+            setShowDailyClosingModal(false);
+            fetchFinanceData();
+          }}
+          defaultDate={selectedDate}
+        />
 
       </div>
     </div>
@@ -74,11 +79,9 @@ export default function DashboardFinancePage() {
         <MonthlyBookingProvider>
           <BookingProvider>
             <StorageProvider>
-              <DashboardProvider>
-                <FinanceProvider>
-                  <DashboardFinanceContent />
-                </FinanceProvider>
-              </DashboardProvider>
+              <FinanceProvider>
+                <FinanceWorkplaceContent />
+              </FinanceProvider>
             </StorageProvider>
           </BookingProvider>
         </MonthlyBookingProvider>
@@ -86,4 +89,3 @@ export default function DashboardFinancePage() {
     </AuthAdminProvider>
   );
 }
-

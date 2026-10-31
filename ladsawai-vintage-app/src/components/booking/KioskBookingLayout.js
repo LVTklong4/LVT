@@ -5,6 +5,7 @@ import { useBooking } from "@/context/BookingContext";
 import StallMapGrid from "@/components/booking/StallMapGrid";
 import KioskStallDetailModal from "@/components/booking/modals/KioskStallDetailModal";
 import { getKioskMarketDates } from "@/utils/thaiDateHelper";
+import { BROADCAST_CHANNEL_NAME } from "@/utils/broadcastSync";
 import { 
   CalendarDays, Search, RefreshCw,
   Sparkles, Leaf, ShoppingBag, Sun, MessageCircle
@@ -31,6 +32,95 @@ export default function KioskBookingLayout() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [kioskDates, setKioskDates] = useState(() => getKioskMarketDates());
+  const [lastSyncedTime, setLastSyncedTime] = useState(() => new Date());
+  const [isSyncPulse, setIsSyncPulse] = useState(false);
+
+  // Trigger brief visual pulse indicator when synced
+  const triggerSyncFeedback = () => {
+    setLastSyncedTime(new Date());
+    setIsSyncPulse(true);
+    setTimeout(() => setIsSyncPulse(false), 2000);
+  };
+
+  // 1. Cross-tab BroadcastChannel Sync (Instant 0-latency for multi-display cashier setup)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+
+    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    let lastHandled = 0;
+
+    channel.onmessage = async (event) => {
+      const data = event.data;
+      if (!data) return;
+      const now = Date.now();
+      if (now - lastHandled < 1000) return;
+
+      if (!data.date || data.date === selectedDate) {
+        lastHandled = now;
+        try {
+          await fetchBookingsAndStorage({ silent: true });
+          triggerSyncFeedback();
+        } catch (err) {
+          console.warn('[Kiosk] Broadcast sync error:', err);
+        }
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, [selectedDate, fetchBookingsAndStorage]);
+
+  // 2. Smart Silent Polling (18s) with visibility & online guards (zero quota waste)
+  useEffect(() => {
+    let isPolling = false;
+    let lastPollTime = Date.now();
+
+    const doSilentPoll = async () => {
+      // Guard 1: Skip if document/screen is not visible (saves 100% quota when inactive)
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
+      // Guard 2: Skip if device is offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return;
+      }
+      // Guard 3: Skip if updated within last 10s (e.g. from BroadcastChannel or manual refresh)
+      if (Date.now() - lastPollTime < 10000) {
+        return;
+      }
+      // Guard 4: Skip if actively loading or customer is viewing stall details
+      if (isPolling || loading || showBookingModal) {
+        return;
+      }
+
+      try {
+        isPolling = true;
+        await fetchBookingsAndStorage({ silent: true });
+        lastPollTime = Date.now();
+        triggerSyncFeedback();
+      } catch (err) {
+        console.warn('[Kiosk] Silent poll error:', err);
+      } finally {
+        isPolling = false;
+      }
+    };
+
+    const intervalTimer = setInterval(doSilentPoll, 18000);
+
+    // Refresh immediately when tab becomes visible again after being hidden/asleep
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastPollTime >= 12000) {
+        doSilentPoll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [selectedDate, showBookingModal, loading, fetchBookingsAndStorage]);
 
   // Periodically re-evaluate kiosk market dates (every 30s) and on tab visibility change
   useEffect(() => {
@@ -64,6 +154,7 @@ export default function KioskBookingLayout() {
     setIsRefreshing(true);
     try {
       await fetchBookingsAndStorage({ silent: false });
+      triggerSyncFeedback();
     } finally {
       setTimeout(() => setIsRefreshing(false), 500);
     }
@@ -89,10 +180,21 @@ export default function KioskBookingLayout() {
                   <h1 className="text-base md:text-lg font-black tracking-tight text-[#4A3B32] leading-tight">
                     ตลาดนัดลาดสวายวินเทจ
                   </h1>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-green-100 text-green-800 border border-green-300 animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span>
-                    ผังสด Realtime
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all duration-300 ${
+                      isSyncPulse 
+                        ? "bg-emerald-200 text-emerald-950 border border-emerald-400 scale-105 shadow-xs" 
+                        : "bg-green-100 text-green-800 border border-green-300"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full bg-green-600 ${isSyncPulse ? "animate-ping" : "animate-pulse"}`}></span>
+                      ผังสด Realtime
+                    </span>
+                    {lastSyncedTime && (
+                      <span className="text-[9px] text-[#8B4513]/70 font-semibold hidden sm:inline">
+                        • ซิงค์ {lastSyncedTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[10px] md:text-xs text-[#8B4513]/80 font-semibold">
                   ผังตรวจสอบสถานะและจองล็อคตลาดออนไลน์

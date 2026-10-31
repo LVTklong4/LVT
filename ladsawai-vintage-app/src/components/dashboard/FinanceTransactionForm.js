@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '@/context/FinanceContext';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, TrendingUp, TrendingDown, Lock } from 'lucide-react';
 
 export const incomeCategories = ['ค่าปรับ', 'เงินประกัน/มัดจำ', 'รายได้เบ็ดเตล็ด', 'ค่าบริการอื่นๆ', 'อื่นๆ'];
 export const expenseCategories = [
@@ -11,7 +11,7 @@ export const expenseCategories = [
   'ค่ารักษาความปลอดภัย (รปภ.)', 'วัสดุสำนักงาน', 'ภาษีและค่าธรรมเนียม', 'อื่นๆ'
 ];
 
-export default function FinanceTransactionForm({ activeTab, onSuccess }) {
+export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDate }) {
   const { 
     loading: loadingFinance, 
     addIncome, 
@@ -19,8 +19,18 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
     isDateClosed 
   } = useFinance();
 
+  const [entryType, setEntryType] = useState(() => (activeTab === 'expense' ? 'expense' : 'income'));
+
+  useEffect(() => {
+    if (activeTab === 'income' || activeTab === 'expense') {
+      setEntryType(activeTab);
+    }
+  }, [activeTab]);
+
+  const todayStr = defaultDate || new Date().toISOString().split('T')[0];
+
   const [incomeForm, setIncomeForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: todayStr,
     category: 'ค่าปรับ',
     description: '',
     amount: '',
@@ -28,12 +38,22 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
   });
 
   const [expenseForm, setExpenseForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: todayStr,
     category: 'ค่าจ้างพนักงาน',
     item: '',
     amount: '',
     method: ''
   });
+
+  // Keep date synced if defaultDate changes
+  useEffect(() => {
+    if (defaultDate) {
+      setIncomeForm(prev => ({ ...prev, date: defaultDate }));
+      setExpenseForm(prev => ({ ...prev, date: defaultDate }));
+    }
+  }, [defaultDate]);
+
+  const isCurrentDateClosed = entryType === 'income' ? isDateClosed(incomeForm.date) : isDateClosed(expenseForm.date);
 
   const handleAddIncomeSubmit = async (e) => {
     e.preventDefault();
@@ -96,9 +116,44 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
   };
 
   return (
-    <div className="lg:col-span-1 border-r border-[#8B4513]/10 pr-0 lg:pr-6">
-      {activeTab === 'income' ? (
-        <form onSubmit={handleAddIncomeSubmit} className="flex flex-col gap-3.5 bg-emerald-50/20 p-4 border border-emerald-200 rounded-lg">
+    <div className="lg:col-span-1 border-r border-[#8B4513]/10 pr-0 lg:pr-6 flex flex-col gap-3">
+      {/* Type Switcher (Income vs Expense) */}
+      <div className="flex items-center gap-1 bg-[#FDF5E6] p-1 rounded-xl border border-amber-200">
+        <button
+          type="button"
+          onClick={() => setEntryType('income')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            entryType === 'income'
+              ? 'bg-emerald-700 text-white shadow-xs'
+              : 'text-gray-600 hover:text-emerald-700'
+          }`}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>+ บันทึกรายรับ</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setEntryType('expense')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            entryType === 'expense'
+              ? 'bg-rose-700 text-white shadow-xs'
+              : 'text-gray-600 hover:text-rose-700'
+          }`}
+        >
+          <TrendingDown className="w-3.5 h-3.5" />
+          <span>- บันทึกรายจ่าย</span>
+        </button>
+      </div>
+
+      {isCurrentDateClosed && (
+        <div className="p-2.5 bg-amber-100 border border-amber-300 rounded-xl text-[11px] font-bold text-amber-950 flex items-center gap-2">
+          <Lock className="w-4 h-4 text-amber-800 shrink-0" />
+          <span>วันที่เลือกนี้ได้ทำการปิดยอดแล้ว ระบบล็อคไม่ให้เพิ่มรายการใหม่</span>
+        </div>
+      )}
+
+      {entryType === 'income' ? (
+        <form onSubmit={handleAddIncomeSubmit} className="flex flex-col gap-3.5 bg-emerald-50/20 p-4 border border-emerald-200 rounded-xl">
           <h3 className="font-extrabold text-xs text-emerald-950 border-b pb-1 flex items-center gap-1">
             📥 เพิ่มรายการรายรับอื่นๆ
           </h3>
@@ -109,7 +164,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
               type="date" 
               value={incomeForm.date} 
               onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
-              className="p-2 border border-emerald-300 rounded text-xs bg-white focus:ring-1 focus:ring-emerald-500" 
+              className="p-2 border border-emerald-300 rounded text-xs bg-white focus:ring-1 focus:ring-emerald-500 font-bold" 
             />
           </div>
           
@@ -118,7 +173,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
             <select 
               value={incomeForm.category} 
               onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
-              className="p-2 border border-emerald-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="p-2 border border-emerald-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold"
             >
               {incomeCategories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -146,7 +201,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
               placeholder="0.00"
               min="0.01"
               step="any"
-              className="p-2 border border-emerald-300 rounded text-xs focus:ring-1 focus:ring-emerald-500 bg-white font-bold" 
+              className="p-2 border border-emerald-300 rounded text-xs focus:ring-1 focus:ring-emerald-500 bg-white font-black text-emerald-800" 
             />
           </div>
 
@@ -170,7 +225,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
                     key={opt.id}
                     type="button"
                     onClick={() => setIncomeForm({ ...incomeForm, method: opt.id })}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all ${
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-emerald-50 border-emerald-600 text-emerald-900 ring-1 ring-emerald-600 shadow-sm'
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-300'
@@ -190,15 +245,15 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
 
           <button 
             type="submit" 
-            disabled={loadingFinance}
-            className="w-full mt-2 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-55"
+            disabled={loadingFinance || isCurrentDateClosed}
+            className="w-full mt-2 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             {loadingFinance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
             บันทึกรายรับ
           </button>
         </form>
       ) : (
-        <form onSubmit={handleAddExpenseSubmit} className="flex flex-col gap-3.5 bg-red-50/20 p-4 border border-red-200 rounded-lg">
+        <form onSubmit={handleAddExpenseSubmit} className="flex flex-col gap-3.5 bg-rose-50/20 p-4 border border-rose-200 rounded-xl">
           <h3 className="font-extrabold text-xs text-red-950 border-b pb-1 flex items-center gap-1">
             📤 เพิ่มรายการรายจ่าย
           </h3>
@@ -290,8 +345,8 @@ export default function FinanceTransactionForm({ activeTab, onSuccess }) {
 
           <button 
             type="submit" 
-            disabled={loadingFinance}
-            className="w-full mt-2 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-55"
+            disabled={loadingFinance || isCurrentDateClosed}
+            className="w-full mt-2 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             {loadingFinance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
             บันทึกรายจ่าย
