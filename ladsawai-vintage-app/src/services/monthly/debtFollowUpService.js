@@ -546,18 +546,7 @@ export function generateDebtFollowUpA4HTML({
         </style>
       </head>
       <body>
-        <!-- On-Screen Control Bar -->
-        <div class="no-print">
-          <div>
-            <span>📋 ใบตรวจติดตามยอดค้างชำระค่าเช่ารายเดือน (พิมพ์แบบ A4 สำหรับเดินตลาด)</span>
-          </div>
-          <div>
-            <button class="close-btn" onclick="window.close()">ปิดหน้าต่าง</button>
-            <button class="print-btn" onclick="window.print()">🖨️ สั่งพิมพ์ใบตรวจ (A4)</button>
-          </div>
-        </div>
-
-        <div style="padding: 10px;">
+        <div style="padding: 6px;">
           <!-- Header -->
           <div class="report-header">
             <div class="header-top">
@@ -615,83 +604,56 @@ export function generateDebtFollowUpA4HTML({
             </div>
           </div>
         </div>
-
-        <script>
-          window.addEventListener('load', function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          });
-        </script>
       </body>
     </html>
   `;
 }
 
 /**
- * Opens a print window with the A4 debt follow-up HTML checklist.
- * Uses a real Blob URL (instead of empty about:blank) to ensure 100% compatibility
- * with Arc Browser, Chrome, Safari, and Electron webviews without "This page couldn't load" errors.
+ * Prints the A4 debt follow-up checklist directly using a hidden iframe.
+ * This completely avoids window.open / popup-blockers and eliminates
+ * the Arc/Chromium/PWA "This page couldn't load" crash screen.
  */
 export function printDebtFollowUpA4(htmlContent) {
   if (typeof window === 'undefined') return;
 
-  // 1. Primary Method: Blob URL via window.open (fixes Arc Browser and Chromium empty tab crash)
   try {
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const blobUrl = URL.createObjectURL(blob);
-    const printWindow = window.open(blobUrl, '_blank', 'width=1000,height=900,scrollbars=yes,resizable=yes');
-
-    if (printWindow) {
-      printWindow.focus();
-      setTimeout(() => {
-        try { URL.revokeObjectURL(blobUrl); } catch (e) {}
-      }, 120000);
-      return;
+    // Remove any existing print iframe
+    const existing = document.getElementById('debt-followup-print-frame');
+    if (existing) {
+      try { existing.remove(); } catch (e) {}
     }
-  } catch (err) {
-    console.warn('Blob window.open error:', err);
-  }
 
-  // 2. Secondary Fallback: Standard document.write with document.open()
-  try {
-    const fallbackWin = window.open('', '_blank', 'width=1000,height=900,scrollbars=yes,resizable=yes');
-    if (fallbackWin) {
-      fallbackWin.document.open();
-      fallbackWin.document.write(htmlContent);
-      fallbackWin.document.close();
-      fallbackWin.focus();
-      return;
-    }
-  } catch (err2) {
-    console.warn('Fallback window.open error:', err2);
-  }
-
-  // 3. Tertiary Fallback: Hidden iframe printing (bypasses all popup blockers completely)
-  try {
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
+    iframe.id = 'debt-followup-print-frame';
+    iframe.setAttribute('style', 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none;');
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow.document;
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
     doc.open();
     doc.write(htmlContent);
     doc.close();
 
-    iframe.contentWindow.focus();
+    // Give browser time to parse CSS and fonts, then trigger native print dialog
     setTimeout(() => {
-      iframe.contentWindow.print();
-      setTimeout(() => {
-        try { document.body.removeChild(iframe); } catch (e) {}
-      }, 2000);
-    }, 500);
-  } catch (err3) {
-    console.error('All print methods failed:', err3);
-    alert('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาตรวจสอบการอนุญาต Pop-up ในเบราว์เซอร์');
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Error invoking iframe.contentWindow.print():', err);
+      } finally {
+        // Clean up iframe after print dialog completes
+        setTimeout(() => {
+          try {
+            if (iframe && iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
+            }
+          } catch (e) {}
+        }, 10000);
+      }
+    }, 250);
+  } catch (err) {
+    console.error('Print iframe creation failed:', err);
+    alert('เกิดข้อผิดพลาดในการสั่งพิมพ์ กรุณาลองใหม่อีกครั้ง');
   }
 }
