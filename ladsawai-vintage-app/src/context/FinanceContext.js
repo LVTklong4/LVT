@@ -170,81 +170,21 @@ export function FinanceProvider({ children }) {
     const selectedDate = targetDate || new Date().toISOString().split('T')[0];
     setLoading(true);
     try {
-      // 0. Fetch previous closing for Float Handover & unclosed dates
+      // 0. Fetch previous closing for Float Handover (เงินทอนยกมาจากวันก่อนหน้า)
       let suggestedFloat = 0;
-      let carryForwardCash = 0;
-      let carryForwardTransfer = 0;
-      let carryForwardExpenses = 0;
-      const carryForwardItems = [];
-
       try {
-        const [prevClosingRes, allClosedRes] = await Promise.all([
-          supabase
-            .from('daily_closings')
-            .select('*')
-            .lt('date', selectedDate)
-            .order('date', { ascending: false })
-            .limit(1),
-          supabase
-            .from('daily_closings')
-            .select('date')
-            .eq('status', 'CLOSED')
-        ]);
-
-        if (prevClosingRes.data && prevClosingRes.data.length > 0) {
-          suggestedFloat = parseFloat(prevClosingRes.data[0].float_amount) || 0;
-        }
-
-        const closedDateSet = new Set((allClosedRes.data || []).map(r => r.date));
-
-        // Query transactions prior to selectedDate that were never closed
-        const { data: pastTxns } = await supabase
-          .from('transactions')
+        const { data: prevClosingRes } = await supabase
+          .from('daily_closings')
           .select('*')
           .lt('date', selectedDate)
-          .order('date', { ascending: true });
+          .order('date', { ascending: false })
+          .limit(1);
 
-        pastTxns?.forEach(t => {
-          if (!closedDateSet.has(t.date)) {
-            const amt = parseFloat(t.total_amount || t.amount) || 0;
-            const isExp = t.bill_type === 'รายจ่าย' || t.bill_type === 'expenses' || t.type === 'รายจ่าย' || t.category?.includes('จ่าย') || t.category?.includes('ค่าจ้าง') || t.category?.includes('ค่าซ่อม');
-            const payment = parsePaymentBreakdown(t.payment_method || t.method, amt);
-
-            if (isExp) {
-              carryForwardExpenses += amt;
-              carryForwardCash -= payment.cash;
-              carryForwardTransfer -= payment.transfer;
-              carryForwardItems.push({
-                id: t.id,
-                date: t.date,
-                description: `[ยกยอด ${t.date}] ${t.description || t.note || t.category || 'รายจ่าย'}`,
-                category: t.category || 'ยกยอด',
-                amount: amt,
-                method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
-                officer: t.officer || 'Admin',
-                isCarryForward: true
-              });
-            } else {
-              const isDiscount = t.category?.includes('ส่วนลด') || payment.isDiscount;
-              if (!isDiscount) {
-                carryForwardCash += payment.cash;
-                carryForwardTransfer += payment.transfer;
-                carryForwardItems.push({
-                  id: t.id,
-                  date: t.date,
-                  description: `[ยกยอด ${t.date}] ${t.description || t.note || t.category || 'รายรับ'}`,
-                  category: t.category || 'ยกยอด',
-                  amount: amt,
-                  method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
-                  officer: t.officer || 'Admin',
-                  isCarryForward: true
-                });
-              }
-            }
-          }
-        });
+        if (prevClosingRes && prevClosingRes.length > 0) {
+          suggestedFloat = parseFloat(prevClosingRes[0].float_amount) || 0;
+        }
       } catch (err) {
-        console.warn('Notice: Error checking carry-forward data:', err);
+        console.warn('Notice: Error checking previous closing float:', err);
       }
 
       const [bookingsRes, txnsRes, closingRes] = await Promise.all([
@@ -257,18 +197,18 @@ export function FinanceProvider({ children }) {
       const txns = txnsRes.data || [];
       const existingClosing = closingRes.data || null;
 
-      // Summary Breakdown
+      // Summary Breakdown for selectedDate only (no carry-forward from past unclosed transactions)
       let dailyStallIncome = 0;
       let monthlyIncome = 0;
       let klongthomIncome = 0;
       let storageIncome = 0;
       let otherIncTotal = 0;
-      let totalExpenses = carryForwardExpenses;
+      let totalExpenses = 0;
 
-      let cashIn = Math.max(0, carryForwardCash);
-      let transferIn = Math.max(0, carryForwardTransfer);
-      let cashOut = carryForwardCash < 0 ? Math.abs(carryForwardCash) : 0;
-      let transferOut = carryForwardTransfer < 0 ? Math.abs(carryForwardTransfer) : 0;
+      let cashIn = 0;
+      let transferIn = 0;
+      let cashOut = 0;
+      let transferOut = 0;
 
       // Detailed category breakdown (Cash vs Transfer)
       const breakdown = {
@@ -382,16 +322,16 @@ export function FinanceProvider({ children }) {
       const totalIncomeTransfer = breakdown.dailyStall.transfer + breakdown.monthly.transfer + breakdown.klongthom.transfer + breakdown.storage.transfer + breakdown.otherIncome.transfer;
       const totalIncomeAll = totalIncomeCash + totalIncomeTransfer;
 
-      const allExpenseItems = [...expenseItems, ...carryForwardItems.filter(i => i.isCarryForward && i.type === 'expense')];
+      const allExpenseItems = expenseItems;
 
       const summary = {
         date: selectedDate,
         suggestedFloat,
         carryForward: {
-          cash: carryForwardCash,
-          transfer: carryForwardTransfer,
-          total: carryForwardCash + carryForwardTransfer,
-          items: carryForwardItems
+          cash: 0,
+          transfer: 0,
+          total: 0,
+          items: []
         },
         dailyStallIncome,
         monthlyIncome,
