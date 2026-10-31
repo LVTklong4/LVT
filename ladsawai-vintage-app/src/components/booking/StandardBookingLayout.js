@@ -8,6 +8,7 @@ import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, 
 import LoginModal from './modals/LoginModal';
 import StorageMgmtModal from './modals/StorageMgmtModal';
 import MonthlyMgmtModal from './modals/MonthlyMgmtModal';
+import MonthlyDebtFollowUpModal from './modals/MonthlyDebtFollowUpModal';
 import SettingsMgmtModal from './modals/SettingsMgmtModal';
 import AddUtilityModal from './modals/AddUtilityModal';
 import MoveLockModal from './modals/MoveLockModal';
@@ -424,6 +425,7 @@ export default function StandardBookingLayout() {
       <LoginModal />
       <StorageMgmtModal />
       <MonthlyMgmtModal />
+      <MonthlyDebtFollowUpModal />
       <SettingsMgmtModal />
       <AddUtilityModal />
       <MoveLockModal />

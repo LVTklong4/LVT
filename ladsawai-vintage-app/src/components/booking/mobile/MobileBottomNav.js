@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useStorage } from '@/context/StorageContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import {
   MapPin, CalendarDays, Package, Banknote, Menu,
   Store, FileText, Settings, Info, LogOut, LogIn,
-  X, CheckCircle, ChevronUp, AlertCircle
+  X, CheckCircle, ChevronUp, AlertCircle, ClipboardList
 } from 'lucide-react';
 
 export default function MobileBottomNav({
@@ -27,6 +28,7 @@ export default function MobileBottomNav({
   } = useBooking();
 
   const { setShowStorageMgmtModal } = useStorage();
+  const { setShowDebtFollowUpModal } = useMonthlyBooking();
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -143,6 +145,23 @@ export default function MobileBottomNav({
                 <div>
                   <div className="text-blue-900 font-black">ตั้งค่าระบบ</div>
                   <div className="text-[10px] text-gray-500 font-medium">ราคาแผงและสิทธิ์</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  setShowDebtFollowUpModal(true);
+                }}
+                className="p-3 bg-amber-50/70 hover:bg-amber-100/80 active:scale-95 border border-amber-300 rounded-xl flex items-center gap-2.5 shadow-2xs transition-all cursor-pointer text-left col-span-2"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-800 flex items-center justify-center text-white shrink-0">
+                  <ClipboardList className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-[#3E2723] font-black">ใบตรวจยอดค้างชำระ (A4)</div>
+                  <div className="text-[10px] text-amber-800 font-medium">เกณฑ์บันได 4 สัปดาห์ พร้อมสั่งพิมพ์เดินตรวจ</div>
                 </div>
               </button>
 

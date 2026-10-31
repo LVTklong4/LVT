@@ -20,7 +20,7 @@ import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsSer
 export default function MonthlyMgmtModal() {
   const {
     activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleShowMonthlyReceiptPreview,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls,
-    alertInfo,    setAlertInfo,    confirmInfo
+    alertInfo,    setAlertInfo,    confirmInfo,    setShowDebtFollowUpModal
   } = useMonthlyBooking();
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -78,6 +78,15 @@ export default function MonthlyMgmtModal() {
                 >
                   <RotateCcw className="w-4 h-4" />
                   ต่อสัญญา
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDebtFollowUpModal(true)}
+                  className="px-3 py-1.5 bg-[#5D4037] hover:bg-[#4A2E1B] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                  title="พิมพ์ใบตรวจติดตามยอดค้างชำระค่าเช่ารายเดือน (A4)"
+                >
+                  <Printer className="w-4 h-4 text-amber-200" />
+                  ใบตรวจยอดค้าง (A4)
                 </button>
               </div>
 

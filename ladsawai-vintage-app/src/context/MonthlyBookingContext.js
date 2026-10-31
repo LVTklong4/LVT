@@ -64,6 +64,7 @@ export function MonthlyBookingProvider({ children }) {
   const [showMonthlyPaymentModal, setShowMonthlyPaymentModal] = useState(false);
   const [showMonthlyPrintModal, setShowMonthlyPrintModal] = useState(false);
   const [showPreRenewalModal, setShowPreRenewalModal] = useState(false);
+  const [showDebtFollowUpModal, setShowDebtFollowUpModal] = useState(false);
 
   // Active Selections
   const [selectedMonthlyItem, setSelectedMonthlyItem] = useState(null);
@@ -910,6 +911,8 @@ export function MonthlyBookingProvider({ children }) {
       setShowMonthlyPrintModal,
       showPreRenewalModal,
       setShowPreRenewalModal,
+      showDebtFollowUpModal,
+      setShowDebtFollowUpModal,
 
       // Active Selections
       selectedMonthlyItem,
@@ -1037,6 +1040,7 @@ export function MonthlyBookingProvider({ children }) {
       setMonthlyPrintPayments,
 
       // Action Handlers
+      handleOpenDebtFollowUpModal: () => setShowDebtFollowUpModal(true),
       handleOpenNewMonthlyModal,
       handleOpenEditMonthlyModal,
       handleOpenBulkRenewModal,

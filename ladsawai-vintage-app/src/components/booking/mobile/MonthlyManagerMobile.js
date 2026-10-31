@@ -37,7 +37,8 @@ export default function MonthlyManagerMobile({ onClose }) {
     fetchMonthlyTransactions,
     activeMonthlyTransactions,
     loadingMonthlyTxns,
-    stalls
+    stalls,
+    setShowDebtFollowUpModal
   } = useMonthlyBooking();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -208,6 +209,15 @@ export default function MonthlyManagerMobile({ onClose }) {
             }`}
           >
             ชำระแล้ว
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDebtFollowUpModal(true)}
+            className="ml-auto px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-800 text-white flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer shrink-0"
+            title="เปิดใบตรวจติดตามยอดค้างชำระค่าเช่ารายเดือน"
+          >
+            <Printer className="w-3.5 h-3.5 text-amber-200" />
+            <span>ใบตรวจยอดค้าง</span>
           </button>
         </div>
       </div>

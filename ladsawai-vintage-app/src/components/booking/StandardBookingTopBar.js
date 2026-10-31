@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useStorage } from '@/context/StorageContext';
+import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { printMarketLayoutA4 } from '@/utils/marketLayoutPrinter';
 import {
   ChevronLeft,
@@ -21,6 +22,7 @@ import {
   Banknote,
   Lock,
   Printer,
+  ClipboardList,
   RefreshCw,
   LogOut,
   User
@@ -29,8 +31,10 @@ import {
 export default function StandardBookingTopBar({
   onOpenOffGrid,
   onOpenKlongThom,
-  onOpenDailyClosing
+  onOpenDailyClosing,
+  onOpenDebtFollowUp
 }) {
+  const { setShowDebtFollowUpModal } = useMonthlyBooking();
   const {
     adminUser,
     selectedDate,
@@ -323,6 +327,16 @@ export default function StandardBookingTopBar({
                         className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
                         <Printer className="w-4 h-4 text-gray-500 shrink-0" /> พิมพ์ผังตลาด (A4)
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setShowProfileDropdown(false);
+                          if (onOpenDebtFollowUp) onOpenDebtFollowUp();
+                          else setShowDebtFollowUpModal(true);
+                        }} 
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <ClipboardList className="w-4 h-4 text-amber-800 shrink-0" /> 📋 ใบตรวจยอดค้างชำระ (A4)
                       </button>
                       <button 
                         onClick={() => {
