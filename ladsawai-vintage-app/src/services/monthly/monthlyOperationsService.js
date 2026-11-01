@@ -409,6 +409,70 @@ export async function updateMonthlyItemQuick(item) {
 }
 
 /**
+ * Helper to delete all daily bookings linked to a monthly contract.
+ * Also performs safety cleanup for any orphaned ghost bookings matching the contract's
+ * booker name, stalls, and date range (especially for Regular/ประจำ contracts).
+ */
+async function deleteLinkedDailyBookings(item) {
+  if (!item?.id) return;
+
+  // 1. Delete by master_id = item.id
+  const { error: bErr } = await supabase.from('bookings').delete().eq('master_id', item.id);
+  if (bErr) throw bErr;
+
+  // 2. Delete by daily booking id prefix (uniqueDailyId: ${item.id}-${date}-${stall})
+  try {
+    await supabase.from('bookings').delete().like('id', `${item.id}-%`);
+  } catch (e) {}
+
+  // 3. Safety Cleanup: If item has stalls, booker_name, and booking_month/start_date,
+  // delete any orphaned unpaid daily bookings for this customer and stalls in this contract's month
+  if (item.stalls && item.booker_name) {
+    try {
+      let targetYear, targetMonth;
+      if (item.start_date) {
+        const d = new Date(item.start_date);
+        if (!isNaN(d.getTime())) {
+          targetYear = d.getFullYear();
+          targetMonth = d.getMonth();
+        }
+      }
+      if (targetYear === undefined && item.booking_month) {
+        const d = new Date(item.booking_month);
+        if (!isNaN(d.getTime())) {
+          targetYear = d.getFullYear();
+          targetMonth = d.getMonth();
+        }
+      }
+
+      if (targetYear !== undefined && targetMonth !== undefined) {
+        const firstDayStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+        const lastDayStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        const cleanStallList = String(item.stalls)
+          .split(',')
+          .map(s => s.replace(/[\[\]]/g, '').trim())
+          .filter(Boolean);
+
+        for (const sName of cleanStallList) {
+          await supabase
+            .from('bookings')
+            .delete()
+            .gte('date', firstDayStr)
+            .lte('date', lastDayStr)
+            .eq('stall_name', sName)
+            .eq('booker_name', item.booker_name)
+            .eq('status', 'ค้างชำระ');
+        }
+      }
+    } catch (cleanupErr) {
+      console.warn('Safety cleanup of orphaned bookings error:', cleanupErr);
+    }
+  }
+}
+
+/**
  * Deletes or cancels a monthly booking contract safely.
  */
 export async function deleteMonthlyBooking(item, adminUser, showConfirm) {
@@ -427,8 +491,7 @@ export async function deleteMonthlyBooking(item, adminUser, showConfirm) {
     });
     if (!isConfirmed) return { success: false };
 
-    const { error: bErr } = await supabase.from('bookings').delete().eq('master_id', item.id);
-    if (bErr) throw bErr;
+    await deleteLinkedDailyBookings(item);
 
     const { error } = await supabase.from('monthly_bookings').delete().eq('id', item.id);
     if (error) throw error;
@@ -458,8 +521,7 @@ export async function deleteMonthlyBooking(item, adminUser, showConfirm) {
       });
       if (!isConfirmed) return { success: false };
 
-      const { error: bErr } = await supabase.from('bookings').delete().eq('master_id', item.id);
-      if (bErr) throw bErr;
+      await deleteLinkedDailyBookings(item);
 
       const { error: mbError } = await supabase.from('monthly_bookings').update({ status: 'ยกเลิก' }).eq('id', item.id);
       if (mbError) throw mbError;

@@ -263,19 +263,17 @@ export function BookingProvider({ children }) {
     };
   }, [selectedDate]);
 
-  // Cross-tab Synchronization via BroadcastChannel (Zero Quota Multi-Monitor / Kiosk Screen 2)
+  // Cross-tab and Same-Window Synchronization via BroadcastChannel & Local Event
   useEffect(() => {
-    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    if (typeof window === 'undefined') return;
 
-    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
     let lastHandledTime = 0;
 
-    channel.onmessage = (event) => {
-      const data = event.data;
+    const handleSyncEvent = (data) => {
       if (!data) return;
 
       const now = Date.now();
-      if (now - lastHandledTime < 1000) return;
+      if (now - lastHandledTime < 500) return;
 
       if (data.type === SYNC_EVENT_TYPES.BOOKING_MUTATION || data.type === SYNC_EVENT_TYPES.MANUAL_REFRESH) {
         if (!data.date || data.date === selectedDate) {
@@ -291,8 +289,22 @@ export function BookingProvider({ children }) {
       }
     };
 
+    let channel = null;
+    if ('BroadcastChannel' in window) {
+      channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+      channel.onmessage = (event) => {
+        handleSyncEvent(event.data);
+      };
+    }
+
+    const handleLocalSync = (event) => {
+      handleSyncEvent(event.detail);
+    };
+    window.addEventListener('lvt_booking_sync_local', handleLocalSync);
+
     return () => {
-      channel.close();
+      if (channel) channel.close();
+      window.removeEventListener('lvt_booking_sync_local', handleLocalSync);
     };
   }, [selectedDate, fetchAllMonthly]);
 

@@ -22,17 +22,32 @@ export function broadcastBookingSync({
   date = null,
   meta = null
 } = {}) {
-  if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+  if (typeof window === 'undefined') return;
+
+  const payload = {
+    type,
+    date,
+    meta,
+    timestamp: Date.now()
+  };
+
+  // 1. Cross-tab synchronization via BroadcastChannel
+  if ('BroadcastChannel' in window) {
+    try {
+      const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+      channel.postMessage(payload);
+      channel.close();
+    } catch (err) {
+      console.warn('[BroadcastSync] Error broadcasting message:', err);
+    }
+  }
+
+  // 2. Same-window / Local tab event dispatch (BroadcastChannel does NOT fire on the posting window)
   try {
-    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-    channel.postMessage({
-      type,
-      date,
-      meta,
-      timestamp: Date.now()
-    });
-    channel.close();
+    window.dispatchEvent(new CustomEvent('lvt_booking_sync_local', {
+      detail: payload
+    }));
   } catch (err) {
-    console.warn('[BroadcastSync] Error broadcasting message:', err);
+    console.warn('[BroadcastSync] Error dispatching local sync event:', err);
   }
 }
