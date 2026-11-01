@@ -49,6 +49,83 @@ export function getCustomerIdentityKey(item) {
 }
 
 /**
+ * Helper to build a Map of stallName -> Set of days of week (0=Sun, 3=Wed, 5=Fri, 6=Sat)
+ * for a monthly contract, checking stall_details first, with fallback to stalls string.
+ */
+export function getStallDaysMapFromContract(contract) {
+  const map = new Map();
+  let details = [];
+  try {
+    const raw = contract?.stall_details || '[]';
+    details = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (e) {}
+
+  if (Array.isArray(details) && details.length > 0) {
+    details.forEach(item => {
+      const cleanName = (item.name || '').replace(/[\[\]]/g, '').trim();
+      if (!cleanName) return;
+      const days = Array.isArray(item.days) ? item.days : [];
+      if (!map.has(cleanName)) {
+        map.set(cleanName, new Set(days));
+      } else {
+        days.forEach(d => map.get(cleanName).add(d));
+      }
+    });
+  } else {
+    const stallNames = (contract?.stalls || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim()).filter(Boolean);
+    const fallbackDays = [0, 3, 5, 6];
+    stallNames.forEach(s => {
+      map.set(s, new Set(fallbackDays));
+    });
+  }
+
+  return map;
+}
+
+/**
+ * Checks whether requestedStallDaysMap overlaps with existingContract on any stall on the SAME day of the week
+ * in the same targetMonthFormatted.
+ */
+export function checkMonthlyContractDaysConflict(requestedStallDaysMap, existingContract, targetMonthFormatted) {
+  if (formatBookingMonth(existingContract.booking_month) !== targetMonthFormatted) {
+    return null;
+  }
+
+  const existingDaysMap = getStallDaysMapFromContract(existingContract);
+
+  for (const [stallName, reqDaysSet] of requestedStallDaysMap.entries()) {
+    if (existingDaysMap.has(stallName)) {
+      const existDaysSet = existingDaysMap.get(stallName);
+      const overlappingDays = [];
+
+      reqDaysSet.forEach(dayNum => {
+        if (existDaysSet.has(dayNum)) {
+          overlappingDays.push(dayNum);
+        }
+      });
+
+      if (overlappingDays.length > 0) {
+        const thaiDays = overlappingDays.map(d => {
+          if (d === 0) return 'วันอาทิตย์';
+          if (d === 3) return 'วันพุธ';
+          if (d === 5) return 'วันศุกร์';
+          if (d === 6) return 'วันเสาร์';
+          return `วัน ${d}`;
+        }).join(', ');
+
+        return {
+          stallName,
+          thaiDays,
+          conflictingBooker: existingContract.booker_name || 'ผู้เช่าอื่น'
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Renews a single monthly contract to the subsequent month.
  */
 export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMaster = [] }) {
@@ -76,7 +153,7 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
 
   const { data: allMonthlyData, error: existError } = await supabase
     .from('monthly_bookings')
-    .select('id, booking_month, stalls, booker_name, phone, product')
+    .select('id, booking_month, stalls, stall_details, booker_name, phone, product')
     .gte('start_date', nextStartDateStr)
     .lte('start_date', nextEndDateStr);
   if (existError) throw existError;
@@ -94,15 +171,17 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
     throw new Error(`ผู้เช่า "${activeMonthlyBooking.booker_name}" (${activeMonthlyBooking.product || 'ไม่มีสินค้า'}, ล็อค ${activeMonthlyBooking.stalls}) ได้ต่อสัญญารอบเดือน ${nextMonthFormatted} ไว้แล้ว`);
   }
 
-  // 1. Strict Conflict Check in monthly_bookings (prevent different merchants from taking the same stall)
-  const conflictingMonthly = (allMonthlyData || []).find(cand => {
-    if (cand.id === activeMonthlyBooking.id) return false;
-    const candStalls = (cand.stalls || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim());
-    return requestedStalls.some(reqS => candStalls.includes(reqS));
-  });
+  // 1. Strict Per-Stall & Per-Day Conflict Check in monthly_bookings (prevent taking the same stall on the same selling days)
+  const requestedStallDaysMap = getStallDaysMapFromContract(activeMonthlyBooking);
+  let conflictInfo = null;
+  for (const cand of (allMonthlyData || [])) {
+    if (cand.id === activeMonthlyBooking.id) continue;
+    conflictInfo = checkMonthlyContractDaysConflict(requestedStallDaysMap, cand, targetMonthFormatted);
+    if (conflictInfo) break;
+  }
 
-  if (conflictingMonthly) {
-    throw new Error(`ไม่สามารถต่อสัญญาได้: ล็อค ${activeMonthlyBooking.stalls} ในรอบเดือน ${nextMonthFormatted} มีสัญญาของ คุณ ${conflictingMonthly.booker_name} อยู่แล้ว`);
+  if (conflictInfo) {
+    throw new Error(`ไม่สามารถต่อสัญญาได้: ล็อค ${conflictInfo.stallName} (${conflictInfo.thaiDays}) ในรอบเดือน ${nextMonthFormatted} มีสัญญาของ คุณ ${conflictInfo.conflictingBooker} อยู่แล้ว`);
   }
 
   // Generate daily rows with high-entropy collision-free ID
@@ -323,16 +402,23 @@ export async function renewBulkMonthlyBookings({
 
     const requestedStalls = details.map(d => (d.name || '').replace(/[\[\]]/g, '').trim()).filter(Boolean);
 
-    // 1. Strict Per-Stall Conflict Check in monthly contracts (including already renewed in this batch)
-    const conflictingContract = dynamicMonthlyList.find(mb => {
-      if (mb.id === item.id) return false;
-      const mbStalls = (mb.stalls || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim());
-      return requestedStalls.some(reqS => mbStalls.includes(reqS));
-    });
+    // 1. Strict Per-Stall & Per-Day Conflict Check in monthly contracts (including already renewed in this batch)
+    const currentContractProxy = {
+      stalls: item.stalls,
+      stall_details: stallDetailsStr
+    };
+    const requestedStallDaysMap = getStallDaysMapFromContract(currentContractProxy);
 
-    if (conflictingContract) {
+    let conflictInfo = null;
+    for (const mb of dynamicMonthlyList) {
+      if (mb.id === item.id) continue;
+      conflictInfo = checkMonthlyContractDaysConflict(requestedStallDaysMap, mb, targetMonthFormatted);
+      if (conflictInfo) break;
+    }
+
+    if (conflictInfo) {
       skippedCount++;
-      conflictErrors.push(`ล็อค ${item.stalls} (${bookerName}): มีสัญญาของ คุณ ${conflictingContract.booker_name} อยู่แล้วในรอบเดือน`);
+      conflictErrors.push(`ล็อค ${conflictInfo.stallName} (${conflictInfo.thaiDays}) [คุณ ${bookerName}]: มีสัญญาของ คุณ ${conflictInfo.conflictingBooker} อยู่แล้วในรอบเดือน`);
       continue;
     }
 
