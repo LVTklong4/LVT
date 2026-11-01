@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { Plus, Loader2, TrendingUp, TrendingDown, Lock } from 'lucide-react';
 
-export const incomeCategories = ['ค่าปรับ', 'เงินประกัน/มัดจำ', 'รายได้เบ็ดเตล็ด', 'ค่าบริการอื่นๆ', 'อื่นๆ'];
+export const incomeCategories = ['ค่าล็อครายวัน', 'ค่าล็อคประจำ', 'ค่าล็อครายเดือน', 'ค่าปรับ', 'เงินประกัน/มัดจำ', 'รายได้เบ็ดเตล็ด', 'ค่าบริการอื่นๆ', 'อื่นๆ'];
 export const expenseCategories = [
   'ค่าจ้างพนักงาน', 'เงินเดือนพนักงาน', 'ค่าล่วงเวลา (OT)', 'สวัสดิการพนักงาน', 'โบนัส/เงินพิเศษ',
   'ค่าน้ำส่วนกลาง', 'ค่าไฟส่วนกลาง', 'ค่ากำจัดขยะ', 'ค่าซ่อมบำรุง', 'ค่าการตลาด', 
@@ -20,12 +20,13 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
   } = useFinance();
 
   const [entryType, setEntryType] = useState(() => (activeTab === 'expense' ? 'expense' : 'income'));
-
-  useEffect(() => {
+  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
+  if (activeTab !== prevActiveTab) {
+    setPrevActiveTab(activeTab);
     if (activeTab === 'income' || activeTab === 'expense') {
       setEntryType(activeTab);
     }
-  }, [activeTab]);
+  }
 
   const todayStr = defaultDate || new Date().toISOString().split('T')[0];
 
@@ -46,12 +47,14 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
   });
 
   // Keep date synced if defaultDate changes
-  useEffect(() => {
+  const [prevDefaultDate, setPrevDefaultDate] = useState(defaultDate);
+  if (defaultDate !== prevDefaultDate) {
+    setPrevDefaultDate(defaultDate);
     if (defaultDate) {
       setIncomeForm(prev => ({ ...prev, date: defaultDate }));
       setExpenseForm(prev => ({ ...prev, date: defaultDate }));
     }
-  }, [defaultDate]);
+  }
 
   const isCurrentDateClosed = entryType === 'income' ? isDateClosed(incomeForm.date) : isDateClosed(expenseForm.date);
 

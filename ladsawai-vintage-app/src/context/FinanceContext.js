@@ -150,6 +150,62 @@ export function FinanceProvider({ children }) {
         }
       });
 
+      // 2. Fetch paid daily/regular bookings from bookings table (if not already logged in transactions)
+      try {
+        let bookingQuery = supabase
+          .from('bookings')
+          .select('*')
+          .in('status', ['ชำระแล้ว', 'จ่ายแล้ว']);
+        if (filters.startDate) bookingQuery = bookingQuery.gte('date', filters.startDate);
+        if (filters.endDate) bookingQuery = bookingQuery.lte('date', filters.endDate);
+        if (!filters.startDate && !filters.endDate) {
+          bookingQuery = bookingQuery.limit(300);
+        }
+
+        const { data: paidBookings } = await bookingQuery;
+
+        (paidBookings || []).forEach(b => {
+          // Exclude monthly bookings since monthly contracts are logged via monthly transactions
+          if (b.type === 'รายเดือน') return;
+          // Check if already represented in transactions to prevent duplicate
+          const alreadyInTxns = allTxns?.some(t => t.booking_ref === b.id);
+          if (alreadyInTxns) return;
+
+          const amt = parseFloat(b.total_price || b.stall_price || b.price || 0);
+          if (amt <= 0) return;
+
+          const rawMethod = b.payment_method || 'เงินสด';
+          const breakdown = parsePaymentBreakdown(rawMethod, amt);
+          const stallLabel = b.stall_name || b.stall_id || '';
+          const tenantName = b.booker_name || b.customer_name || 'ลูกค้าทั่วไป';
+
+          incList.push({
+            id: b.id,
+            date: b.date,
+            category: b.type === 'ประจำ' ? 'ค่าล็อคประจำ' : 'ค่าล็อครายวัน',
+            description: `ค่าล็อค ${stallLabel} (${tenantName})`,
+            item: `ค่าล็อค ${stallLabel}`,
+            amount: amt,
+            method: rawMethod,
+            cashAmount: breakdown.cash,
+            transferAmount: breakdown.transfer,
+            officer: 'Staff',
+            timestamp: b.updated_at || b.created_at || b.date
+          });
+        });
+      } catch (err) {
+        console.warn('Could not fetch daily bookings for ledger:', err);
+      }
+
+      incList.sort((a, b) => {
+        const dateA = a.date || '';
+        const dateB = b.date || '';
+        if (dateA !== dateB) return dateB.localeCompare(dateA);
+        const timeA = a.timestamp || '';
+        const timeB = b.timestamp || '';
+        return timeB.localeCompare(timeA);
+      });
+
       let filteredIncome = incList;
       let filteredExpense = expList;
 
@@ -316,8 +372,9 @@ export function FinanceProvider({ children }) {
 
       // 2. Bookings (Direct daily payments if not recorded in transactions)
       bookings.forEach(b => {
-        if (b.status === 'จ่ายแล้ว' && b.price) {
-          const amt = parseFloat(b.price) || 0;
+        const isPaid = b.status === 'ชำระแล้ว' || b.status === 'จ่ายแล้ว';
+        const amt = parseFloat(b.total_price || b.price || b.stall_price || 0);
+        if (isPaid && amt > 0 && b.type !== 'รายเดือน') {
           // check if already counted in txns
           const hasTxn = txns.some(t => t.booking_ref === b.id);
           if (!hasTxn) {
@@ -335,7 +392,7 @@ export function FinanceProvider({ children }) {
         }
       });
 
-      const bookedCount = bookings.filter(b => b.status === 'จ่ายแล้ว' || b.status === 'จองแล้ว' || (b.customer_name && b.customer_name.trim() !== '')).length;
+      const bookedCount = bookings.filter(b => b.status === 'ชำระแล้ว' || b.status === 'จ่ายแล้ว' || b.status === 'จองแล้ว' || b.status === 'ค้างชำระ' || (b.customer_name && b.customer_name.trim() !== '') || (b.booker_name && b.booker_name.trim() !== '')).length;
       const occupancy = {
         totalStalls: 275,
         booked: bookedCount,
