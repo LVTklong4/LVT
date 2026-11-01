@@ -21,10 +21,6 @@ export async function withRetryOnJwtFuture(asyncFn, maxRetries = 2, delayMs = 15
 
     if (isJwtFuture && maxRetries > 0) {
       console.warn(`[Supabase] Clock drift detected (${errMsg}). Auto-retrying in ${delayMs}ms...`);
-      try {
-        await supabase.auth.getSession();
-      } catch (e) {}
-
       await new Promise(resolve => setTimeout(resolve, delayMs));
       return withRetryOnJwtFuture(asyncFn, maxRetries - 1, delayMs);
     }

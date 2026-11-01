@@ -181,31 +181,33 @@ export function MonthlyBookingProvider({ children }) {
   const fetchMonthlyBookings = useCallback(async () => {
     setLoadingMonthly(true);
     try {
-      const pageSize = 1000;
-      let allData = [];
-      let page = 0;
-      let hasMore = true;
+      await withRetryOnJwtFuture(async () => {
+        const pageSize = 1000;
+        let allData = [];
+        let page = 0;
+        let hasMore = true;
 
-      while (hasMore) {
-        const from = page * pageSize;
-        const to = from + pageSize - 1;
-        const { data, error } = await supabase
-          .from('monthly_bookings')
-          .select('*')
-          .range(from, to)
-          .order('created_at', { ascending: false });
+        while (hasMore) {
+          const from = page * pageSize;
+          const to = from + pageSize - 1;
+          const { data, error } = await supabase
+            .from('monthly_bookings')
+            .select('*')
+            .range(from, to)
+            .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        if (data && data.length > 0) {
-          allData = allData.concat(data);
-          if (data.length < pageSize) hasMore = false;
-          else page++;
-        } else {
-          hasMore = false;
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allData = allData.concat(data);
+            if (data.length < pageSize) hasMore = false;
+            else page++;
+          } else {
+            hasMore = false;
+          }
         }
-      }
 
-      setMonthlyList(allData);
+        setMonthlyList(allData);
+      });
     } catch (e) {
       console.error('Error fetching monthly bookings:', e);
     } finally {
@@ -215,9 +217,11 @@ export function MonthlyBookingProvider({ children }) {
 
   const fetchStalls = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('stalls').select('*').order('name');
-      if (error) throw error;
-      setStalls(data || []);
+      await withRetryOnJwtFuture(async () => {
+        const { data, error } = await supabase.from('stalls').select('*').order('name');
+        if (error) throw error;
+        setStalls(data || []);
+      });
     } catch (e) {
       console.error('Error fetching stalls in MonthlyBookingContext:', e);
     }

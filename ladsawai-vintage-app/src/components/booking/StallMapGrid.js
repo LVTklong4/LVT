@@ -14,7 +14,8 @@ export default function StallMapGrid({ hideLegend = false }) {
     highlightedStall,
     handleStallClick,
     formatBookingMonth,
-    getBookingMonthStr
+    getBookingMonthStr,
+    fetchBookingsAndStorage
   } = useBooking();
 
   const maxCol = 20;
@@ -175,6 +176,12 @@ export default function StallMapGrid({ hideLegend = false }) {
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-10 h-10 text-amber-800 animate-spin" />
               <span className="text-xs font-bold text-amber-900">กำลังดาวน์โหลดข้อมูลผังตลาด...</span>
+              <button 
+                onClick={() => fetchBookingsAndStorage?.()} 
+                className="mt-2 px-2.5 py-1 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 rounded text-[11px] font-bold shadow-xs cursor-pointer transition-colors"
+              >
+                🔄 หากรอนาน คลิกเพื่อโหลดใหม่
+              </button>
             </div>
           </div>
         )}

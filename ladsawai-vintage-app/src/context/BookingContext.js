@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, withRetryOnJwtFuture } from '@/lib/supabase';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { logOfficerActivity } from '@/utils/logger';
@@ -383,11 +383,25 @@ export function BookingProvider({ children }) {
   };
 
 
+  const queryWithTimeout = async (queryPromise, timeoutMs = 8000, errorMsg = 'หมดเวลาการเชื่อมต่อฐานข้อมูล') => {
+    let timer;
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(errorMsg)), timeoutMs);
+    });
+    try {
+      return await Promise.race([queryPromise, timeoutPromise]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   const fetchStalls = async () => {
     try {
-      const { data, error } = await supabase.from('stalls').select('*');
-      if (error) throw error;
-      setStalls(data || []);
+      const res = await withRetryOnJwtFuture(() =>
+        queryWithTimeout(supabase.from('stalls').select('*'), 10000, 'ดึงข้อมูลผังตลาดใช้เวลานานเกินไป')
+      );
+      if (res?.error) throw res.error;
+      setStalls(res?.data || []);
     } catch (e) {
       console.error("Error fetching stalls:", e);
       showAlert("ดึงข้อมูลผังตลาดไม่สำเร็จ: " + e.message, "ข้อผิดพลาด", true);
@@ -403,12 +417,17 @@ export function BookingProvider({ children }) {
       }
 
       // 2. Fetch Bookings for selected date
-      const { data: bookingsData, error: bError } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('date', selectedDate);
-      if (bError) throw bError;
-      setBookings(bookingsData || []);
+      if (selectedDate) {
+        const res = await withRetryOnJwtFuture(() =>
+          queryWithTimeout(
+            supabase.from('bookings').select('*').eq('date', selectedDate),
+            10000,
+            'ดึงข้อมูลการจองใช้เวลานานเกินไป'
+          )
+        );
+        if (res?.error) throw res.error;
+        setBookings(res?.data || []);
+      }
     } catch (e) {
       console.error("Error fetching date data:", e);
       if (!silent) {
@@ -1792,7 +1811,8 @@ export function BookingProvider({ children }) {
       getBookingCustomerType,
       cleanStallName,
       formatPrice,
-      formatBookingMonth
+      formatBookingMonth,
+      getBookingMonthStr
     }}>
       {children}
     </BookingContext.Provider>

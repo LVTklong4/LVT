@@ -40,14 +40,22 @@ export function AuthAdminProvider({ children }) {
 
     checkUserSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user?.email) {
-        await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
-      } else if (event === 'SIGNED_OUT') {
-        setAdminUser(null);
-        localStorage.removeItem('lvt_admin_session');
-      }
-      setLoadingAuth(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Defer async database calls to avoid Web Locks deadlock in Supabase auth
+      setTimeout(async () => {
+        try {
+          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user?.email) {
+            await verifyAndSetAdmin(session.user.email, session.user.user_metadata);
+          } else if (event === 'SIGNED_OUT') {
+            setAdminUser(null);
+            localStorage.removeItem('lvt_admin_session');
+          }
+        } catch (err) {
+          console.error("Auth state change error:", err);
+        } finally {
+          setLoadingAuth(false);
+        }
+      }, 0);
     });
 
     return () => {
