@@ -1,14 +1,32 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
-import { CreditCard, Banknote, Tag, Loader2, X } from 'lucide-react';
+import { CreditCard, Banknote, Tag, Loader2, X, AlertTriangle } from 'lucide-react';
+import { findEarlierUnpaidContracts } from '@/services/monthly/monthlyPaymentService';
+import { formatBookingMonth } from '@/utils/thaiDateHelper';
 
 export default function MonthlyPaymentModal() {
   const {
-    activeMonthlyBooking,    handleMonthlyPaymentSubmit,    handleSlipChange,    monthlyPaymentForm,    note,    parseNumber,    setMonthlyPaymentForm,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyPaymentModal,    slipPreviewUrl,
-    loadingMonthly
+    activeMonthlyBooking,
+    handleMonthlyPaymentSubmit,
+    handleSlipChange,
+    monthlyPaymentForm,
+    note,
+    parseNumber,
+    setMonthlyPaymentForm,
+    setShowMonthlyPaymentModal,
+    setSlipPreviewUrl,
+    setFullScreenSlipUrl,
+    showMonthlyPaymentModal,
+    slipPreviewUrl,
+    loadingMonthly,
+    monthlyList
   } = useMonthlyBooking();
+
+  const earlierDebts = useMemo(() => {
+    return findEarlierUnpaidContracts(activeMonthlyBooking, monthlyList);
+  }, [activeMonthlyBooking, monthlyList]);
 
   if (!showMonthlyPaymentModal || !activeMonthlyBooking) return null;
 
@@ -36,6 +54,23 @@ export default function MonthlyPaymentModal() {
               </div>
               
               <form onSubmit={handleMonthlyPaymentSubmit} className="flex flex-col gap-3.5 overflow-y-auto pr-1">
+                {earlierDebts.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 flex flex-col gap-1.5 shadow-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>แจ้งเตือน: พบยอดค้างชำระเดือนก่อนหน้า</span>
+                    </div>
+                    <div className="flex flex-col gap-1 pl-5 text-[11px] text-amber-800">
+                      {earlierDebts.map(d => (
+                        <div key={d.id} className="flex justify-between items-center bg-amber-100/60 px-2 py-1 rounded-md">
+                          <span>รอบ {formatBookingMonth(d.booking_month)} (ล็อค {d.stalls})</span>
+                          <span className="font-extrabold text-red-600">ค้าง {d.remaining.toLocaleString()} บ.</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* วันที่ชำระเงิน */}
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-gray-700">วันที่ชำระเงิน</label>

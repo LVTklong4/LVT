@@ -28,7 +28,8 @@ import {
   submitMonthlyPayment,
   deleteMonthlyTransaction,
   fetchMonthlyTransactions as fetchTxnsService,
-  scanSlipFile
+  scanSlipFile,
+  findEarlierUnpaidContracts
 } from '@/services/monthly/monthlyPaymentService';
 import {
   generateMonthlyReceiptHTML,
@@ -488,7 +489,7 @@ export function MonthlyBookingProvider({ children }) {
     setBulkRenewEditData({});
   }, [monthlyList, monthlyMonthFilter]);
 
-  const handleOpenMonthlyPaymentModal = useCallback((targetBooking) => {
+  const handleOpenMonthlyPaymentModal = useCallback(async (targetBooking) => {
     const isSyntheticEvent = targetBooking && (targetBooking.nativeEvent || targetBooking._reactName || typeof targetBooking.preventDefault === 'function');
     const booking = (!isSyntheticEvent && targetBooking && typeof targetBooking === 'object' && targetBooking.id)
       ? targetBooking
@@ -498,6 +499,23 @@ export function MonthlyBookingProvider({ children }) {
       console.warn("handleOpenMonthlyPaymentModal: No valid monthly booking provided", { targetBooking, activeMonthlyBooking });
       showAlert("กรุณาเลือกลูกค้ารายเดือนที่ต้องการชำระเงินก่อน", "แจ้งเตือน", true);
       return;
+    }
+
+    // Check if customer has earlier unpaid monthly contracts (e.g. October not fully paid when attempting to pay November)
+    const earlierDebts = findEarlierUnpaidContracts(booking, monthlyList);
+    if (earlierDebts.length > 0) {
+      const debtDetails = earlierDebts.map(d =>
+        `• รอบเดือน ${formatBookingMonth(d.booking_month)}: ล็อค ${d.stalls} ค้างชำระ ${d.remaining.toLocaleString()} บ.`
+      ).join('\n');
+
+      const isConfirmed = await showConfirm({
+        title: '⚠️ แจ้งเตือน: มียอดค้างชำระเดือนก่อนหน้า',
+        message: `ลูกค้ารายนี้ (${booking.booker_name}) ยังมียอดค้างชำระในรอบเดือนก่อนหน้า:\n\n${debtDetails}\n\nคุณกำลังจะเปิดรับชำระเงินสำหรับรอบเดือน "${formatBookingMonth(booking.booking_month)}"\nต้องการดำเนินการต่อหรือไม่?`,
+        confirmText: 'รับชำระเงินรอบนี้ต่อ',
+        cancelText: 'ย้อนกลับไปชำระเดือนก่อนหน้า',
+        isDanger: true
+      });
+      if (!isConfirmed) return;
     }
 
     setActiveMonthlyBooking(booking);
@@ -514,7 +532,7 @@ export function MonthlyBookingProvider({ children }) {
     if (booking.id) {
       fetchMonthlyTransactions(booking.id);
     }
-  }, [activeMonthlyBooking, fetchMonthlyTransactions, showAlert]);
+  }, [activeMonthlyBooking, monthlyList, showConfirm, fetchMonthlyTransactions, showAlert]);
 
   // CRUD Operations Handlers
   const handleCreateNewMonthlyBooking = useCallback(async (e) => {
@@ -646,6 +664,24 @@ export function MonthlyBookingProvider({ children }) {
   }, [adminUser, showConfirm, activeMonthlyBooking, showAlert, fetchMonthlyBookings]);
 
   const handleToggleNonRenewal = useCallback(async (item) => {
+    if (!adminUser) {
+      showAlert("กรุณาเข้าสู่ระบบก่อนทำรายการ", "แจ้งเตือน", true);
+      return;
+    }
+    if (!item?.id) return;
+
+    const isCurrentlyNonRenewal = item.renewal_status === 'ไม่ต่อสัญญา';
+    const isConfirmed = await showConfirm({
+      title: isCurrentlyNonRenewal ? 'ยืนยันยกเลิกการแจ้งไม่ต่อสัญญา' : '⚠️ ยืนยันการแจ้งไม่ต่อสัญญา',
+      message: isCurrentlyNonRenewal
+        ? `ต้องการยกเลิกสถานะ "ไม่ต่อสัญญา" และเปิดให้ต่อสัญญาตามปกติสำหรับคุณ "${item.booker_name}" (ล็อค ${item.stalls}) หรือไม่?`
+        : `คุณกำลังจะตั้งค่า "ไม่ต่อสัญญา" ให้กับคุณ "${item.booker_name}" (ล็อค ${item.stalls}) สำหรับรอบเดือนถัดไป\n\nเมื่อตั้งค่านี้ ระบบจะไม่นำลูกค้ารายนี้เข้าสู่รอบต่อสัญญาแบบกลุ่ม\n\nยืนยันทำรายการหรือไม่?`,
+      confirmText: isCurrentlyNonRenewal ? 'เปิดให้ต่อสัญญาตามปกติ' : 'ยืนยันแจ้งไม่ต่อสัญญา',
+      cancelText: 'ยกเลิก',
+      isDanger: !isCurrentlyNonRenewal
+    });
+    if (!isConfirmed) return;
+
     setLoadingMonthly(true);
     try {
       const newStatus = await toggleMonthlyNonRenewal(item, adminUser);
@@ -661,7 +697,7 @@ export function MonthlyBookingProvider({ children }) {
     } finally {
       setLoadingMonthly(false);
     }
-  }, [adminUser, activeMonthlyBooking, showAlert, fetchMonthlyBookings]);
+  }, [adminUser, showConfirm, activeMonthlyBooking, showAlert, fetchMonthlyBookings]);
 
   // Renewal Handlers
   const handleRenewMonthlyBooking = useCallback(async () => {

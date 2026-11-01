@@ -162,6 +162,25 @@ export const sortThaiMonthsDescending = (monthsArray) => {
   });
 };
 
+/**
+ * Returns a numerical sort value (year * 12 + month) for chronological comparison of months.
+ */
+export const getMonthSortValue = (monthStr) => {
+  if (!monthStr) return 0;
+  const formatted = formatBookingMonth(monthStr);
+  const parts = String(formatted).trim().split(' ');
+  if (parts.length < 2) return 0;
+  const monthsMap = {
+    'มกราคม': 0, 'กุมภาพันธ์': 1, 'มีนาคม': 2, 'เมษายน': 3,
+    'พฤษภาคม': 4, 'มิถุนายน': 5, 'กรกฎาคม': 6, 'สิงหาคม': 7,
+    'กันยายน': 8, 'ตุลาคม': 9, 'พฤศจิกายน': 10, 'ธันวาคม': 11
+  };
+  const m = monthsMap[parts[0]];
+  const y = parseInt(parts[1], 10);
+  if (m === undefined || isNaN(y)) return 0;
+  return y * 12 + m;
+};
+
 export const formatBookingMonth = (monthStr) => {
   if (!monthStr) return '-';
   const str = String(monthStr).trim();

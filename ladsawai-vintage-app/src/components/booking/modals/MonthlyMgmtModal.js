@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
-import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX, AlertCircle, CheckCircle } from 'lucide-react';
+import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
 import { monthNamesFull } from '@/utils/thaiDateHelper';
 import NewMonthlyModal from './NewMonthlyModal';
 import EditMonthlyModal from './EditMonthlyModal';
@@ -467,8 +467,9 @@ export default function MonthlyMgmtModal() {
           {confirmInfo && (
             <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
               <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
-                <div className="bg-[#FAEBD7] border-b border-[#8B4513]/20 px-4 py-3 font-bold text-sm text-[#4A3B32]">
-                  {confirmInfo.title}
+                <div className={`px-5 py-4 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
+                  {confirmInfo.isDanger ? <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" /> : <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />}
+                  <h3 className="font-extrabold text-sm flex-1">{confirmInfo.title}</h3>
                 </div>
                 <div className="p-5 text-sm text-gray-700 whitespace-pre-line leading-relaxed">
                   {confirmInfo.message}

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import { parseNumber } from '@/utils/numberHelper';
+import { parseNumber, cleanStallName } from '@/utils/numberHelper';
+import { getMonthSortValue, formatBookingMonth } from '@/utils/thaiDateHelper';
 import { uploadSlipToStorage } from '@/services/storageService';
 
 /**
@@ -220,4 +221,55 @@ export async function scanSlipFile(file) {
   const text = result?.data?.text || '';
   const detectedAmount = extractAmountFromText(text);
   return { text, detectedAmount };
+}
+
+/**
+ * Finds all earlier monthly contracts for the same merchant that are still unpaid (have remaining balance).
+ * Used to warn staff before accepting payment for a future month when past debts remain.
+ */
+export function findEarlierUnpaidContracts(targetBooking, monthlyList) {
+  if (!targetBooking || !monthlyList || !Array.isArray(monthlyList)) return [];
+
+  const targetMonthVal = getMonthSortValue(targetBooking.booking_month || targetBooking.start_date);
+  if (!targetMonthVal) return [];
+
+  const targetBooker = (targetBooking.booker_name || '').trim().toLowerCase();
+  const targetPhone = String(targetBooking.phone || '').replace(/[\s-]/g, '').trim();
+  const targetCleanStalls = cleanStallName(targetBooking.stalls);
+
+  return monthlyList.filter(item => {
+    // Must not be the same contract
+    if (item.id === targetBooking.id) return false;
+    // Exclude cancelled contracts
+    if (item.status === 'ยกเลิก') return false;
+
+    // Check if it is from an EARLIER month
+    const itemMonthVal = getMonthSortValue(item.booking_month || item.start_date);
+    if (!itemMonthVal || itemMonthVal >= targetMonthVal) return false;
+
+    // Check remaining balance
+    const total = parseNumber(item.total_price || 0);
+    const paid = parseNumber(item.paid_amount || 0);
+    const remaining = Math.max(0, total - paid);
+    if (remaining <= 0) return false;
+
+    // Check customer identity:
+    const itemCleanStalls = cleanStallName(item.stalls);
+    const itemBooker = (item.booker_name || '').trim().toLowerCase();
+    const itemPhone = String(item.phone || '').replace(/[\s-]/g, '').trim();
+
+    const isSameStall = itemCleanStalls && targetCleanStalls && itemCleanStalls === targetCleanStalls;
+    const isSameName = itemBooker && targetBooker && itemBooker === targetBooker;
+    const isSamePhone = itemPhone && targetPhone && itemPhone.length >= 8 && targetPhone.length >= 8 && itemPhone === targetPhone;
+    const isGenericName = !targetBooker || targetBooker === 'ไม่ระบุชื่อ' || targetBooker === '-' || targetBooker === 'ร้านค้าประจำ';
+    const isSameNameValid = !isGenericName && itemBooker && targetBooker && itemBooker === targetBooker;
+
+    return (isSameName && isSameStall) ||
+           (isSameName && isSamePhone) ||
+           (isSamePhone && isSameStall) ||
+           (isSameNameValid && !targetPhone && !itemPhone);
+  }).map(item => ({
+    ...item,
+    remaining: Math.max(0, parseNumber(item.total_price || 0) - parseNumber(item.paid_amount || 0))
+  }));
 }
