@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { DashboardContext } from '@/context/DashboardContext';
-import { useBooking } from '@/context/BookingContext';
 import { 
   Trash2, TrendingUp, TrendingDown, Loader2, RefreshCw, AlertCircle, 
-  Lock, ListFilter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight 
+  Lock, ListFilter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, HelpCircle 
 } from 'lucide-react';
 import DailyClosingModal from './DailyClosingModal';
 import FinanceTransactionForm from './FinanceTransactionForm';
@@ -20,10 +19,11 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
     fetchFinanceData, 
     deleteIncome, 
     deleteExpense,
-    isDateClosed
+    isDateClosed,
+    confirmInfo,
+    showConfirm
   } = useFinance();
 
-  const { showConfirm } = useBooking();
   const dashboardContext = useContext(DashboardContext);
 
   // Daily Closing Modal state
@@ -32,12 +32,29 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
   // Local state for tabs: 'all', 'income', or 'expense'
   const [activeTab, setActiveTab] = useState('all');
 
-  // Filter states
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Filter states - default to defaultDate (today) for optimal performance
+  const [startDate, setStartDate] = useState(defaultDate || '');
+  const [endDate, setEndDate] = useState(defaultDate || '');
   const [categoryFilter, setCategoryFilter] = useState('ทั้งหมด');
   const [methodFilter, setMethodFilter] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Keep date synced if defaultDate from header changes
+  const [prevDefaultDate, setPrevDefaultDate] = useState(defaultDate);
+  if (defaultDate !== prevDefaultDate) {
+    setPrevDefaultDate(defaultDate);
+    setStartDate(defaultDate || '');
+    setEndDate(defaultDate || '');
+  }
+
+  // Debounce search query to prevent spamming requests on each keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   // Fetch data on filter change
   const loadData = useCallback(() => {
@@ -46,9 +63,9 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
       endDate,
       category: categoryFilter,
       method: methodFilter,
-      searchQuery
+      searchQuery: debouncedSearchQuery
     });
-  }, [fetchFinanceData, startDate, endDate, categoryFilter, methodFilter, searchQuery]);
+  }, [fetchFinanceData, startDate, endDate, categoryFilter, methodFilter, debouncedSearchQuery]);
 
   useEffect(() => {
     loadData();
@@ -56,7 +73,6 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
 
   // Handle transaction creation success
   const handleTransactionSuccess = () => {
-    loadData();
     dashboardContext?.calculateDashboard?.();
   };
 
@@ -487,6 +503,43 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
         }}
         defaultDate={defaultDate || startDate || new Date().toISOString().split('T')[0]}
       />
+
+      {/* Confirmation Modal */}
+      {confirmInfo && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
+            <div className={`px-5 py-4 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
+              {confirmInfo.isDanger ? <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" /> : <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />}
+              <h3 className="font-extrabold text-sm flex-1">{confirmInfo.title}</h3>
+            </div>
+            <div className="p-5 flex flex-col gap-3 text-left">
+              <p className="text-xs font-bold text-gray-700 whitespace-pre-line leading-relaxed">
+                {confirmInfo.message}
+              </p>
+              <div className="flex gap-2.5 mt-2 pt-2 border-t border-amber-900/10">
+                <button
+                  type="button"
+                  onClick={confirmInfo.onCancel}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all cursor-pointer"
+                >
+                  {confirmInfo.cancelText || 'ยกเลิก'}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmInfo.onConfirm}
+                  className={`flex-1 py-2.5 rounded-xl font-extrabold text-xs text-white shadow-md hover:shadow-lg transition-all cursor-pointer ${
+                    confirmInfo.isDanger
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-[#8B4513] hover:bg-[#5D4037]'
+                  }`}
+                >
+                  {confirmInfo.confirmText || 'ตกลง'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

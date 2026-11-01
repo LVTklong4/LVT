@@ -61,6 +61,27 @@ export function FinanceProvider({ children }) {
   const [dailyClosingData, setDailyClosingData] = useState(null);
   const [closedDates, setClosedDates] = useState(new Set());
   const [loading, setLoading] = useState(false);
+  const [confirmInfo, setConfirmInfo] = useState(null);
+
+  const showConfirm = useCallback(({ title = 'ยืนยันการทำรายการ', message, confirmText = 'ตกลง', cancelText = 'ยกเลิก', isDanger = false }) => {
+    return new Promise((resolve) => {
+      setConfirmInfo({
+        title,
+        message,
+        confirmText,
+        cancelText,
+        isDanger,
+        onConfirm: () => {
+          setConfirmInfo(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setConfirmInfo(null);
+          resolve(false);
+        }
+      });
+    });
+  }, []);
 
   // Check if a date is closed/frozen
   const isDateClosed = useCallback((targetDate) => {
@@ -90,6 +111,9 @@ export function FinanceProvider({ children }) {
       let txnQuery = supabase.from('transactions').select('*').order('date', { ascending: false }).order('timestamp', { ascending: false });
       if (filters.startDate) txnQuery = txnQuery.gte('date', filters.startDate);
       if (filters.endDate) txnQuery = txnQuery.lte('date', filters.endDate);
+      if (!filters.startDate && !filters.endDate) {
+        txnQuery = txnQuery.limit(300);
+      }
 
       const { data: allTxns } = await txnQuery;
       
@@ -471,7 +495,23 @@ export function FinanceProvider({ children }) {
       const { error } = await supabase.from('transactions').insert([payloadTxn]);
       if (error) throw error;
 
-      await fetchFinanceData();
+      // Optimistic update state immediately for zero latency
+      const breakdown = parsePaymentBreakdown(payloadTxn.method, payloadTxn.total_amount);
+      const itemObj = {
+        id: payloadTxn.id,
+        date: payloadTxn.date,
+        category: payloadTxn.category,
+        description: payloadTxn.description,
+        item: payloadTxn.description,
+        amount: payloadTxn.total_amount,
+        method: payloadTxn.method,
+        cashAmount: breakdown.cash,
+        transferAmount: breakdown.transfer,
+        officer: payloadTxn.officer,
+        timestamp: payloadTxn.timestamp
+      };
+      setIncomeList(prev => [itemObj, ...prev]);
+
       return { success: true, data: payloadTxn };
     } catch (e) {
       console.error('Error adding income:', e);
@@ -479,7 +519,7 @@ export function FinanceProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [fetchFinanceData]);
+  }, []);
 
   // ADD Expense Transaction
   const addExpense = useCallback(async (formData, officerName = 'Admin') => {
@@ -504,7 +544,23 @@ export function FinanceProvider({ children }) {
       const { error } = await supabase.from('transactions').insert([payloadTxn]);
       if (error) throw error;
 
-      await fetchFinanceData();
+      // Optimistic update state immediately for zero latency
+      const breakdown = parsePaymentBreakdown(payloadTxn.method, payloadTxn.total_amount);
+      const itemObj = {
+        id: payloadTxn.id,
+        date: payloadTxn.date,
+        category: payloadTxn.category,
+        description: payloadTxn.description,
+        item: payloadTxn.description,
+        amount: payloadTxn.total_amount,
+        method: payloadTxn.method,
+        cashAmount: breakdown.cash,
+        transferAmount: breakdown.transfer,
+        officer: payloadTxn.officer,
+        timestamp: payloadTxn.timestamp
+      };
+      setExpenseList(prev => [itemObj, ...prev]);
+
       return { success: true, data: payloadTxn };
     } catch (e) {
       console.error('Error adding expense:', e);
@@ -512,7 +568,7 @@ export function FinanceProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [fetchFinanceData]);
+  }, []);
 
   // DELETE Income Transaction
   const deleteIncome = useCallback(async (id) => {
@@ -520,7 +576,7 @@ export function FinanceProvider({ children }) {
     try {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
-      await fetchFinanceData();
+      setIncomeList(prev => prev.filter(x => x.id !== id));
       return { success: true };
     } catch (e) {
       console.error('Error deleting income:', e);
@@ -528,7 +584,7 @@ export function FinanceProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [fetchFinanceData]);
+  }, []);
 
   // DELETE Expense Transaction
   const deleteExpense = useCallback(async (id) => {
@@ -536,7 +592,7 @@ export function FinanceProvider({ children }) {
     try {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
-      await fetchFinanceData();
+      setExpenseList(prev => prev.filter(x => x.id !== id));
       return { success: true };
     } catch (e) {
       console.error('Error deleting expense:', e);
@@ -544,7 +600,7 @@ export function FinanceProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [fetchFinanceData]);
+  }, []);
 
   return (
     <FinanceContext.Provider value={{
@@ -560,7 +616,9 @@ export function FinanceProvider({ children }) {
       addIncome,
       addExpense,
       deleteIncome,
-      deleteExpense
+      deleteExpense,
+      confirmInfo,
+      showConfirm
     }}>
       {children}
     </FinanceContext.Provider>

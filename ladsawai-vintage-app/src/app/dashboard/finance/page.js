@@ -2,9 +2,6 @@
 
 import React, { useState } from 'react';
 import { AuthAdminProvider } from '@/context/AuthAdminContext';
-import { MonthlyBookingProvider } from '@/context/MonthlyBookingContext';
-import { BookingProvider } from '@/context/BookingContext';
-import { StorageProvider } from '@/context/StorageContext';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import FinanceHeader from '@/components/dashboard/FinanceHeader';
 import FinanceSummaryCards from '@/components/dashboard/FinanceSummaryCards';
@@ -27,7 +24,7 @@ function FinanceWorkplaceContent() {
   const isClosed = isDateClosed(selectedDate);
 
   const handleRefresh = () => {
-    fetchFinanceData();
+    fetchFinanceData({ startDate: selectedDate, endDate: selectedDate });
   };
 
   return (
@@ -64,7 +61,7 @@ function FinanceWorkplaceContent() {
           isOpen={showDailyClosingModal}
           onClose={() => {
             setShowDailyClosingModal(false);
-            fetchFinanceData();
+            fetchFinanceData({ startDate: selectedDate, endDate: selectedDate });
           }}
           defaultDate={selectedDate}
         />
@@ -78,15 +75,9 @@ export default function DashboardFinancePage() {
   return (
     <AuthAdminProvider>
       <DashboardAuthGuard>
-        <MonthlyBookingProvider>
-          <BookingProvider>
-            <StorageProvider>
-              <FinanceProvider>
-                <FinanceWorkplaceContent />
-              </FinanceProvider>
-            </StorageProvider>
-          </BookingProvider>
-        </MonthlyBookingProvider>
+        <FinanceProvider>
+          <FinanceWorkplaceContent />
+        </FinanceProvider>
       </DashboardAuthGuard>
     </AuthAdminProvider>
   );
