@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, withRetryOnJwtFuture } from '@/lib/supabase';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import {
   monthNamesFull,
@@ -517,7 +517,7 @@ export function MonthlyBookingProvider({ children }) {
     if (e?.preventDefault) e.preventDefault();
     setLoadingMonthly(true);
     try {
-      const res = await createMonthlyBooking({
+      const res = await withRetryOnJwtFuture(() => createMonthlyBooking({
         adminUser,
         bookerName: newMonthlyBookerName,
         phone: newMonthlyPhone,
@@ -534,7 +534,7 @@ export function MonthlyBookingProvider({ children }) {
         elecUnit: newMonthlyElecUnit,
         storageFee: newMonthlyStorageFee,
         customPrice: newMonthlyCustomPrice
-      });
+      }));
       showAlert(`จองล็อครายเดือนสำเร็จ สำหรับคุณ "${newMonthlyBookerName}"`, "สำเร็จ");
       setShowNewMonthlyModal(false);
       fetchMonthlyBookings();
@@ -556,7 +556,7 @@ export function MonthlyBookingProvider({ children }) {
   const handleSaveEditedMonthlyBooking = useCallback(async () => {
     setLoadingMonthly(true);
     try {
-      await updateMonthlyBooking({
+      await withRetryOnJwtFuture(() => updateMonthlyBooking({
         editingMonthlyId,
         bookerName: newMonthlyBookerName,
         phone: newMonthlyPhone,
@@ -576,7 +576,7 @@ export function MonthlyBookingProvider({ children }) {
         editStatus: editMonthlyStatus,
         editPaidAmount: editMonthlyPaidAmount,
         editRenewalStatus: editMonthlyRenewalStatus
-      });
+      }));
       showAlert("แก้ไขการจองรายเดือนสำเร็จ", "สำเร็จ");
       setShowNewMonthlyModal(false);
       if (activeMonthlyBooking && activeMonthlyBooking.id === editingMonthlyId) {
@@ -604,7 +604,7 @@ export function MonthlyBookingProvider({ children }) {
     if (!selectedMonthlyItem) return;
     setLoadingMonthly(true);
     try {
-      await updateMonthlyItemQuick(selectedMonthlyItem);
+      await withRetryOnJwtFuture(() => updateMonthlyItemQuick(selectedMonthlyItem));
       showAlert("อัปเดตข้อมูลผู้เช่ารายเดือนสำเร็จ", "สำเร็จ");
       if (activeMonthlyBooking && activeMonthlyBooking.id === selectedMonthlyItem.id) {
         setActiveMonthlyBooking({ ...activeMonthlyBooking, ...selectedMonthlyItem });
@@ -672,10 +672,10 @@ export function MonthlyBookingProvider({ children }) {
 
     setLoadingMonthly(true);
     try {
-      const { nextMonthFormatted } = await renewSingleMonthlyBooking({
+      const { nextMonthFormatted } = await withRetryOnJwtFuture(() => renewSingleMonthlyBooking({
         activeMonthlyBooking,
         stallsMaster: stalls
-      });
+      }));
       showAlert(`ต่อสัญญาผู้เช่า "${activeMonthlyBooking.booker_name}" ไปยังรอบเดือน ${nextMonthFormatted} เรียบร้อยแล้ว`, "สำเร็จ");
       fetchMonthlyBookings();
       broadcastBookingSync({ type: SYNC_EVENT_TYPES.MONTHLY_MUTATION });
@@ -690,12 +690,12 @@ export function MonthlyBookingProvider({ children }) {
   const handleBulkRenewSubmit = useCallback(async () => {
     setLoadingMonthly(true);
     try {
-      const { successCount, skippedCount, conflictErrors } = await renewBulkMonthlyBookings({
+      const { successCount, skippedCount, conflictErrors } = await withRetryOnJwtFuture(() => renewBulkMonthlyBookings({
         bulkRenewCheckedIds,
         monthlyList,
         bulkRenewEditData,
         stallsMaster: stalls
-      });
+      }));
       
       let message = `ต่อสัญญากลุ่มสำเร็จจำนวน ${successCount} ราย`;
       if (skippedCount > 0) {
