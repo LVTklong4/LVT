@@ -477,7 +477,7 @@ export default function MonthlyMgmtModal() {
                 <div className="bg-gray-50 border-t border-gray-100 p-3 flex justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => confirmInfo.onCancel ? confirmInfo.onCancel() : setConfirmInfo(null)}
+                    onClick={() => confirmInfo.onCancel && confirmInfo.onCancel()}
                     className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
                   >
                     {confirmInfo.cancelText || 'ยกเลิก'}

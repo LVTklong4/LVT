@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Component } from 'react';
 import {
   Printer, X, Search, Calendar, CheckCircle2,
-  Phone, FileText, LayoutList
+  Phone, FileText, LayoutList, AlertTriangle
 } from 'lucide-react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
@@ -18,7 +18,47 @@ import {
   printDebtFollowUpA4
 } from '@/services/monthly/debtFollowUpService';
 
-export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
+class ModalErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('MonthlyDebtFollowUpModal error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border-2 border-red-300 text-center flex flex-col gap-3">
+            <h3 className="font-extrabold text-base text-red-700">เกิดข้อผิดพลาดในการแสดงผลใบตรวจยอดค้าง</h3>
+            <p className="text-xs text-gray-600 bg-red-50 p-3 rounded-lg text-left overflow-auto max-h-32">
+              {this.state.error?.message || 'Unknown error'}
+            </p>
+            <div className="flex gap-2 justify-center mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  this.props.onClose?.();
+                }}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MonthlyDebtFollowUpModalContent({ isOpen, onClose }) {
   const {
     monthlyList,
     stalls,
@@ -83,14 +123,19 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
 
   // Real-time A4 HTML for live preview and printing
   const previewHTML = useMemo(() => {
-    return generateDebtFollowUpA4HTML({
-      items: filteredItems,
-      milestone: activeMilestone,
-      selectedMonth,
-      zoneFilter,
-      statusFilter,
-      adminUser
-    });
+    try {
+      return generateDebtFollowUpA4HTML({
+        items: filteredItems,
+        milestone: activeMilestone,
+        selectedMonth,
+        zoneFilter,
+        statusFilter,
+        adminUser
+      });
+    } catch (err) {
+      console.error('generateDebtFollowUpA4HTML error:', err);
+      return `<div style="padding:20px;color:red;font-family:sans-serif;">เกิดข้อผิดพลาดในการสร้างเอกสาร: ${err.message}</div>`;
+    }
   }, [filteredItems, activeMilestone, selectedMonth, zoneFilter, statusFilter, adminUser]);
 
   // Handle A4 Print
@@ -471,5 +516,13 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
 
       </div>
     </div>
+  );
+}
+
+export default function MonthlyDebtFollowUpModal(props) {
+  return (
+    <ModalErrorBoundary onClose={props.onClose}>
+      <MonthlyDebtFollowUpModalContent {...props} />
+    </ModalErrorBoundary>
   );
 }
