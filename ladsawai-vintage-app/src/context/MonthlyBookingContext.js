@@ -324,14 +324,31 @@ export function MonthlyBookingProvider({ children }) {
 
     if (monthlySearchQuery.trim()) {
       const q = monthlySearchQuery.toLowerCase().trim();
-      list = list.filter(item =>
-        (item.booker_name && item.booker_name.toLowerCase().includes(q)) ||
-        (item.customer_name && item.customer_name.toLowerCase().includes(q)) ||
-        (item.product && item.product.toLowerCase().includes(q)) ||
-        (item.stalls && item.stalls.toLowerCase().includes(q)) ||
-        (item.stall_name && item.stall_name.toLowerCase().includes(q)) ||
-        (item.phone && item.phone.includes(q))
-      );
+      list = list.filter(item => {
+        // 1. ค้นหาจากชื่อผู้ค้า
+        const name = `${item.booker_name || ''} ${item.customer_name || ''}`.toLowerCase();
+        if (name.includes(q)) return true;
+
+        // 2. ค้นหาจากสินค้า
+        const product = (item.product || '').toLowerCase();
+        if (product.includes(q)) return true;
+
+        // 3. ค้นหาจากเลขล็อค (ดึงเฉพาะชื่อล็อค ตัดวงเล็บออก และไม่ดึงยอดเงินหรือเบอร์โทร)
+        const rawStalls = String(item.stalls || item.stall_name || '');
+        let stallNamesStr = rawStalls;
+        if (rawStalls.startsWith('[') && rawStalls.includes('"name"')) {
+          try {
+            const parsed = JSON.parse(rawStalls);
+            if (Array.isArray(parsed)) {
+              stallNamesStr = parsed.map(s => s.name || s.stall_name || '').join(', ');
+            }
+          } catch (e) {}
+        }
+        const cleanStalls = stallNamesStr.replace(/[\[\]]/g, '').toLowerCase();
+        if (cleanStalls.includes(q)) return true;
+
+        return false;
+      });
     }
 
     return [...list].sort((a, b) => {

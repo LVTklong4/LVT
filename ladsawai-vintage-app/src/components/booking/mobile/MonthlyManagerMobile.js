@@ -155,7 +155,7 @@ export default function MonthlyManagerMobile({ onClose }) {
                 setMonthlySearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="ค้นหาชื่อ, เบอร์โทร, แผงค้า..."
+              placeholder="ค้นหาชื่อ, สินค้า, เลขล็อค..."
               className="w-full pl-8 pr-7 py-1.5 border border-amber-300/80 rounded-xl text-xs bg-amber-50/20 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8B4513]/30"
             />
             <Search className="w-3.5 h-3.5 text-amber-800/60 absolute left-2.5 top-1/2 -translate-y-1/2" />

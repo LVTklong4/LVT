@@ -231,7 +231,7 @@ export default function MonthlyManagerLayout() {
                 type="text"
                 value={monthlySearchQuery}
                 onChange={(e) => setMonthlySearchQuery(e.target.value)}
-                placeholder="ค้นหาชื่อ, เบอร์โทร, แผงค้า..."
+                placeholder="ค้นหาชื่อ, สินค้า, เลขล็อค..."
                 className="w-48 pl-7 pr-7 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
