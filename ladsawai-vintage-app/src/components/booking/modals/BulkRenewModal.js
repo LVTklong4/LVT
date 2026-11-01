@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { Loader2, X, Phone, Check, Search, ArrowUpDown, Users, AlertTriangle } from 'lucide-react';
 
@@ -12,6 +12,65 @@ export default function BulkRenewModal() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDuplicatesOnly, setFilterDuplicatesOnly] = useState(false);
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc' | 'none'
+  const [renewalFilter, setRenewalFilter] = useState('all'); // 'all' | 'unrenewed' | 'renewed'
+
+  // Smart Identity Key Helper: Name + Phone (if phone exists) OR Name + Product (if no phone)
+  const getCustomerIdentityKey = useCallback((item) => {
+    if (!item) return '';
+    const name = (item.booker_name || '').trim().toLowerCase();
+    const phone = String(item.phone || '').replace(/[\s-]/g, '').trim();
+    const product = (item.product || '').trim().toLowerCase();
+
+    // If generic/empty name, avoid grouping as duplicate
+    if (!name || name === 'ไม่ระบุชื่อ' || name === 'ร้านค้าประจำ' || name === '-') {
+      return `UNIQUE_${item.id || Math.random()}`;
+    }
+
+    // 1. If has valid phone (>= 8 digits) -> Name + Phone
+    if (phone && phone !== '-' && phone !== '0' && phone.length >= 8) {
+      return `${name}__PHONE__${phone}`;
+    }
+
+    // 2. If NO phone -> Name + Product (to distinguish different sellers with same name)
+    if (product && product !== '-') {
+      return `${name}__PROD__${product}`;
+    }
+
+    // 3. Fallback: Name only
+    return `${name}__NAMEONLY`;
+  }, []);
+
+  const targetMonth = useMemo(() => {
+    return computeNextMonthThai(bulkRenewFromMonth);
+  }, [computeNextMonthThai, bulkRenewFromMonth]);
+
+  const isAlreadyRenewed = useCallback((item) => {
+    const itemKey = getCustomerIdentityKey(item);
+    const cleanItemStalls = cleanStallName(item.stalls);
+    return monthlyList.some(mb => {
+      if (formatBookingMonth(mb.booking_month) !== targetMonth) return false;
+      return getCustomerIdentityKey(mb) === itemKey && cleanStallName(mb.stalls) === cleanItemStalls;
+    });
+  }, [monthlyList, targetMonth, getCustomerIdentityKey, cleanStallName, formatBookingMonth]);
+
+  const baseSourceBookings = useMemo(() => {
+    return monthlyList.filter(item =>
+      formatBookingMonth(item.booking_month) === bulkRenewFromMonth &&
+      item.renewal_status !== 'ไม่ต่อสัญญา'
+    );
+  }, [monthlyList, bulkRenewFromMonth, formatBookingMonth]);
+
+  const counts = useMemo(() => {
+    let renewed = 0;
+    baseSourceBookings.forEach(item => {
+      if (isAlreadyRenewed(item)) renewed++;
+    });
+    return {
+      total: baseSourceBookings.length,
+      renewed,
+      unrenewed: baseSourceBookings.length - renewed
+    };
+  }, [baseSourceBookings, isAlreadyRenewed]);
 
   if (!showBulkRenewModal) return null;
 
@@ -63,8 +122,57 @@ export default function BulkRenewModal() {
                   </div>
                 </div>
 
-                {/* Right: Search box & Duplicate Filter toggle */}
-                <div className="flex items-center gap-2.5 ml-auto">
+                {/* Right: Status Filter & Search box */}
+                <div className="flex flex-wrap items-center gap-2.5 ml-auto">
+                  {/* Renewal status filter buttons */}
+                  <div className="inline-flex rounded-lg border border-purple-200 bg-white p-0.5 shadow-2xs text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setRenewalFilter('all')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        renewalFilter === 'all'
+                          ? 'bg-purple-700 text-white shadow-xs'
+                          : 'text-gray-600 hover:text-purple-900 hover:bg-purple-50'
+                      }`}
+                    >
+                      ทั้งหมด ({counts.total})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRenewalFilter('unrenewed')}
+                      className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                        renewalFilter === 'unrenewed'
+                          ? 'bg-amber-500 text-white shadow-xs ring-1 ring-amber-400 font-extrabold'
+                          : 'text-amber-800 hover:bg-amber-50'
+                      }`}
+                      title="กรองดูเฉพาะลูกค้าที่ยังไม่ได้ต่อสัญญาในเดือนถัดไป"
+                    >
+                      <span>⏳ ยังไม่ต่อ</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                        renewalFilter === 'unrenewed' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-900'
+                      }`}>
+                        {counts.unrenewed}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRenewalFilter('renewed')}
+                      className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                        renewalFilter === 'renewed'
+                          ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-500 font-extrabold'
+                          : 'text-emerald-800 hover:bg-emerald-50'
+                      }`}
+                      title="กรองดูเฉพาะลูกค้าที่ต่อสัญญาในเดือนถัดไปแล้ว"
+                    >
+                      <span>✅ ต่อแล้ว</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                        renewalFilter === 'renewed' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-900'
+                      }`}>
+                        {counts.renewed}
+                      </span>
+                    </button>
+                  </div>
+
                   {/* Search box */}
                   <div className="relative">
                     <input
@@ -72,14 +180,14 @@ export default function BulkRenewModal() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="ค้นหาชื่อ, เบอร์โทร, แผงค้า, สินค้า..."
-                      className="w-56 pl-8 pr-7 py-1.5 border border-purple-200 rounded-lg text-xs bg-white text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-xs font-normal"
+                      className="w-48 sm:w-56 pl-8 pr-7 py-1.5 border border-purple-200 rounded-lg text-xs bg-white text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-xs font-normal"
                     />
                     <Search className="w-3.5 h-3.5 text-purple-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     {searchQuery && (
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold text-xs"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold text-xs cursor-pointer"
                       >
                         ✕
                       </button>
@@ -91,15 +199,7 @@ export default function BulkRenewModal() {
               {/* Main Table Area */}
               <div className="flex-1 overflow-auto p-4 min-h-[300px]">
                 {(() => {
-                  const targetMonth = computeNextMonthThai(bulkRenewFromMonth);
-                  
-                  // 1. Get base source bookings
-                  let sourceBookings = monthlyList.filter(item =>
-                    formatBookingMonth(item.booking_month) === bulkRenewFromMonth &&
-                    item.renewal_status !== 'ไม่ต่อสัญญา'
-                  );
-
-                  if (sourceBookings.length === 0) {
+                  if (baseSourceBookings.length === 0) {
                     return (
                       <div className="flex flex-col items-center justify-center py-20 text-gray-400 font-bold gap-2">
                         <span>ไม่พบลูกค้ารายเดือนในรอบเดือน {bulkRenewFromMonth}</span>
@@ -108,35 +208,9 @@ export default function BulkRenewModal() {
                     );
                   }
 
-                  // Smart Identity Key Helper: Name + Phone (if phone exists) OR Name + Product (if no phone)
-                  const getCustomerIdentityKey = (item) => {
-                    if (!item) return '';
-                    const name = (item.booker_name || '').trim().toLowerCase();
-                    const phone = String(item.phone || '').replace(/[\s-]/g, '').trim();
-                    const product = (item.product || '').trim().toLowerCase();
-
-                    // If generic/empty name, avoid grouping as duplicate
-                    if (!name || name === 'ไม่ระบุชื่อ' || name === 'ร้านค้าประจำ' || name === '-') {
-                      return `UNIQUE_${item.id || Math.random()}`;
-                    }
-
-                    // 1. If has valid phone (>= 8 digits) -> Name + Phone
-                    if (phone && phone !== '-' && phone !== '0' && phone.length >= 8) {
-                      return `${name}__PHONE__${phone}`;
-                    }
-
-                    // 2. If NO phone -> Name + Product (to distinguish different sellers with same name)
-                    if (product && product !== '-') {
-                      return `${name}__PROD__${product}`;
-                    }
-
-                    // 3. Fallback: Name only
-                    return `${name}__NAMEONLY`;
-                  };
-
-                  // 2. Count contracts per customer identity in this source month
+                  // Count contracts per customer identity in this source month
                   const identityCountMap = {};
-                  sourceBookings.forEach(item => {
+                  baseSourceBookings.forEach(item => {
                     const key = getCustomerIdentityKey(item);
                     if (!key.startsWith('UNIQUE_')) {
                       identityCountMap[key] = (identityCountMap[key] || 0) + 1;
@@ -147,7 +221,9 @@ export default function BulkRenewModal() {
                     Object.keys(identityCountMap).filter(key => identityCountMap[key] > 1)
                   );
 
-                  // 3. Filter by search query
+                  let sourceBookings = [...baseSourceBookings];
+
+                  // 1. Filter by search query
                   if (searchQuery.trim()) {
                     const q = searchQuery.toLowerCase().trim();
                     sourceBookings = sourceBookings.filter(item => {
@@ -164,7 +240,14 @@ export default function BulkRenewModal() {
                     });
                   }
 
-                  // 4. Filter by duplicates only
+                  // 2. Filter by renewal status (all | unrenewed | renewed)
+                  if (renewalFilter === 'unrenewed') {
+                    sourceBookings = sourceBookings.filter(item => !isAlreadyRenewed(item));
+                  } else if (renewalFilter === 'renewed') {
+                    sourceBookings = sourceBookings.filter(item => isAlreadyRenewed(item));
+                  }
+
+                  // 3. Filter by duplicates only
                   if (filterDuplicatesOnly) {
                     sourceBookings = sourceBookings.filter(item => {
                       const key = getCustomerIdentityKey(item);
@@ -172,7 +255,7 @@ export default function BulkRenewModal() {
                     });
                   }
 
-                  // 5. Sort by customer name
+                  // 4. Sort by customer name
                   sourceBookings.sort((a, b) => {
                     const nameA = (a.booker_name || '').trim();
                     const nameB = (b.booker_name || '').trim();
@@ -180,24 +263,26 @@ export default function BulkRenewModal() {
                     return sortOrder === 'asc' ? cmp : -cmp;
                   });
 
-                  const isAlreadyRenewed = (item) => {
-                    const itemKey = getCustomerIdentityKey(item);
-                    return monthlyList.some(mb => {
-                      if (formatBookingMonth(mb.booking_month) !== targetMonth) return false;
-                      return getCustomerIdentityKey(mb) === itemKey && mb.stalls === item.stalls;
-                    });
-                  };
-
                   const nonRenewedBookings = sourceBookings.filter(item => !isAlreadyRenewed(item));
                   const allChecked = nonRenewedBookings.length > 0 && nonRenewedBookings.every(b => bulkRenewCheckedIds.includes(b.id));
 
                   return (
                     <div>
                       {/* Active Filter Bar if active */}
-                      {(filterDuplicatesOnly || searchQuery) && (
+                      {(filterDuplicatesOnly || searchQuery || renewalFilter !== 'all') && (
                         <div className="mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-xs font-bold text-amber-900">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span>🔍 ผลการกรอง: แสดง {sourceBookings.length} รายการ</span>
+                            {renewalFilter === 'unrenewed' && (
+                              <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded text-[10px]">
+                                เฉพาะที่ยังไม่ต่อ ({sourceBookings.length} รายการ)
+                              </span>
+                            )}
+                            {renewalFilter === 'renewed' && (
+                              <span className="bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded text-[10px]">
+                                เฉพาะที่ต่อสัญญาแล้ว ({sourceBookings.length} รายการ)
+                              </span>
+                            )}
                             {filterDuplicatesOnly && (
                               <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded text-[10px]">
                                 เฉพาะลูกค้าที่มีหลายสัญญา ({duplicateIdentityKeys.size} คน)
@@ -214,6 +299,7 @@ export default function BulkRenewModal() {
                             onClick={() => {
                               setFilterDuplicatesOnly(false);
                               setSearchQuery('');
+                              setRenewalFilter('all');
                             }}
                             className="text-amber-800 hover:text-amber-950 underline text-[11px] cursor-pointer"
                           >
