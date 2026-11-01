@@ -25,14 +25,16 @@ import {
   ClipboardList,
   RefreshCw,
   LogOut,
-  User
+  User,
+  Copy
 } from 'lucide-react';
 
 export default function StandardBookingTopBar({
   onOpenOffGrid,
   onOpenKlongThom,
   onOpenDailyClosing,
-  onOpenDebtFollowUp
+  onOpenDebtFollowUp,
+  onOpenCopyStallMap
 }) {
   const { setShowDebtFollowUpModal } = useMonthlyBooking();
   const {
@@ -206,6 +208,15 @@ export default function StandardBookingTopBar({
                           className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                         >
                           <Store className="w-4 h-4 text-red-600 shrink-0" /> คลองถม
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setShowGearDropdown(false);
+                            onOpenCopyStallMap?.();
+                          }} 
+                          className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-4 h-4 text-amber-800 shrink-0" /> คัดลอกผังจากวันอื่น
                         </button>
                         <button 
                           onClick={() => {

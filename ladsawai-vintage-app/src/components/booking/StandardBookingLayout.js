@@ -21,6 +21,7 @@ import BookingDetailModal from './modals/BookingDetailModal';
 import StandbyWaitlistModal from './modals/StandbyWaitlistModal';
 import ActivityLogsModal from './modals/ActivityLogsModal';
 import DailyReceiptPreviewModal from './modals/DailyReceiptPreviewModal';
+import CopyStallMapModal from './modals/CopyStallMapModal';
 import { FinanceProvider } from '@/context/FinanceContext';
 import { KlongThomProvider } from '@/context/KlongThomContext';
 import StallMapGrid from './StallMapGrid';
@@ -81,6 +82,9 @@ export default function StandardBookingLayout() {
 
   // Daily Closing Modal State
   const [showDailyClosingModal, setShowDailyClosingModal] = React.useState(false);
+
+  // Copy Stall Map Modal State
+  const [showCopyStallMapModal, setShowCopyStallMapModal] = React.useState(false);
 
   // States & memo for vacating multiple monthly stalls
   const [selectedVacateStallIds, setSelectedVacateStallIds] = React.useState([]);
@@ -183,6 +187,7 @@ export default function StandardBookingLayout() {
           }}
           onOpenKlongThom={() => setShowKlongThomModal(true)}
           onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+          onOpenCopyStallMap={() => setShowCopyStallMapModal(true)}
         />
       </div>
 
@@ -221,6 +226,7 @@ export default function StandardBookingLayout() {
           }}
           onOpenKlongThom={() => setShowKlongThomModal(true)}
           onOpenDailyClosing={() => setShowDailyClosingModal(true)}
+          onOpenCopyStallMap={() => setShowCopyStallMapModal(true)}
         />
       </div>
 
@@ -462,6 +468,13 @@ export default function StandardBookingLayout() {
           onClose={() => setShowDailyClosingModal(false)}
         />
       </FinanceProvider>
+
+      {/* 📋 Copy Stall Map Modal */}
+      <CopyStallMapModal 
+        isOpen={showCopyStallMapModal}
+        onClose={() => setShowCopyStallMapModal(false)}
+        defaultTargetDate={selectedDate || '2026-11-06'}
+      />
     </div>
   );
 }

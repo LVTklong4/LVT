@@ -8,13 +8,15 @@ import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import {
   MapPin, CalendarDays, Package, Banknote, Menu,
   Store, FileText, Settings, Info, LogOut, LogIn,
-  X, CheckCircle, ChevronUp, AlertCircle, ClipboardList
+  X, CheckCircle, ChevronUp, AlertCircle, ClipboardList,
+  Copy
 } from 'lucide-react';
 
 export default function MobileBottomNav({
   onOpenOffGrid,
   onOpenKlongThom,
-  onOpenDailyClosing
+  onOpenDailyClosing,
+  onOpenCopyStallMap
 }) {
   const { adminUser } = useAuthAdmin();
   const {
@@ -145,6 +147,23 @@ export default function MobileBottomNav({
                 <div>
                   <div className="text-blue-900 font-black">ตั้งค่าระบบ</div>
                   <div className="text-[10px] text-gray-500 font-medium">ราคาแผงและสิทธิ์</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  onOpenCopyStallMap?.();
+                }}
+                className="p-3 bg-white hover:bg-amber-50 active:scale-95 border border-[#8B4513]/15 rounded-xl flex items-center gap-2.5 shadow-2xs transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 shrink-0">
+                  <Copy className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-amber-900 font-black">คัดลอกผัง</div>
+                  <div className="text-[10px] text-gray-500 font-medium">คัดลอกจองข้ามวัน</div>
                 </div>
               </button>
 
