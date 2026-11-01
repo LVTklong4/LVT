@@ -20,7 +20,8 @@ import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsSer
 export default function MonthlyMgmtModal() {
   const {
     activeMonthlyBooking,    activeMonthlyTransactions,    cleanStallName,    fetchMonthlyTransactions,    filteredMonthlyList,    formatBookingMonth,    handleDeleteMonthlyBooking,    handleOpenBulkRenewModal,    handleOpenEditMonthlyModal,    handleOpenNewMonthlyModal,    handlePrintMonthlyInvoice,    handlePrintMonthlyReceiptDirect,    handleShowMonthlyReceiptPreview,    handleOpenMonthlyPaymentModal,    handleDeleteMonthlyTransaction,    handleSortToggle,    handleToggleNonRenewal,    loadingMonthly,    loadingMonthlyTxns,    monthlyList,    monthlyMonthFilter,    monthlySearchQuery,    note,    parseNumber,    renderSortArrow,    setActiveMonthlyBooking,    setMonthlyMonthFilter,    setMonthlyPaymentForm,    setMonthlySearchQuery,    setShowMonthlyMgmtModal,    setShowMonthlyPaymentModal,    setSlipPreviewUrl,    setFullScreenSlipUrl,    showMonthlyMgmtModal,    sortThaiMonthsDescending,    stalls,
-    alertInfo,    setAlertInfo,    confirmInfo,    setShowDebtFollowUpModal
+    alertInfo,    setAlertInfo,    confirmInfo,    setShowDebtFollowUpModal,
+    orphanBookingsCount,    loadingCleanup,    handleCleanupOrphans
   } = useMonthlyBooking();
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -88,6 +89,18 @@ export default function MonthlyMgmtModal() {
                   <Printer className="w-4 h-4 text-amber-200" />
                   ใบตรวจยอดค้าง (A4)
                 </button>
+                {orphanBookingsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleCleanupOrphans}
+                    disabled={loadingCleanup}
+                    className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer animate-pulse"
+                    title="กวาดล้างข้อมูลจองประจำที่ตกค้างในผัง (ไม่มีสัญญาหลัก)"
+                  >
+                    {loadingCleanup ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 text-rose-200" />}
+                    <span>ล้างข้อมูลตกค้าง ({orphanBookingsCount})</span>
+                  </button>
+                )}
               </div>
 
               {/* ค้นหาและตัวกรองรายเดือน */}

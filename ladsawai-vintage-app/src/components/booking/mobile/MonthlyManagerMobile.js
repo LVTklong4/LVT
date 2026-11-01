@@ -38,7 +38,10 @@ export default function MonthlyManagerMobile({ onClose }) {
     activeMonthlyTransactions,
     loadingMonthlyTxns,
     stalls,
-    setShowDebtFollowUpModal
+    setShowDebtFollowUpModal,
+    orphanBookingsCount,
+    loadingCleanup,
+    handleCleanupOrphans
   } = useMonthlyBooking();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,6 +124,24 @@ export default function MonthlyManagerMobile({ onClose }) {
           )}
         </div>
       </div>
+
+      {/* Orphan Bookings Warning Banner */}
+      {orphanBookingsCount > 0 && (
+        <div className="bg-rose-50 px-3 py-1.5 border-b border-rose-200 flex items-center justify-between gap-2 shrink-0">
+          <span className="text-[11px] font-bold text-rose-800">
+            พบข้อมูลจองประจำตกค้าง {orphanBookingsCount} รายการ
+          </span>
+          <button
+            type="button"
+            onClick={handleCleanupOrphans}
+            disabled={loadingCleanup}
+            className="px-2.5 py-1 bg-rose-700 active:bg-rose-800 text-white rounded-lg text-[10px] font-black flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
+          >
+            {loadingCleanup ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+            ล้างข้อมูลตกค้าง
+          </button>
+        </div>
+      )}
 
       {/* 2. Mobile Search & Filter Toolbar */}
       <div className="bg-white px-3 py-2 border-b border-amber-200/60 flex flex-col gap-2 shrink-0 shadow-2xs">

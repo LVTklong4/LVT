@@ -41,7 +41,8 @@ export async function checkStallsAvailability({
   date,
   stalls,
   excludeBookingId = null,
-  excludeMasterId = null
+  excludeMasterId = null,
+  bookerName = null
 }) {
   if (!supabase || !date || !stalls) {
     return { isAvailable: true, conflictStall: null, conflictBooking: null, error: 'Missing parameters' };
@@ -55,7 +56,7 @@ export async function checkStallsAvailability({
   try {
     const { data: activeBookings, error } = await supabase
       .from('bookings')
-      .select('id, date, stall_name, booker_name, product, status, master_id')
+      .select('id, date, stall_name, booker_name, product, status, master_id, note')
       .eq('date', date)
       .neq('status', 'ลา');
 
@@ -73,6 +74,16 @@ export async function checkStallsAvailability({
       // Exclude self when updating
       if (excludeBookingId && b.id === excludeBookingId) continue;
       if (excludeMasterId && b.master_id === excludeMasterId) continue;
+
+      // Exclude if conflicting booking belongs to the same booker (updating same customer's stall)
+      if (bookerName && b.booker_name && b.booker_name.trim().toLowerCase() === bookerName.trim().toLowerCase()) {
+        continue;
+      }
+
+      // Exclude if conflicting booking is an orphaned record from legacy generation
+      if (b.note?.includes('[ลูกค้าประจำ]') || b.master_id?.startsWith('BK-2610-')) {
+        continue;
+      }
 
       const bookedStalls = extractStallNames(b.stall_name);
       for (const reqStall of requestedStalls) {

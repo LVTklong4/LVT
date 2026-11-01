@@ -39,6 +39,7 @@ import {
 import { syncMonthlyAndFinanceFromSheets } from '@/services/monthly/monthlyArchiveService';
 import { calculateMonthlySummary } from '@/services/monthly/monthlyPricingService';
 import { broadcastBookingSync, SYNC_EVENT_TYPES } from '@/utils/broadcastSync';
+import { checkOrphanBookings, deleteOrphanBookings } from '@/services/monthly/monthlyCleanupService';
 
 const MonthlyBookingContext = createContext();
 
@@ -79,6 +80,11 @@ export function MonthlyBookingProvider({ children }) {
   const [alertInfo, setAlertInfo] = useState(null);
   const [confirmInfo, setConfirmInfo] = useState(null);
   const alertTimeoutRef = useRef(null);
+
+  // Orphan Bookings cleanup state
+  const [orphanBookingsCount, setOrphanBookingsCount] = useState(0);
+  const [orphanBookingIds, setOrphanBookingIds] = useState([]);
+  const [loadingCleanup, setLoadingCleanup] = useState(false);
 
   const showAlert = useCallback((message, title = 'แจ้งเตือน', isError = false) => {
     if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
@@ -209,6 +215,13 @@ export function MonthlyBookingProvider({ children }) {
 
         setMonthlyList(allData);
       });
+      // Check for orphan regular bookings in background
+      checkOrphanBookings(supabase).then(res => {
+        if (res && res.orphans) {
+          setOrphanBookingsCount(res.count);
+          setOrphanBookingIds(res.orphans.map(o => o.id));
+        }
+      }).catch(() => {});
     } catch (e) {
       console.error('Error fetching monthly bookings:', e);
     } finally {
@@ -247,6 +260,50 @@ export function MonthlyBookingProvider({ children }) {
       supabase.removeChannel(channel);
     };
   }, [fetchMonthlyBookings]);
+
+  // Check for orphaned daily bookings that have no parent monthly contract
+  const checkOrphans = useCallback(async () => {
+    try {
+      const res = await checkOrphanBookings(supabase);
+      if (res && res.orphans) {
+        setOrphanBookingsCount(res.count);
+        setOrphanBookingIds(res.orphans.map(o => o.id));
+      }
+    } catch (err) {
+      console.warn('Orphan check error:', err);
+    }
+  }, []);
+
+  const handleCleanupOrphans = useCallback(async () => {
+    if (orphanBookingsCount === 0) {
+      showAlert('ไม่พบข้อมูลการจองรายวันที่ตกค้างในระบบ', 'ข้อมูลเรียบร้อย');
+      return;
+    }
+
+    const isConfirmed = await showConfirm({
+      title: 'ยืนยันกวาดล้างข้อมูลจองตกค้าง',
+      message: `ตรวจพบข้อมูลจองรายวันตกค้าง (ไม่มีสัญญาหลัก) จำนวน ${orphanBookingsCount} รายการ\n\nต้องการล้างข้อมูลที่ซ้ำซ้อนเหล่านี้ออกจากฐานข้อมูลหรือไม่?\n(ระบบจะลบเฉพาะรายการค้างชำระที่ไม่มีสัญญาแม่เท่านั้น ไม่กระทบรายการที่ชำระแล้ว)`,
+      confirmText: 'ล้างข้อมูลตกค้าง',
+      cancelText: 'ยกเลิก',
+      isDanger: true
+    });
+    if (!isConfirmed) return;
+
+    setLoadingCleanup(true);
+    try {
+      const res = await deleteOrphanBookings(supabase, orphanBookingIds);
+      if (res.success) {
+        showAlert(`ล้างข้อมูลการจองประจำที่ตกค้างเรียบร้อยแล้ว จำนวน ${res.deletedCount} รายการ`, 'สำเร็จ');
+        setOrphanBookingsCount(0);
+        setOrphanBookingIds([]);
+        broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: '2026-11-01' });
+      } else {
+        showAlert('เกิดข้อผิดพลาดในการลบข้อมูล: ' + (res.error || 'ข้อผิดพลาด'), 'ข้อผิดพลาด', true);
+      }
+    } finally {
+      setLoadingCleanup(false);
+    }
+  }, [orphanBookingsCount, orphanBookingIds, showConfirm, showAlert]);
 
   // Filtered & Sorted monthly list
   const filteredMonthlyList = useMemo(() => {
@@ -1116,6 +1173,10 @@ export function MonthlyBookingProvider({ children }) {
       handlePrintMonthlyInvoice,
       handleSyncFromLegacySheets,
       fetchMonthlyTransactions,
+      orphanBookingsCount,
+      loadingCleanup,
+      handleCleanupOrphans,
+      checkOrphans,
 
       // Utility re-exports
       cleanStallName,

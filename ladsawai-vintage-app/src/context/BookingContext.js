@@ -682,6 +682,19 @@ export function BookingProvider({ children }) {
     let booking = matchedBookings.sort((a, b) => {
       if (a.status === 'ลา' && b.status !== 'ลา') return 1;
       if (a.status !== 'ลา' && b.status === 'ลา') return -1;
+
+      // Prefer paid bookings over unpaid
+      const isPaidA = a.status === 'ชำระแล้ว' || a.status === 'จ่ายแล้ว';
+      const isPaidB = b.status === 'ชำระแล้ว' || b.status === 'จ่ายแล้ว';
+      if (isPaidA && !isPaidB) return -1;
+      if (!isPaidA && isPaidB) return 1;
+
+      // Prefer active monthly/regular contracts over legacy orphaned rows
+      const isLegacyA = a.note?.includes('[ลูกค้าประจำ]') || a.master_id?.startsWith('BK-2610-');
+      const isLegacyB = b.note?.includes('[ลูกค้าประจำ]') || b.master_id?.startsWith('BK-2610-');
+      if (isLegacyA && !isLegacyB) return 1;
+      if (!isLegacyA && isLegacyB) return -1;
+
       return 0;
     })[0];
 
@@ -929,7 +942,8 @@ export function BookingProvider({ children }) {
         date: selectedDate,
         stalls: selectedStallsList,
         excludeBookingId: selectedBooking?.id,
-        excludeMasterId: selectedBooking?.master_id
+        excludeMasterId: selectedBooking?.master_id,
+        bookerName: bookerName
       });
 
       if (!availCheck.isAvailable) {
