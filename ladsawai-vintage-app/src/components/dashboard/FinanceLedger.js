@@ -8,7 +8,7 @@ import {
   Lock, ListFilter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, HelpCircle 
 } from 'lucide-react';
 import DailyClosingModal from './DailyClosingModal';
-import FinanceTransactionForm from './FinanceTransactionForm';
+import FinanceTransactionForm, { incomeCategories, expenseCategories } from './FinanceTransactionForm';
 import FinanceTransactionFilter from './FinanceTransactionFilter';
 
 export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
@@ -33,8 +33,8 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
   const [activeTab, setActiveTab] = useState('all');
 
   // Filter states - default to defaultDate (today) for optimal performance
-  const [startDate, setStartDate] = useState(defaultDate || '');
-  const [endDate, setEndDate] = useState(defaultDate || '');
+  const [startDate, setStartDate] = useState(() => defaultDate || new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => defaultDate || new Date().toISOString().split('T')[0]);
   const [categoryFilter, setCategoryFilter] = useState('ทั้งหมด');
   const [methodFilter, setMethodFilter] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,10 +42,10 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
 
   // Keep date synced if defaultDate from header changes
   const [prevDefaultDate, setPrevDefaultDate] = useState(defaultDate);
-  if (defaultDate !== prevDefaultDate) {
+  if (defaultDate && defaultDate !== prevDefaultDate) {
     setPrevDefaultDate(defaultDate);
-    setStartDate(defaultDate || '');
-    setEndDate(defaultDate || '');
+    setStartDate(defaultDate);
+    setEndDate(defaultDate);
   }
 
   // Debounce search query to prevent spamming requests on each keystroke
@@ -113,10 +113,26 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Reset all filters
+  // Switch tabs without resetting date
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setCurrentPage(1);
+    if (categoryFilter !== 'ทั้งหมด') {
+      const isIncomeCategory = incomeCategories.includes(categoryFilter);
+      const isExpenseCategory = expenseCategories.includes(categoryFilter);
+      if (newTab === 'income' && !isIncomeCategory) {
+        setCategoryFilter('ทั้งหมด');
+      } else if (newTab === 'expense' && !isExpenseCategory) {
+        setCategoryFilter('ทั้งหมด');
+      }
+    }
+  };
+
+  // Reset all filters back to today's date
   const handleResetFilters = () => {
-    setStartDate('');
-    setEndDate('');
+    const today = defaultDate || new Date().toISOString().split('T')[0];
+    setStartDate(today);
+    setEndDate(today);
     setCategoryFilter('ทั้งหมด');
     setMethodFilter('ทั้งหมด');
     setSearchQuery('');
@@ -193,7 +209,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
 
           <div className="flex bg-[#FDF5E6] p-1 rounded-xl border border-[#8B4513]/20 flex-1 md:flex-initial">
             <button
-              onClick={() => { setActiveTab('all'); handleResetFilters(); }}
+              onClick={() => handleTabChange('all')}
               className={`flex-1 md:flex-initial px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 activeTab === 'all' 
                   ? 'bg-amber-800 text-white shadow-xs' 
@@ -204,7 +220,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
               <span>ทั้งหมด ({incomeList.length + expenseList.length})</span>
             </button>
             <button
-              onClick={() => { setActiveTab('income'); handleResetFilters(); }}
+              onClick={() => handleTabChange('income')}
               className={`flex-1 md:flex-initial px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 activeTab === 'income' 
                   ? 'bg-emerald-700 text-white shadow-xs' 
@@ -215,7 +231,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
               <span>รายรับ ({incomeList.length})</span>
             </button>
             <button
-              onClick={() => { setActiveTab('expense'); handleResetFilters(); }}
+              onClick={() => handleTabChange('expense')}
               className={`flex-1 md:flex-initial px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 activeTab === 'expense' 
                   ? 'bg-rose-700 text-white shadow-xs' 

@@ -40,6 +40,23 @@ export default function FinanceTransactionFilter({
     }
   };
 
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const past7 = new Date();
+  past7.setDate(past7.getDate() - 6);
+  const past7Str = past7.toISOString().split('T')[0];
+  const firstDayStr = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+
+  const isToday = startDate === todayStr && endDate === todayStr;
+  const is7Days = startDate === past7Str && endDate === todayStr;
+  const isMonth = startDate === firstDayStr && endDate === todayStr;
+  const isAll = !startDate && !endDate;
+
+  const getChipStyle = (isActive) =>
+    isActive
+      ? 'px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-800 text-white shadow-2xs border border-amber-900 transition-all cursor-pointer'
+      : 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer';
+
   return (
     <div className="p-3.5 bg-amber-50/30 border border-amber-200/70 rounded-xl flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -52,28 +69,28 @@ export default function FinanceTransactionFilter({
             <button
               type="button"
               onClick={() => handleQuickDatePreset('today')}
-              className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer"
+              className={getChipStyle(isToday)}
             >
               วันนี้
             </button>
             <button
               type="button"
               onClick={() => handleQuickDatePreset('7days')}
-              className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer"
+              className={getChipStyle(is7Days)}
             >
               7 วันล่าสุด
             </button>
             <button
               type="button"
               onClick={() => handleQuickDatePreset('thisMonth')}
-              className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer"
+              className={getChipStyle(isMonth)}
             >
               เดือนนี้
             </button>
             <button
               type="button"
               onClick={() => handleQuickDatePreset('all')}
-              className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer"
+              className={getChipStyle(isAll)}
             >
               ทั้งหมด
             </button>
