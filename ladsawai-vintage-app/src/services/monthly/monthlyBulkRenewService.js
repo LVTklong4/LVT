@@ -72,8 +72,17 @@ export function getStallDaysMapFromContract(contract) {
       }
     });
   } else {
+    // If stall_details is missing, parse selected_days before assuming all market days
+    let parsedDays = [];
+    if (contract?.selected_days) {
+      const sDays = String(contract.selected_days);
+      if (sDays.includes('พุธ')) parsedDays.push(3);
+      if (sDays.includes('ศุกร์')) parsedDays.push(5);
+      if (sDays.includes('เสาร์')) parsedDays.push(6);
+      if (sDays.includes('อาทิตย์')) parsedDays.push(0);
+    }
+    const fallbackDays = parsedDays.length > 0 ? parsedDays : [0, 3, 5, 6];
     const stallNames = (contract?.stalls || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim()).filter(Boolean);
-    const fallbackDays = [0, 3, 5, 6];
     stallNames.forEach(s => {
       map.set(s, new Set(fallbackDays));
     });
@@ -153,7 +162,7 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
 
   const { data: allMonthlyData, error: existError } = await supabase
     .from('monthly_bookings')
-    .select('id, booking_month, stalls, stall_details, booker_name, phone, product')
+    .select('id, booking_month, stalls, stall_details, selected_days, booker_name, phone, product')
     .gte('start_date', nextStartDateStr)
     .lte('start_date', nextEndDateStr);
   if (existError) throw existError;
@@ -323,7 +332,7 @@ export async function renewBulkMonthlyBookings({
   // 2. Fetch all existing bookings specifically for target month without 1000 limit issue
   const { data: targetMonthRecords, error: existError } = await supabase
     .from('monthly_bookings')
-    .select('id, booker_name, phone, product, stalls, booking_month, start_date')
+    .select('id, booker_name, phone, product, stalls, stall_details, selected_days, booking_month, start_date')
     .gte('start_date', targetStartDateStr)
     .lte('start_date', targetEndDateStr);
   if (existError) throw existError;
