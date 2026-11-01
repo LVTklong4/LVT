@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { Loader2 } from 'lucide-react';
 
@@ -19,6 +19,55 @@ export default function StallMapGrid({ hideLegend = false }) {
 
   const maxCol = 20;
   const maxRow = 26;
+
+  // Drag to pan refs for smooth PC mouse navigation
+  const containerRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+  const hasDraggedRef = useRef(false);
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return; // Only drag with left mouse button
+    const container = containerRef.current;
+    if (!container) return;
+
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    startPosRef.current = {
+      x: e.pageX,
+      y: e.pageY,
+      scrollLeft: container.scrollLeft,
+      scrollTop: container.scrollTop
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const dx = e.pageX - startPosRef.current.x;
+    const dy = e.pageY - startPosRef.current.y;
+
+    if (Math.hypot(dx, dy) > 5) {
+      hasDraggedRef.current = true;
+    }
+
+    container.scrollLeft = startPosRef.current.scrollLeft - dx;
+    container.scrollTop = startPosRef.current.scrollTop - dy;
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 60);
+  };
+
+  const handleSafeStallClick = (stall) => {
+    if (hasDraggedRef.current) return;
+    handleStallClick(stall);
+  };
 
   // 1. Pre-index stalls by row-col coordinates -> O(1) lookup
   const stallPosMap = useMemo(() => {
@@ -98,19 +147,27 @@ export default function StallMapGrid({ hideLegend = false }) {
       {/* Colors Legend */}
       {!hideLegend && (
         <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-1.5 mb-2 w-fit">
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] md:text-[10px] font-bold justify-center text-gray-700">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] md:text-[10px] font-bold justify-center items-center text-gray-700">
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#DCEDC8] border border-[#AED581] rounded-sm"></span>อาหาร (ว่าง)</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#B3E5FC] border border-[#81D4FA] rounded-sm"></span>เสื้อผ้า (ว่าง)</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFE0B2] border border-[#FFB74D] rounded-sm"></span>ค้างชำระ</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFCDD2] border border-[#E57373] rounded-sm"></span>จองแล้ว</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#D1C4E9] border border-[#B39DDB] rounded-sm"></span>รายเดือน</div>
+            <span className="hidden md:inline-flex items-center gap-1 text-[9px] text-[#8B4513] font-extrabold bg-[#8B4513]/10 px-1.5 py-0.5 rounded ml-1">
+              🖐️ คลิกลากเมาส์เพื่อเลื่อนผัง
+            </span>
           </div>
         </div>
       )}
 
       {/* The Grid Map Container */}
       <div 
-        className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-2 sm:p-4 overflow-x-auto min-h-[500px] sm:min-h-[600px] custom-scrollbar w-full sm:w-fit mx-auto touch-pan-x touch-pan-y overscroll-x-contain select-none"
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        className="relative bg-[#D7CCC8] border-4 border-[#5D4037] rounded-lg shadow-2xl p-2 sm:p-4 overflow-auto min-h-[500px] sm:min-h-[600px] max-h-[80vh] custom-scrollbar w-full sm:w-fit mx-auto touch-pan-x touch-pan-y overscroll-contain select-none cursor-grab active:cursor-grabbing"
         style={{ touchAction: 'pan-x pan-y' }}
       >
         {loading && (
@@ -225,7 +282,7 @@ export default function StallMapGrid({ hideLegend = false }) {
                     key={stall.name}
                     id={`stall-${stall.name}`}
                     style={{ gridRow: r, gridColumn: c }}
-                    onClick={() => isClickable && handleStallClick(stall)}
+                    onClick={() => isClickable && handleSafeStallClick(stall)}
                     disabled={!isClickable}
                     className={`stall-box relative p-0.5 rounded-sm border shadow-sm flex flex-col items-center justify-center transition-all ${statusClass} ${
                       isClickable ? 'clickable cursor-pointer active:scale-95' : 'non-clickable pointer-events-none'

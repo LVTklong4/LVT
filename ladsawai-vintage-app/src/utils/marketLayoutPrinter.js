@@ -268,16 +268,36 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
       </html>
     `;
 
-    const printWin = window.open('', '_blank', 'width=1200,height=850');
-    if (printWin) {
-      printWin.document.open();
-      printWin.document.write(htmlContent);
-      printWin.document.close();
-    } else {
-      if (showAlert) {
-        showAlert("เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้เพื่อพิมพ์ผังตลาด", "แจ้งเตือน", true);
-      }
+    // Print via isolated hidden iframe to eliminate popup-blocking and Arc/Chromium black screen crashes
+    const existing = document.getElementById('market-layout-print-frame');
+    if (existing) {
+      try { existing.remove(); } catch (e) {}
     }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'market-layout-print-frame';
+    iframe.setAttribute('style', 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none;');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Error invoking iframe.contentWindow.print():', err);
+      } finally {
+        setTimeout(() => {
+          try {
+            if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          } catch (e) {}
+        }, 10000);
+      }
+    }, 250);
   } catch (e) {
     console.error("Error printing market layout:", e);
     if (showAlert) {

@@ -690,13 +690,25 @@ export function MonthlyBookingProvider({ children }) {
   const handleBulkRenewSubmit = useCallback(async () => {
     setLoadingMonthly(true);
     try {
-      const { successCount, skippedCount } = await renewBulkMonthlyBookings({
+      const { successCount, skippedCount, conflictErrors } = await renewBulkMonthlyBookings({
         bulkRenewCheckedIds,
         monthlyList,
         bulkRenewEditData,
         stallsMaster: stalls
       });
-      showAlert(`ต่อสัญญากลุ่มสำเร็จจำนวน ${successCount} ราย (ข้ามที่ซ้ำไป ${skippedCount} ราย)`, "สำเร็จ");
+      
+      let message = `ต่อสัญญากลุ่มสำเร็จจำนวน ${successCount} ราย`;
+      if (skippedCount > 0) {
+        message += ` (ข้าม/ติดจองซ้อน ${skippedCount} ราย)`;
+      }
+      if (conflictErrors && conflictErrors.length > 0) {
+        message += `\n\n⚠️ รายการที่ระบบข้ามเนื่องจากล็อคติดจองซ้อนในรอบเดือน:\n` + conflictErrors.slice(0, 5).join('\n');
+        if (conflictErrors.length > 5) {
+          message += `\n... และอีก ${conflictErrors.length - 5} รายการ`;
+        }
+      }
+
+      showAlert(message, conflictErrors?.length > 0 ? "แจ้งเตือนการต่อสัญญา" : "สำเร็จ");
       setShowBulkRenewModal(false);
       setBulkRenewCheckedIds([]);
       setBulkRenewEditData({});

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { parseNumber } from '@/utils/numberHelper';
 import { monthNamesFull, formatBookingMonth } from '@/utils/thaiDateHelper';
 import { calculateStallDayPrice } from './monthlyPricingService';
+import { checkConflictingBookings } from './monthlyOperationsService';
 
 /**
  * Computes next Thai month string from given "Month Year" format (e.g. "กรกฎาคม 2569" -> "สิงหาคม 2569")
@@ -80,6 +81,10 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
     .lte('start_date', nextEndDateStr);
   if (existError) throw existError;
 
+  // Parse stall details early for pre-validation
+  const details = JSON.parse(activeMonthlyBooking.stall_details || '[]');
+  const requestedStalls = details.map(d => (d.name || '').replace(/[\[\]]/g, '').trim()).filter(Boolean);
+
   const isAlreadyExists = (allMonthlyData || []).some(cand => {
     if (formatBookingMonth(cand.booking_month) !== targetMonthFormatted) return false;
     return getCustomerIdentityKey(cand) === activeKey && cand.stalls === activeMonthlyBooking.stalls;
@@ -89,11 +94,21 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
     throw new Error(`ผู้เช่า "${activeMonthlyBooking.booker_name}" (${activeMonthlyBooking.product || 'ไม่มีสินค้า'}, ล็อค ${activeMonthlyBooking.stalls}) ได้ต่อสัญญารอบเดือน ${nextMonthFormatted} ไว้แล้ว`);
   }
 
+  // 1. Strict Conflict Check in monthly_bookings (prevent different merchants from taking the same stall)
+  const conflictingMonthly = (allMonthlyData || []).find(cand => {
+    if (cand.id === activeMonthlyBooking.id) return false;
+    const candStalls = (cand.stalls || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim());
+    return requestedStalls.some(reqS => candStalls.includes(reqS));
+  });
+
+  if (conflictingMonthly) {
+    throw new Error(`ไม่สามารถต่อสัญญาได้: ล็อค ${activeMonthlyBooking.stalls} ในรอบเดือน ${nextMonthFormatted} มีสัญญาของ คุณ ${conflictingMonthly.booker_name} อยู่แล้ว`);
+  }
+
   // Generate daily rows with high-entropy collision-free ID
   const newBookingId = `BK-${String(nextYear).substr(-2)}${String(nextMonthVal + 1).padStart(2, '0')}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
   const lastDay = new Date(nextYear, nextMonthVal + 1, 0).getDate();
   const dailyBookings = [];
-  const details = JSON.parse(activeMonthlyBooking.stall_details || '[]');
   const timestamp = new Date().toISOString();
 
   const allDays = new Set();
@@ -139,6 +154,12 @@ export async function renewSingleMonthlyBooking({ activeMonthlyBooking, stallsMa
         });
       }
     });
+  }
+
+  // 2. Strict Conflict Check in daily bookings table (prevent overlap with any existing booking)
+  const { conflictMsg } = await checkConflictingBookings(dailyBookings, requestedStalls);
+  if (conflictMsg) {
+    throw new Error(`ไม่สามารถต่อสัญญาได้เนื่องจากแผงค้าไม่ว่างในรอบเดือน ${nextMonthFormatted}:\n\n${conflictMsg}`);
   }
 
   if (dailyBookings.length > 0) {
@@ -205,6 +226,7 @@ export async function renewBulkMonthlyBookings({
 
   let successCount = 0;
   let skippedCount = 0;
+  const conflictErrors = [];
 
   // 1. Determine target month window from first checked item
   const firstOldId = bulkRenewCheckedIds[0];
@@ -299,6 +321,21 @@ export async function renewBulkMonthlyBookings({
       details = JSON.parse(stallDetailsStr || '[]');
     } catch (e) {}
 
+    const requestedStalls = details.map(d => (d.name || '').replace(/[\[\]]/g, '').trim()).filter(Boolean);
+
+    // 1. Strict Per-Stall Conflict Check in monthly contracts (including already renewed in this batch)
+    const conflictingContract = dynamicMonthlyList.find(mb => {
+      if (mb.id === item.id) return false;
+      const mbStalls = (mb.stalls || '').split(',').map(s => s.replace(/[\[\]]/g, '').trim());
+      return requestedStalls.some(reqS => mbStalls.includes(reqS));
+    });
+
+    if (conflictingContract) {
+      skippedCount++;
+      conflictErrors.push(`ล็อค ${item.stalls} (${bookerName}): มีสัญญาของ คุณ ${conflictingContract.booker_name} อยู่แล้วในรอบเดือน`);
+      continue;
+    }
+
     const allDays = new Set();
     details.forEach(st => {
       if (st.days) st.days.forEach(dayVal => allDays.add(dayVal));
@@ -383,6 +420,14 @@ export async function renewBulkMonthlyBookings({
       renewal_status: ''
     };
 
+    // 2. Strict Conflict Check in daily bookings table (prevent overlap with any existing booking)
+    const { conflictMsg } = await checkConflictingBookings(dailyBookings, requestedStalls);
+    if (conflictMsg) {
+      skippedCount++;
+      conflictErrors.push(`ล็อค ${item.stalls} (${bookerName}): มีการจองซ้อนในวันขาย`);
+      continue;
+    }
+
     try {
       if (dailyBookings.length > 0) {
         const { error: dbError } = await supabase.from('bookings').insert(dailyBookings);
@@ -404,5 +449,5 @@ export async function renewBulkMonthlyBookings({
     }
   }
 
-  return { successCount, skippedCount };
+  return { successCount, skippedCount, conflictErrors };
 }

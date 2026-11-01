@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Printer, X, Search, Calendar, CheckCircle2,
-  Phone
+  Phone, FileText, LayoutList
 } from 'lucide-react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
@@ -42,6 +42,7 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
   const [statusFilter, setStatusFilter] = useState('BEHIND_TARGET'); // 'BEHIND_TARGET' | 'ALL_OVERDUE' | 'PAID' | 'ALL'
   const [zoneFilter, setZoneFilter] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('TABLE'); // 'TABLE' | 'A4_PREVIEW'
 
   // Months available in system
   const monthOptions = useMemo(() => {
@@ -80,9 +81,9 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
 
   const activeMilestone = MILESTONES[selectedMilestoneId] || MILESTONES.W1;
 
-  // Handle A4 Print
-  const handlePrintA4 = () => {
-    const html = generateDebtFollowUpA4HTML({
+  // Real-time A4 HTML for live preview and printing
+  const previewHTML = useMemo(() => {
+    return generateDebtFollowUpA4HTML({
       items: filteredItems,
       milestone: activeMilestone,
       selectedMonth,
@@ -90,7 +91,11 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
       statusFilter,
       adminUser
     });
-    printDebtFollowUpA4(html);
+  }, [filteredItems, activeMilestone, selectedMonth, zoneFilter, statusFilter, adminUser]);
+
+  // Handle A4 Print
+  const handlePrintA4 = () => {
+    printDebtFollowUpA4(previewHTML);
   };
 
   if (!isModalOpen) return null;
@@ -100,7 +105,7 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
       <div className="bg-[#FFFDF9] border-2 border-[#8B4513] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden text-[#4A3B32]">
         
         {/* Header Bar */}
-        <div className="px-4 py-3.5 sm:px-6 bg-[#FAEBD7] border-b-2 border-[#8B4513]/20 flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 sm:px-6 bg-[#FAEBD7] border-b-2 border-[#8B4513]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-800 text-white flex items-center justify-center shadow-md shrink-0">
               <Printer className="w-5 h-5 text-amber-100" />
@@ -120,7 +125,35 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            {/* View Mode Toggle: Interactive Table vs A4 Real Preview */}
+            <div className="flex items-center bg-[#8B4513]/10 p-0.5 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setViewMode('TABLE')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'TABLE'
+                    ? 'bg-white text-stone-900 shadow-sm font-black'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span>ตารางค้นหา ({filteredItems.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('A4_PREVIEW')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'A4_PREVIEW'
+                    ? 'bg-amber-800 text-white shadow-sm font-black'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>ดูตัวอย่างใบ A4 จริง</span>
+              </button>
+            </div>
+
             <button
               onClick={handlePrintA4}
               disabled={filteredItems.length === 0}
@@ -128,8 +161,8 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
               title="พิมพ์เอกสาร A4 พร้อมตารางติ๊กผลตรวจ"
             >
               <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">พิมพ์ใบตรวจ A4 ({filteredItems.length})</span>
-              <span className="sm:hidden">พิมพ์ A4</span>
+              <span className="hidden sm:inline">สั่งพิมพ์ใบตรวจ A4 ({filteredItems.length})</span>
+              <span className="sm:hidden">สั่งพิมพ์ A4</span>
             </button>
 
             <button
@@ -247,7 +280,27 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Table Content */}
+        {/* Main Content: Interactive Table or Live A4 Document Preview */}
+        {viewMode === 'A4_PREVIEW' ? (
+          <div className="flex-1 min-h-[350px] overflow-auto p-3 sm:p-5 bg-stone-200/60 flex flex-col items-center custom-scrollbar">
+            <div className="w-full max-w-[210mm] bg-white rounded-xl shadow-2xl border border-stone-300 overflow-hidden flex flex-col">
+              <div className="bg-amber-100/70 px-4 py-2 border-b border-amber-300/80 flex flex-wrap justify-between items-center text-xs font-bold text-amber-950">
+                <span className="flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-amber-800" />
+                  พรีวิวใบตรวจ A4 จริง (ตัดการ์ด 4 ใบและแถบเงื่อนไขออกแล้ว)
+                </span>
+                <span className="text-stone-500 font-mono text-[11px]">
+                  พร้อมพิมพ์ {filteredItems.length} ล็อค
+                </span>
+              </div>
+              <iframe
+                srcDoc={previewHTML}
+                title="A4 Debt Follow-Up Document Preview"
+                className="w-full h-[62vh] border-0 bg-white"
+              />
+            </div>
+          </div>
+        ) : (
         <div className="flex-1 min-h-[300px] overflow-y-auto overflow-x-auto p-3 sm:p-6 bg-stone-50">
           <div className="bg-white border border-stone-200 rounded-xl shadow-xs overflow-hidden">
             <table className="w-full text-xs text-left min-w-[760px]">
@@ -390,6 +443,7 @@ export default function MonthlyDebtFollowUpModal({ isOpen, onClose }) {
             </table>
           </div>
         </div>
+        )}
 
         {/* Footer Action Bar */}
         <div className="px-4 py-3 sm:px-6 bg-[#FAEBD7] border-t-2 border-[#8B4513]/20 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
