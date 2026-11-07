@@ -64,17 +64,42 @@ export async function submitMonthlyPayment({
   const amountVal = parseNumber(paymentForm.amount);
   if (amountVal <= 0) throw new Error("กรุณาระบุจำนวนเงินที่ถูกต้อง");
 
-  const currentPaid = parseNumber(activeMonthlyBooking.paid_amount || 0);
+  if (!paymentForm.method) {
+    throw new Error("กรุณาเลือกประเภทการบันทึก (เงินสด / โอนจ่าย / ส่วนลด)");
+  }
+
+  // 1. Anti-duplicate protection: Check if an identical payment transaction was recorded within the last 15 seconds
+  const fifteenSecAgo = new Date(Date.now() - 15000).toISOString();
+  const { data: recentTxns } = await supabase
+    .from('transactions')
+    .select('id, total_amount, method, timestamp, booking_ref')
+    .eq('booking_ref', activeMonthlyBooking.id)
+    .eq('total_amount', amountVal)
+    .eq('method', paymentForm.method)
+    .gte('timestamp', fifteenSecAgo);
+
+  if (recentTxns && recentTxns.length > 0) {
+    console.warn("⚠️ ตรวจพบการกดบันทึกชำระเงินซ้ำภายใน 15 วินาที - ป้องกันรายการซ้ำซ้อนสำเร็จ", recentTxns[0]);
+    return {
+      txnData: recentTxns[0],
+      updatedBooking: activeMonthlyBooking
+    };
+  }
+
+  // 2. Fetch fresh contract data from database to prevent stale in-memory race conditions
+  const { data: freshBooking } = await supabase
+    .from('monthly_bookings')
+    .select('id, paid_amount, total_price, status')
+    .eq('id', activeMonthlyBooking.id)
+    .single();
+
+  const currentPaid = freshBooking ? parseNumber(freshBooking.paid_amount || 0) : parseNumber(activeMonthlyBooking.paid_amount || 0);
+  const totalPrice = freshBooking ? parseNumber(freshBooking.total_price || 0) : parseNumber(activeMonthlyBooking.total_price || 0);
   const newPaid = currentPaid + amountVal;
-  const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
 
   if (totalPrice > 0 && newPaid > totalPrice + 0.01) {
     const remaining = Math.max(0, totalPrice - currentPaid);
     throw new Error(`ยอดเงินชำระ (${amountVal.toLocaleString()} บาท) ร่วมกับยอดที่เคยชำระแล้ว (${currentPaid.toLocaleString()} บาท) เกินกว่ายอดรวมค่าเช่ารายเดือนทั้งหมด (${totalPrice.toLocaleString()} บาท)\n\nกรุณากรอกยอดชำระไม่เกินยอดคงเหลือค้างชำระ: ${remaining.toLocaleString()} บาท`);
-  }
-
-  if (!paymentForm.method) {
-    throw new Error("กรุณาเลือกประเภทการบันทึก (เงินสด / โอนจ่าย / ส่วนลด)");
   }
 
   const isDiscount = paymentForm.method === 'ส่วนลด';

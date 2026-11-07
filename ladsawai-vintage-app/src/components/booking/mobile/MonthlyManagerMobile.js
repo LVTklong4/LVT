@@ -379,8 +379,12 @@ export default function MonthlyManagerMobile({ onClose }) {
                     {unpaidBalance > 0 ? (
                       <button
                         type="button"
-                        onClick={() => handleOpenMonthlyPaymentModal(item)}
-                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                        disabled={loadingMonthly}
+                        onClick={() => {
+                          if (loadingMonthly) return;
+                          handleOpenMonthlyPaymentModal(item);
+                        }}
+                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                       >
                         <Banknote className="w-3.5 h-3.5" /> ชำระเงิน
                       </button>
@@ -552,11 +556,13 @@ export default function MonthlyManagerMobile({ onClose }) {
             <div className="p-3 bg-gray-50 border-t flex gap-2 shrink-0">
               <button
                 type="button"
+                disabled={loadingMonthly}
                 onClick={() => {
+                  if (loadingMonthly) return;
                   setSelectedMobileItem(null);
                   handleOpenMonthlyPaymentModal(selectedMobileItem);
                 }}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Banknote className="w-4 h-4" /> บันทึกชำระเงิน
               </button>

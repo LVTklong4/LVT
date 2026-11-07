@@ -844,13 +844,20 @@ export function MonthlyBookingProvider({ children }) {
   }, []);
 
   // Payment Handlers
+  const isSubmittingPaymentRef = useRef(false);
+
   const handleMonthlyPaymentSubmit = useCallback(async (e) => {
     if (e?.preventDefault) e.preventDefault();
+    if (isSubmittingPaymentRef.current || loadingMonthly) {
+      console.warn("Blocked duplicate monthly payment submission (already in-flight)");
+      return;
+    }
     if (!activeMonthlyBooking || !activeMonthlyBooking.id) {
       showAlert("ไม่พบข้อมูลสัญญาที่กำลังเลือก กรุณาเลือกลูกค้ารายเดือนใหม่อีกครั้ง", "ข้อผิดพลาด", true);
       return;
     }
 
+    isSubmittingPaymentRef.current = true;
     setLoadingMonthly(true);
     try {
       const { updatedBooking } = await submitMonthlyPayment({
@@ -870,9 +877,10 @@ export function MonthlyBookingProvider({ children }) {
       console.error(err);
       showAlert(err.message, "ข้อผิดพลาด", true);
     } finally {
+      isSubmittingPaymentRef.current = false;
       setLoadingMonthly(false);
     }
-  }, [activeMonthlyBooking, monthlyPaymentForm, adminUser, showAlert, fetchMonthlyBookings, fetchMonthlyTransactions, handleShowMonthlyReceiptPreview]);
+  }, [activeMonthlyBooking, monthlyPaymentForm, adminUser, showAlert, fetchMonthlyBookings, fetchMonthlyTransactions, handleShowMonthlyReceiptPreview, loadingMonthly]);
 
   const handleDeleteMonthlyTransaction = useCallback(async (txn) => {
     setLoadingMonthly(true);

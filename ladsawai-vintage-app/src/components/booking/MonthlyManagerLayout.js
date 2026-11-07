@@ -458,8 +458,12 @@ export default function MonthlyManagerLayout() {
                       <div className="flex flex-col gap-1 items-end">
                         <button
                           type="button"
-                          onClick={() => handleOpenMonthlyPaymentModal(activeMonthlyBooking)}
-                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-28 justify-center"
+                          disabled={loadingMonthly}
+                          onClick={() => {
+                            if (loadingMonthly) return;
+                            handleOpenMonthlyPaymentModal(activeMonthlyBooking);
+                          }}
+                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-28 justify-center disabled:opacity-50 disabled:pointer-events-none"
                         >
                           <Plus className="w-3 h-3" /> ชำระเงิน
                         </button>
