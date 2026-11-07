@@ -256,14 +256,6 @@ export const printMarketLayoutA4 = ({ selectedDate, stalls = [], bookings = [], 
               </div>
             </div>
           </div>
-
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 300);
-            };
-          </script>
         </body>
       </html>
     `;
