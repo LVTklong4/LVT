@@ -165,6 +165,9 @@ export function BookingProvider({ children }) {
   // Settings Modal States
   const [showSettingsMgmtModal, setShowSettingsMgmtModal] = useState(false);
   
+  // Market Inspection Hub Modal State
+  const [showInspectionModal, setShowInspectionModal] = useState(false);
+  
   // Alert/Toast & Confirm Modal States
   const [alertInfo, setAlertInfo] = useState(null);
   const [confirmInfo, setConfirmInfo] = useState(null);
@@ -1813,6 +1816,8 @@ export function BookingProvider({ children }) {
       // Settings & Archive
       showSettingsMgmtModal,
       setShowSettingsMgmtModal,
+      showInspectionModal,
+      setShowInspectionModal,
       fetchAdminRolesData,
       syncingLegacy,
       archiveWebhookUrl,

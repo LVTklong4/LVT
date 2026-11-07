@@ -9,6 +9,7 @@ import LoginModal from './modals/LoginModal';
 import StorageMgmtModal from './modals/StorageMgmtModal';
 import MonthlyMgmtModal from './modals/MonthlyMgmtModal';
 import MonthlyDebtFollowUpModal from './modals/MonthlyDebtFollowUpModal';
+import MarketInspectionModal from './modals/MarketInspectionModal';
 import SettingsMgmtModal from './modals/SettingsMgmtModal';
 import AddUtilityModal from './modals/AddUtilityModal';
 import MoveLockModal from './modals/MoveLockModal';
@@ -435,6 +436,7 @@ export default function StandardBookingLayout() {
       <StorageMgmtModal />
       <MonthlyMgmtModal />
       <MonthlyDebtFollowUpModal />
+      <MarketInspectionModal />
       <SettingsMgmtModal />
       <AddUtilityModal />
       <MoveLockModal />

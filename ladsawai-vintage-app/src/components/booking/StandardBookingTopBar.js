@@ -26,7 +26,8 @@ import {
   RefreshCw,
   LogOut,
   User,
-  Copy
+  Copy,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function StandardBookingTopBar({
@@ -57,6 +58,7 @@ export default function StandardBookingTopBar({
     setShowStandbyModal,
     setShowActivityLogsModal,
     setShowSettingsMgmtModal,
+    setShowInspectionModal,
     handleLogout
   } = useBooking();
 
@@ -175,6 +177,17 @@ export default function StandardBookingTopBar({
               {/* Navigation buttons */}
               <div className="flex gap-1.5 items-center">
                 
+                {/* 🛡️ Market Inspection Hub Button */}
+                <button 
+                  type="button"
+                  onClick={() => setShowInspectionModal(true)}
+                  className="px-2.5 py-1.5 bg-amber-800/10 hover:bg-amber-800/20 text-[#8B4513] border border-[#8B4513]/30 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="ศูนย์รวมการตรวจสอบตลาด (พิมพ์ผังตลาด, ตรวจไฟฟ้า, ตรวจฝากของ, ตรวจค้างชำระ)"
+                >
+                  <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0" />
+                  <span className="hidden sm:inline font-extrabold">ตรวจตลาด</span>
+                </button>
+                
                 {/* Admin Management Dropdown */}
                 <div className="relative">
                   <button 
@@ -253,6 +266,15 @@ export default function StandardBookingTopBar({
                           className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                         >
                           <Info className="w-4 h-4 text-emerald-700 shrink-0" /> ประวัติทีมงาน (Audit Logs)
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setShowGearDropdown(false);
+                            setShowInspectionModal(true);
+                          }} 
+                          className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-100/70 bg-amber-50/50 text-amber-950 font-bold flex items-center gap-2 transition-colors cursor-pointer border-t border-amber-100"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0" /> 🛡️ ศูนย์ตรวจตลาด (A4)
                         </button>
                       </div>
                     </>
@@ -333,21 +355,11 @@ export default function StandardBookingTopBar({
                       <button 
                         onClick={() => {
                           setShowProfileDropdown(false);
-                          printMarketLayoutA4({ selectedDate, stalls, bookings, adminUser, showAlert });
+                          setShowInspectionModal(true);
                         }} 
-                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-100/80 bg-amber-50/60 text-amber-950 font-extrabold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
                       >
-                        <Printer className="w-4 h-4 text-gray-500 shrink-0" /> พิมพ์ผังตลาด (A4)
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setShowProfileDropdown(false);
-                          if (onOpenDebtFollowUp) onOpenDebtFollowUp();
-                          else setShowDebtFollowUpModal(true);
-                        }} 
-                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
-                      >
-                        <ClipboardList className="w-4 h-4 text-amber-800 shrink-0" /> 📋 ใบตรวจยอดค้างชำระ (A4)
+                        <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0" /> 🛡️ เจ้าหน้าที่ตรวจสอบ (ศูนย์ตรวจตลาด)
                       </button>
                       <button 
                         onClick={() => {

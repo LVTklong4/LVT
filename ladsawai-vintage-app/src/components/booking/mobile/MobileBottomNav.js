@@ -9,7 +9,7 @@ import {
   MapPin, CalendarDays, Package, Banknote, Menu,
   Store, FileText, Settings, Info, LogOut, LogIn,
   X, CheckCircle, ChevronUp, AlertCircle, ClipboardList,
-  Copy
+  Copy, ShieldCheck
 } from 'lucide-react';
 
 export default function MobileBottomNav({
@@ -26,6 +26,7 @@ export default function MobileBottomNav({
     setShowStandbyModal,
     setShowActivityLogsModal,
     setShowSettingsMgmtModal,
+    setShowInspectionModal,
     handleLogout
   } = useBooking();
 
@@ -171,16 +172,16 @@ export default function MobileBottomNav({
                 type="button"
                 onClick={() => {
                   setShowMoreMenu(false);
-                  setShowDebtFollowUpModal(true);
+                  setShowInspectionModal(true);
                 }}
-                className="p-3 bg-amber-50/70 hover:bg-amber-100/80 active:scale-95 border border-amber-300 rounded-xl flex items-center gap-2.5 shadow-2xs transition-all cursor-pointer text-left col-span-2"
+                className="p-3 bg-amber-50/90 hover:bg-amber-100 active:scale-95 border-2 border-amber-400 rounded-xl flex items-center gap-2.5 shadow-xs transition-all cursor-pointer text-left col-span-2"
               >
-                <div className="w-8 h-8 rounded-lg bg-amber-800 flex items-center justify-center text-white shrink-0">
-                  <ClipboardList className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-amber-800 flex items-center justify-center text-amber-200 shrink-0 font-bold">
+                  <ShieldCheck className="w-4 h-4 text-amber-200" />
                 </div>
                 <div>
-                  <div className="text-[#3E2723] font-black">ใบตรวจยอดค้างชำระ (A4)</div>
-                  <div className="text-[10px] text-amber-800 font-medium">เกณฑ์บันได 4 สัปดาห์ พร้อมสั่งพิมพ์เดินตรวจ</div>
+                  <div className="text-[#3E2723] font-black">🛡️ เจ้าหน้าที่ตรวจสอบ (A4)</div>
+                  <div className="text-[10px] text-amber-800 font-medium">ศูนย์ตรวจตลาด: ผังตลาด, ไฟฟ้า, ฝากของ, ยอดค้างชำระ</div>
                 </div>
               </button>
 
