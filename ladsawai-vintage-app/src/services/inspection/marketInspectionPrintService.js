@@ -676,6 +676,7 @@ export function prepareStorageInspectionData({
 export function generateStorageInspectionA4HTML({
   storageList = [],
   monthlyList = [],
+  stalls = [],
   adminUser = null,
   selectedDate = null
 }) {
@@ -692,6 +693,7 @@ export function generateStorageInspectionA4HTML({
   const formattedDate = formatThaiDateLong(selectedDate || new Date().toISOString().split('T')[0]);
   const inspectorName = adminUser?.name || 'เจ้าหน้าที่ตรวจตลาด';
 
+  // 1. Authorized Storage Rows
   const rowsHtml = items.map((item, idx) => {
     const typeBadge = item.type === 'รายเดือน'
       ? `<span class="type-monthly">รายเดือน</span>`
@@ -717,15 +719,83 @@ export function generateStorageInspectionA4HTML({
         </td>
         <td class="col-checklist">
           <div class="check-box-group">
-            <span class="chk-item">[ ] มีของ</span>
-            <span class="chk-item">[ ] ไม่พบของ</span>
-            <span class="chk-item">[ ] แอบฝาก/วางเกิน</span>
+            <span class="chk-item">[ ] มีของวางถูกต้อง</span>
+            <span class="chk-item">[ ] ล็อคว่าง (ไม่พบของ)</span>
           </div>
         </td>
         <td class="col-note">
           <div class="note-dots"></div>
         </td>
       </tr>
+    `;
+  }).join('');
+
+  // 2. Build Stalls Map for Patrol / Unauthorized Check Sheet (ใบสุดท้าย)
+  const authorizedStallsMap = new Map();
+  items.forEach(item => {
+    (item.stallsList || []).forEach(sName => {
+      authorizedStallsMap.set(cleanStallName(sName), {
+        ownerName: item.ownerName,
+        phone: item.phone,
+        period: item.period,
+        type: item.type
+      });
+    });
+  });
+
+  const allStallsSorted = [...(stalls || [])].sort((a, b) => compareStallNames(a.name, b.name));
+
+  const stallZones = [
+    { title: '📍 โซน A (A1 - A22)', list: allStallsSorted.filter(s => cleanStallName(s.name).startsWith('A')) },
+    { title: '📍 โซน ส (ส - ส18 อาหาร)', list: allStallsSorted.filter(s => cleanStallName(s.name).startsWith('ส')) },
+    { title: '📍 โซน L (L3 - L33 เสื้อผ้า/แฟชั่น)', list: allStallsSorted.filter(s => cleanStallName(s.name).startsWith('L')) },
+    { title: '📍 โซนตัวเลข (แถวกลาง 3 - 122)', list: allStallsSorted.filter(s => {
+      const n = cleanStallName(s.name);
+      return !n.startsWith('A') && !n.startsWith('ส') && !n.startsWith('L') && !n.startsWith('พื้น') && !n.startsWith('ค') && !n.startsWith('C');
+    }) },
+    { title: '📍 ลานพื้น / เบ็ดเตล็ด', list: allStallsSorted.filter(s => {
+      const n = cleanStallName(s.name);
+      return n.startsWith('พื้น') || n.startsWith('ค') || n.startsWith('C');
+    }) }
+  ].filter(z => z.list.length > 0);
+
+  const patrolZonesHtml = stallZones.map(zone => {
+    const boxesHtml = zone.list.map(s => {
+      const sName = cleanStallName(s.name);
+      const auth = authorizedStallsMap.get(sName);
+
+      if (auth) {
+        return `
+          <div class="patrol-stall-box is-authorized">
+            <div class="patrol-stall-badge">${sName}</div>
+            <div class="patrol-auth-info">
+              <span class="auth-tag">✅ ฝากถูกต้อง</span>
+              <span class="auth-owner">${auth.ownerName}</span>
+              <span class="auth-period">(${auth.period})</span>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="patrol-stall-box is-unauthorized">
+          <div class="patrol-stall-badge">${sName}</div>
+          <div class="patrol-check-group">
+            <span class="chk-item">[ ] ว่าง</span>
+            <span class="chk-item alert-chk">[ ] ⚠️ แอบฝาก</span>
+          </div>
+          <div class="patrol-note-line"></div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="zone-section">
+        <div class="zone-header-title">${zone.title} (ทั้งหมด ${zone.list.length} ล็อค)</div>
+        <div class="patrol-grid">
+          ${boxesHtml}
+        </div>
+      </div>
     `;
   }).join('');
 
@@ -944,6 +1014,141 @@ export function generateStorageInspectionA4HTML({
             color: #374151;
           }
 
+          /* Sheet 2: Patrol & Unauthorized Check Styles */
+          .patrol-page {
+            page-break-before: always;
+            margin-top: 15px;
+          }
+          .patrol-header {
+            border-bottom: 2px solid #7c2d12;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+          }
+          .patrol-desc {
+            font-size: 8pt;
+            color: #64748b;
+            margin-top: 4px;
+            line-height: 1.35;
+          }
+          .incident-log-section {
+            margin-bottom: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 8px;
+            background: #fffdf9;
+          }
+          .section-title {
+            font-size: 8.5pt;
+            font-weight: 800;
+            color: #7c2d12;
+            margin-bottom: 4px;
+          }
+          table.incident-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7.5pt;
+          }
+          table.incident-table th {
+            background: #7c2d12;
+            color: #fff;
+            padding: 3px 4px;
+            border: 1px solid #5c1d08;
+            font-weight: bold;
+            text-align: center;
+          }
+          table.incident-table td {
+            height: 18px;
+            border: 1px solid #cbd5e1;
+            padding: 2px 4px;
+          }
+          .zone-header-title {
+            font-size: 8.5pt;
+            font-weight: 800;
+            color: #4a2e1b;
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            padding: 2.5px 6px;
+            border-radius: 4px;
+            margin-top: 7px;
+            margin-bottom: 4px;
+          }
+          .patrol-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2.5px 6px;
+          }
+          .patrol-stall-box {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 5px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 7.5pt;
+            background: #fff;
+            min-height: 22px;
+          }
+          .patrol-stall-box.is-authorized {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+          }
+          .patrol-stall-badge {
+            font-weight: 900;
+            font-size: 8pt;
+            color: #4a2e1b;
+            min-width: 44px;
+            text-align: center;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            padding: 1px 3px;
+          }
+          .is-authorized .patrol-stall-badge {
+            background: #dcfce7;
+            color: #166534;
+            border-color: #86efac;
+          }
+          .patrol-auth-info {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 7.5pt;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+          }
+          .auth-tag {
+            color: #15803d;
+            font-weight: 800;
+          }
+          .auth-owner {
+            color: #1e293b;
+            font-weight: 700;
+          }
+          .auth-period {
+            color: #64748b;
+            font-size: 7pt;
+          }
+          .patrol-check-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #475569;
+            white-space: nowrap;
+          }
+          .alert-chk {
+            color: #dc2626;
+            font-weight: 800;
+          }
+          .patrol-note-line {
+            flex: 1;
+            border-bottom: 1px dotted #94a3b8;
+            height: 12px;
+            min-width: 40px;
+          }
+
           @media print {
             .no-print { display: none !important; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -953,29 +1158,30 @@ export function generateStorageInspectionA4HTML({
       <body>
         <div class="no-print">
           <div>
-            <span>📦 ตลาดนัดลาดสวายวินเทจ - ใบตรวจการฝากของประจำตลาด (A4)</span>
-            <span style="margin-left: 10px; font-weight: normal; font-size: 11px;">[ทั้งหมด ${items.length} ร้าน (${totalStallsCount} ล็อค)]</span>
+            <span>📦 ตลาดนัดลาดสวายวินเทจ - ชุดใบตรวจการฝากของและตรวจจับแอบฝาก (A4)</span>
+            <span style="margin-left: 10px; font-weight: normal; font-size: 11px;">[รายชื่อฝากถูกต้อง: ${items.length} ร้าน | ล็อคทั้งตลาด: ${allStallsSorted.length} ล็อค]</span>
           </div>
           <div>
             <button class="close-btn" onclick="window.close()">ปิดหน้าต่าง</button>
-            <button class="print-btn" onclick="window.print()">🖨️ สั่งพิมพ์เอกสาร (Print)</button>
+            <button class="print-btn" onclick="window.print()">🖨️ สั่งพิมพ์เอกสารครบชุด (Print All)</button>
           </div>
         </div>
 
+        <!-- SHEET 1: AUTHORIZED STORAGE SHEET -->
         <div class="report-header">
           <div class="header-top">
             <div class="logo-title-group">
               <img src="/logo.png" class="logo-img" alt="Logo" />
               <div>
                 <div class="brand-title">ตลาดนัดลาดสวายวินเทจ</div>
-                <div class="report-subtitle">📦 ใบตรวจการฝากของประจำตลาด (Storage Inspection Sheet)</div>
+                <div class="report-subtitle">📦 ใบที่ 1: บัญชีรายชื่อผู้ได้รับสิทธิ์ฝากของ (Authorized Storage List)</div>
               </div>
             </div>
             <div class="meta-info">
               <div><strong>ประจำวัน/รอบสัปดาห์:</strong> ${formattedDate}</div>
               <div><strong>พิมพ์เมื่อ:</strong> ${printTimeStr}</div>
               <div><strong>ผู้สั่งพิมพ์:</strong> ${inspectorName}</div>
-              <div><strong>รายการที่ตรวจ:</strong> ${items.length} ร้าน (${totalStallsCount} ล็อค)</div>
+              <div><strong>รายการที่ได้รับสิทธิ์:</strong> ${items.length} ร้าน (${totalStallsCount} ล็อค)</div>
             </div>
           </div>
         </div>
@@ -1009,6 +1215,72 @@ export function generateStorageInspectionA4HTML({
             <div style="font-size: 8pt; color: #6b7280; margin-top: 2px;">ผู้จัดการตลาด / ผู้ดูแลระบบ</div>
           </div>
         </div>
+
+        <!-- SHEET 2: MARKET PATROL & UNAUTHORIZED STORAGE SHEET (ใบสุดท้าย) -->
+        ${allStallsSorted.length > 0 ? `
+          <div class="patrol-page">
+            <div class="report-header patrol-header">
+              <div class="header-top">
+                <div class="logo-title-group">
+                  <img src="/logo.png" class="logo-img" alt="Logo" />
+                  <div>
+                    <div class="brand-title">ตลาดนัดลาดสวายวินเทจ</div>
+                    <div class="report-subtitle">🔍 ใบที่ 2: ใบตรวจผังล็อคและตรวจจับการแอบฝากของ (Market Patrol & Unauthorized Check)</div>
+                  </div>
+                </div>
+                <div class="meta-info">
+                  <div><strong>รอบตรวจตรา:</strong> วันจันทร์ - อังคาร</div>
+                  <div><strong>พิมพ์เมื่อ:</strong> ${printTimeStr}</div>
+                  <div><strong>ผู้ตรวจ:</strong> ${inspectorName}</div>
+                </div>
+              </div>
+              <div class="patrol-desc">
+                * สำหรับเจ้าหน้าที่เดินตรวจตราล็อคตลาดในวันหยุดเพื่อตรวจสอบสิ่งของที่วางไว้โดยไม่ได้รับอนุญาต (ล็อคที่จ่ายแล้วมีป้ายเขียว ✅ ระบุชื่อไว้แล้ว หากพบล็อคอื่นที่ไม่มีสิทธิ์แต่มีของวาง ให้ติ๊ก <strong>[ ] ⚠️ แอบฝาก</strong> และระบุสิ่งของลงในตารางสรุปด้านล่าง)
+              </div>
+            </div>
+
+            <!-- Incident Log Table -->
+            <div class="incident-log-section">
+              <div class="section-title">📝 ตารางบันทึกสรุปการตรวจพบของแอบฝากหน้างาน (สำหรับติดตามผู้ค้า / ดำเนินการ)</div>
+              <table class="incident-table">
+                <thead>
+                  <tr>
+                    <th style="width: 24px;">#</th>
+                    <th style="width: 65px;">เลขล็อค</th>
+                    <th style="width: 175px;">ลักษณะสิ่งของที่แอบวาง</th>
+                    <th style="width: 160px;">คาดว่าเป็นของร้านค้า / เบอร์โทร</th>
+                    <th>มาตรการ (ตักเตือน / เคลื่อนย้าย / คิดเงินย้อนหลัง)</th>
+                    <th style="width: 75px;">ผู้ตรวจ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td style="text-align:center;">1</td><td></td><td></td><td></td><td></td><td></td></tr>
+                  <tr><td style="text-align:center;">2</td><td></td><td></td><td></td><td></td><td></td></tr>
+                  <tr><td style="text-align:center;">3</td><td></td><td></td><td></td><td></td><td></td></tr>
+                  <tr><td style="text-align:center;">4</td><td></td><td></td><td></td><td></td><td></td></tr>
+                  <tr><td style="text-align:center;">5</td><td></td><td></td><td></td><td></td><td></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Stall Checklist by Zones -->
+            ${patrolZonesHtml}
+
+            <div class="signature-section" style="margin-top: 20px;">
+              <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">ลงชื่อ ................................................................ (ผู้ตรวจ)</div>
+                <div style="font-size: 8pt; color: #6b7280; margin-top: 2px;">เจ้าหน้าที่ตรวจตราความเรียบร้อย</div>
+              </div>
+              <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">ลงชื่อ ................................................................ (ผู้รับทราบ)</div>
+                <div style="font-size: 8pt; color: #6b7280; margin-top: 2px;">ผู้จัดการตลาด / ผู้ดูแลระบบ</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
       </body>
     </html>
   `;

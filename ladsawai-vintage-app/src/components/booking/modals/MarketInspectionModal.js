@@ -119,6 +119,7 @@ export default function MarketInspectionModal() {
     printStorageInspectionA4({
       storageList,
       monthlyList,
+      stalls,
       adminUser,
       selectedDate,
       showAlert
