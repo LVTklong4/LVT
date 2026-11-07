@@ -36,54 +36,110 @@ export function prepareElectricityInspectionData({
 }) {
   const dateBookings = (bookings || []).filter(b => b.date === selectedDate && b.status !== 'ยกเลิก');
 
-  // Map occupied stalls
-  const stallItems = [];
-  const processedKeys = new Set();
+  // Group bookings by merchant/contract so customers with multiple stalls
+  // do not duplicate electricity units and are consolidated into a single row.
+  const groups = new Map();
+  let totalStallsCount = 0;
 
   dateBookings.forEach((b) => {
+    const isMonthly = !!b.master_id || b.type === 'รายเดือน';
+    let groupKey;
+    if (b.master_id) {
+      groupKey = `monthly_${b.master_id}`;
+    } else if (isMonthly && b.booker_name && b.booker_name !== '.' && b.booker_name !== '-') {
+      groupKey = `monthly_${b.booker_name.trim().toLowerCase()}_${(b.product || '').trim().toLowerCase()}`;
+    } else if (
+      b.booker_name && 
+      !['.', '-', '0', '00', '000', 'ปจ'].includes(b.booker_name.trim()) && 
+      b.product && 
+      b.product.trim() && 
+      b.product.trim() !== '-'
+    ) {
+      groupKey = `daily_${b.booker_name.trim().toLowerCase()}_${b.product.trim().toLowerCase()}`;
+    } else {
+      groupKey = `daily_id_${b.id}`;
+    }
+
     const rawStallStr = b.stall_name || b.stall_id || '';
     const stallNames = rawStallStr.split(',').map(s => cleanStallName(s)).filter(Boolean);
+    const unit = parseNumber(b.elec_unit || 0);
+    const price = parseNumber(b.elec_price || (unit > 0 ? unit * 10 : 0));
+    const isAbsent = b.status === 'ลา';
 
-    // If no stall name, fallback to raw
-    const listToIterate = stallNames.length > 0 ? stallNames : [cleanStallName(rawStallStr)];
-
-    listToIterate.forEach((sName) => {
-      const uniqueKey = `${sName}__${b.id}`;
-      if (processedKeys.has(uniqueKey)) return;
-      processedKeys.add(uniqueKey);
-
-      const sMaster = stalls.find(s => cleanStallName(s.name) === sName);
-      const elecUnit = parseNumber(b.elec_unit || 0);
-      const elecPrice = parseNumber(b.elec_price || (elecUnit > 0 ? elecUnit * 10 : 0));
-      const isAbsent = b.status === 'ลา';
-
-      stallItems.push({
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
         id: b.id,
-        stallName: sName,
-        stallMaster: sMaster,
-        row: sMaster?.row || 999,
-        col: sMaster?.col || 999,
+        groupKey,
+        isMonthly,
+        masterId: b.master_id,
         bookerName: b.booker_name || b.customer_name || '-',
         product: b.product || '-',
-        type: b.type === 'รายเดือน' || b.master_id ? 'รายเดือน' : 'รายวัน',
-        status: b.status || 'ค้างชำระ',
+        type: isMonthly ? 'รายเดือน' : 'รายวัน',
+        stallsSet: new Set(stallNames),
+        elecUnit: unit,
+        elecPrice: price,
         isAbsent,
-        elecUnit,
-        elecPrice,
         note: b.note || ''
       });
+    } else {
+      const g = groups.get(groupKey);
+      stallNames.forEach(s => g.stallsSet.add(s));
+      // For both monthly contracts and daily multi-stall setups, the electricity unit
+      // requested represents the total electricity for their whole shop on that day.
+      if (unit > g.elecUnit) {
+        g.elecUnit = unit;
+        g.elecPrice = price;
+      }
+      if (isAbsent) g.isAbsent = true;
+      if (b.note && !g.note) g.note = b.note;
+    }
+  });
+
+  // Convert groups to array items with sorted stalls and walkway coordinates
+  const items = Array.from(groups.values()).map((g) => {
+    const sortedStalls = Array.from(g.stallsSet).sort(compareStallNames);
+    const displayStalls = sortedStalls.join(', ') || '-';
+    totalStallsCount += sortedStalls.length;
+
+    // Find lowest row and col across all stalls in this group
+    let minRow = 999;
+    let minCol = 999;
+    sortedStalls.forEach((sName) => {
+      const sm = stalls.find(s => cleanStallName(s.name) === sName);
+      if (sm) {
+        if (sm.row != null && sm.row < minRow) minRow = sm.row;
+        if (sm.col != null && sm.col < minCol) minCol = sm.col;
+      }
     });
+
+    return {
+      id: g.id,
+      groupKey: g.groupKey,
+      stallName: displayStalls,
+      displayStalls,
+      stallsList: sortedStalls,
+      firstStall: sortedStalls[0] || '',
+      row: minRow,
+      col: minCol,
+      bookerName: g.bookerName,
+      product: g.product,
+      type: g.type,
+      isAbsent: g.isAbsent,
+      elecUnit: g.elecUnit,
+      elecPrice: g.elecPrice,
+      note: g.note
+    };
   });
 
   // Calculate statistics
-  const totalOccupied = stallItems.length;
-  const withElecCount = stallItems.filter(i => i.elecUnit > 0).length;
-  const totalElecUnits = stallItems.reduce((sum, i) => sum + i.elecUnit, 0);
-  const totalElecAmount = stallItems.reduce((sum, i) => sum + i.elecPrice, 0);
+  const totalOccupied = items.length; // Number of unique merchant shops/rows
+  const withElecCount = items.filter(i => i.elecUnit > 0).length;
+  const totalElecUnits = items.reduce((sum, i) => sum + i.elecUnit, 0);
+  const totalElecAmount = items.reduce((sum, i) => sum + i.elecPrice, 0);
   const noElecCount = totalOccupied - withElecCount;
 
   // Filter
-  let filtered = [...stallItems];
+  let filtered = [...items];
   if (filterType === 'WITH_ELEC') {
     filtered = filtered.filter(i => i.elecUnit > 0);
   } else if (filterType === 'NO_ELEC') {
@@ -95,19 +151,20 @@ export function prepareElectricityInspectionData({
     if (sortType === 'WALKWAY') {
       if (a.row !== b.row) return a.row - b.row;
       if (a.col !== b.col) return a.col - b.col;
-      return compareStallNames(a.stallName, b.stallName);
+      return compareStallNames(a.firstStall, b.firstStall);
     }
     if (sortType === 'ELEC_DESC') {
       if (b.elecUnit !== a.elecUnit) return b.elecUnit - a.elecUnit;
-      return compareStallNames(a.stallName, b.stallName);
+      return compareStallNames(a.firstStall, b.firstStall);
     }
-    return compareStallNames(a.stallName, b.stallName);
+    return compareStallNames(a.firstStall, b.firstStall);
   });
 
   return {
     items: filtered,
     stats: {
       totalOccupied,
+      totalStallsCount,
       withElecCount,
       totalElecUnits,
       totalElecAmount,
@@ -339,15 +396,15 @@ export function generateElectricityInspectionA4HTML({
           }
           
           .col-num { width: 24px; text-align: center; font-weight: bold; color: #6b7280; font-size: 8pt; }
-          .col-stall { width: 55px; text-align: center; }
-          .col-tenant { width: 180px; }
+          .col-stall { width: 70px; text-align: center; }
+          .col-tenant { width: 175px; }
           .col-type { width: 60px; text-align: center; }
           .col-elec { width: 120px; text-align: center; }
-          .col-checklist { width: 140px; }
-          .col-note { width: 140px; }
+          .col-checklist { width: 135px; }
+          .col-note { width: 135px; }
 
           .stall-badge {
-            font-size: 10.5pt;
+            font-size: 9.5pt;
             font-weight: 900;
             color: #7c2d12;
             background: #ffedd5;
@@ -355,6 +412,8 @@ export function generateElectricityInspectionA4HTML({
             border-radius: 4px;
             padding: 1.5px 4px;
             display: inline-block;
+            line-height: 1.25;
+            word-break: break-word;
           }
           .tenant-name {
             font-weight: 800;
@@ -479,7 +538,7 @@ export function generateElectricityInspectionA4HTML({
         </div>
 
         <div class="stats-bar">
-          <div class="stat-item">ลงขายทั้งหมด: <span class="stat-val">${stats.totalOccupied} ล็อค</span></div>
+          <div class="stat-item">ลงขายทั้งหมด: <span class="stat-val">${stats.totalOccupied} ร้าน (${stats.totalStallsCount} ล็อค)</span></div>
           <div class="stat-item">แจ้งขอใช้ไฟ: <span class="stat-val">${stats.withElecCount} ร้าน (${stats.totalElecUnits} หน่วย = ${formatPriceInt(stats.totalElecAmount)}.-)</span></div>
           <div class="stat-item">ไม่ขอใช้ไฟ: <span class="stat-val">${stats.noElecCount} ร้าน</span></div>
           <div class="stat-item">รายการที่ตรวจ: <span class="stat-val">${items.length} ร้าน</span></div>

@@ -252,7 +252,9 @@ export default function MarketInspectionModal() {
                 <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
                   <div>
                     <span className="text-gray-500 font-bold block text-[11px]">ลงขายทั้งหมดวันนี้</span>
-                    <span className="text-base sm:text-lg font-black text-amber-950">{elecData.stats.totalOccupied} ล็อค</span>
+                    <span className="text-base sm:text-lg font-black text-amber-950">
+                      {elecData.stats.totalOccupied} ร้าน <span className="text-xs font-normal text-amber-800">({elecData.stats.totalStallsCount} ล็อค)</span>
+                    </span>
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 font-black">
                     🏪
@@ -371,11 +373,10 @@ export default function MarketInspectionModal() {
                     <thead className="bg-[#4A2E1B] text-white font-bold sticky top-0 z-10 text-[11px]">
                       <tr>
                         <th className="p-2 w-10 text-center">#</th>
-                        <th className="p-2 w-20 text-center">ล็อค</th>
+                        <th className="p-2 w-28 text-center">ล็อค</th>
                         <th className="p-2">ชื่อร้านค้า / สินค้า</th>
                         <th className="p-2 w-24 text-center">ประเภท</th>
-                        <th className="p-2 w-32 text-center">ไฟฟ้าที่แจ้งขอ</th>
-                        <th className="p-2 w-32 text-center">สถานะการชำระ</th>
+                        <th className="p-2 w-36 text-center">ไฟฟ้าที่แจ้งขอ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -383,15 +384,22 @@ export default function MarketInspectionModal() {
                         filteredElecItems.map((item, idx) => {
                           const hasElec = item.elecUnit > 0;
                           return (
-                            <tr key={idx} className={`hover:bg-amber-50/40 transition-colors ${item.isAbsent ? 'bg-gray-50 text-gray-400' : ''}`}>
+                            <tr key={item.id || idx} className={`hover:bg-amber-50/40 transition-colors ${item.isAbsent ? 'bg-gray-50 text-gray-400' : ''}`}>
                               <td className="p-2 text-center text-gray-400 font-semibold">{idx + 1}</td>
                               <td className="p-2 text-center">
-                                <span className="font-extrabold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded text-xs">
+                                <span className="font-extrabold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded text-xs inline-block">
                                   {item.stallName}
                                 </span>
                               </td>
                               <td className="p-2">
-                                <div className="font-extrabold text-gray-900">{item.bookerName}</div>
+                                <div className="font-extrabold text-gray-900 flex items-center gap-1.5">
+                                  <span>{item.bookerName}</span>
+                                  {item.isAbsent && (
+                                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold">
+                                      (ลา)
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-gray-500 font-medium">{item.product}</div>
                               </td>
                               <td className="p-2 text-center">
@@ -412,23 +420,12 @@ export default function MarketInspectionModal() {
                                   <span className="text-gray-400 text-[11px] font-medium">ไม่ขอใช้ไฟ (0)</span>
                                 )}
                               </td>
-                              <td className="p-2 text-center">
-                                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                                  item.isAbsent
-                                    ? 'bg-gray-200 text-gray-600'
-                                    : item.status === 'ชำระแล้ว'
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-rose-100 text-rose-800'
-                                }`}>
-                                  {item.isAbsent ? 'ลา' : item.status}
-                                </span>
-                              </td>
                             </tr>
                           );
                         })
                       ) : (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-gray-400 font-medium">
+                          <td colSpan={5} className="p-8 text-center text-gray-400 font-medium">
                             ไม่พบรายการล็อคที่ลงขายในเงื่อนไขนี้
                           </td>
                         </tr>
