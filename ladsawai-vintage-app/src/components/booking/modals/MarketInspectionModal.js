@@ -28,6 +28,7 @@ import {
 } from '@/services/inspection/marketInspectionPrintService';
 import { printMarketLayoutA4 } from '@/utils/marketLayoutPrinter';
 import { formatPrice, formatPriceInt } from '@/utils/numberHelper';
+import { formatPhoneDisplay } from '@/utils/thaiDateHelper';
 
 export default function MarketInspectionModal() {
   const {
@@ -52,6 +53,7 @@ export default function MarketInspectionModal() {
   const [elecSearch, setElecSearch] = useState('');
 
   // Storage Tab Filters
+  const [storageTypeFilter, setStorageTypeFilter] = useState('ALL'); // 'ALL' | 'MONTHLY' | 'DAILY'
   const [storageSearch, setStorageSearch] = useState('');
 
   if (!showInspectionModal) return null;
@@ -79,16 +81,24 @@ export default function MarketInspectionModal() {
   // Storage Data
   const storageItems = prepareStorageInspectionData({
     storageList,
-    monthlyList
+    monthlyList,
+    selectedDate
   });
 
+  const monthlyStorageCount = storageItems.filter(i => i.type === 'รายเดือน').length;
+  const dailyStorageCount = storageItems.filter(i => i.type === 'รายวัน').length;
+
   const filteredStorageItems = storageItems.filter(item => {
+    if (storageTypeFilter === 'MONTHLY' && item.type !== 'รายเดือน') return false;
+    if (storageTypeFilter === 'DAILY' && item.type !== 'รายวัน') return false;
+
     if (!storageSearch.trim()) return true;
     const q = storageSearch.toLowerCase().trim();
     return (
       item.stallName.toLowerCase().includes(q) ||
       item.ownerName.toLowerCase().includes(q) ||
-      item.itemNote.toLowerCase().includes(q)
+      (item.phone && item.phone.toLowerCase().includes(q)) ||
+      item.period.toLowerCase().includes(q)
     );
   });
 
@@ -110,6 +120,7 @@ export default function MarketInspectionModal() {
       storageList,
       monthlyList,
       adminUser,
+      selectedDate,
       showAlert
     });
   };
@@ -402,113 +413,121 @@ export default function MarketInspectionModal() {
 
           {/* TAB 2: STORAGE */}
           {activeTab === 'STORAGE' && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               
-              {/* Stat Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
-                  <div>
-                    <span className="text-gray-500 font-bold block text-[11px]">รายการฝากของทั้งหมด</span>
-                    <span className="text-base sm:text-lg font-black text-amber-950">{storageItems.length} รายการ</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 font-black">
-                    📦
-                  </div>
-                </div>
-
-                <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
-                  <div>
-                    <span className="text-blue-700 font-bold block text-[11px]">ฝากรายเดือน / สะสม</span>
-                    <span className="text-base sm:text-lg font-black text-blue-900">
-                      {storageItems.filter(i => i.source === 'MONTHLY').length} รายเดือน / {storageItems.filter(i => i.source === 'STORAGE').length} ฝากสะสม
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-800 font-black">
-                    📅
-                  </div>
-                </div>
-              </div>
-
               {/* Action Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-2.5 bg-gray-50/80 border border-gray-200 rounded-xl p-2.5 text-xs font-bold">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="ค้นหาล็อค/ชื่อผู้ฝาก..."
-                    value={storageSearch}
-                    onChange={(e) => setStorageSearch(e.target.value)}
-                    className="pl-8 pr-2.5 py-1 bg-white border border-gray-200 rounded-md font-medium text-gray-800 w-48 focus:ring-1 focus:ring-amber-500 outline-none"
-                  />
+                
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-gray-500 text-[11px] mr-1">ตัวกรอง:</span>
+                  <button
+                    type="button"
+                    onClick={() => setStorageTypeFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      storageTypeFilter === 'ALL'
+                        ? 'bg-amber-800 text-white shadow-2xs'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    ทั้งหมด ({storageItems.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStorageTypeFilter('MONTHLY')}
+                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      storageTypeFilter === 'MONTHLY'
+                        ? 'bg-blue-700 text-white shadow-2xs'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    📅 รายเดือน ({monthlyStorageCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStorageTypeFilter('DAILY')}
+                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      storageTypeFilter === 'DAILY'
+                        ? 'bg-emerald-700 text-white shadow-2xs'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    📦 รายวัน ({dailyStorageCount})
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handlePrintStorage}
-                  className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all ml-auto"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>พิมพ์ใบตรวจฝากของ (A4)</span>
-                </button>
+                {/* Search & Print */}
+                <div className="flex items-center gap-2 flex-wrap ml-auto">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="ค้นหาล็อค/ผู้ฝาก/เบอร์..."
+                      value={storageSearch}
+                      onChange={(e) => setStorageSearch(e.target.value)}
+                      className="pl-8 pr-2.5 py-1 bg-white border border-gray-200 rounded-md font-medium text-gray-800 w-44 focus:ring-1 focus:ring-amber-500 outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handlePrintStorage}
+                    className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>พิมพ์ใบตรวจฝากของ (A4)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Table Preview */}
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto max-h-[46vh]">
+                <div className="overflow-x-auto max-h-[58vh]">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-[#4A2E1B] text-white font-bold sticky top-0 z-10 text-[11px]">
                       <tr>
-                        <th className="p-2 w-10 text-center">#</th>
-                        <th className="p-2 w-20 text-center">ล็อค</th>
+                        <th className="p-2 w-10 text-center">ลำดับ</th>
+                        <th className="p-2 w-24 text-center">ประเภท</th>
                         <th className="p-2">ผู้ฝาก / เบอร์โทร</th>
-                        <th className="p-2">รายละเอียดสิ่งของที่ฝาก</th>
-                        <th className="p-2 w-28 text-center">ประเภท</th>
-                        <th className="p-2 w-28 text-center">ช่วงเวลา</th>
-                        <th className="p-2 w-24 text-center">สถานะ</th>
+                        <th className="p-2 w-28 text-center">ล็อค</th>
+                        <th className="p-2 w-36 text-center">ช่วงเวลา</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {filteredStorageItems.length > 0 ? (
                         filteredStorageItems.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-amber-50/40 transition-colors">
+                          <tr key={item.id || idx} className="hover:bg-amber-50/40 transition-colors">
                             <td className="p-2 text-center text-gray-400 font-semibold">{idx + 1}</td>
                             <td className="p-2 text-center">
-                              <span className="font-extrabold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded text-xs">
-                                {item.stallName}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                item.type === 'รายเดือน'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {item.type}
                               </span>
                             </td>
                             <td className="p-2">
                               <div className="font-extrabold text-gray-900">{item.ownerName}</div>
-                              <div className="text-[10px] text-gray-500">{item.phone}</div>
+                              {item.phone && item.phone !== '-' && (
+                                <div className="text-[10px] text-gray-500 font-medium">📞 {formatPhoneDisplay(item.phone)}</div>
+                              )}
                             </td>
-                            <td className="p-2 font-medium text-gray-700">{item.itemNote}</td>
                             <td className="p-2 text-center">
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                item.source === 'MONTHLY'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-amber-100 text-amber-900'
-                              }`}>
-                                {item.typeLabel}
+                              <span className="font-extrabold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded text-xs inline-block">
+                                {item.stallName}
                               </span>
                             </td>
-                            <td className="p-2 text-center text-[10px] text-gray-600 font-medium">
-                              <div>{item.startDate}</div>
-                              <div className="text-gray-400 text-[9px]">ถึง {item.endDate}</div>
-                            </td>
-                            <td className="p-2 text-center">
-                              <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                                item.isOverdue
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : 'bg-emerald-100 text-emerald-800'
-                              }`}>
-                                {item.status}
+                            <td className="p-2 text-center font-bold">
+                              <span className={`text-xs ${item.type === 'รายเดือน' ? 'text-blue-900 font-extrabold' : 'text-gray-800 font-bold'}`}>
+                                {item.period}
                               </span>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-gray-400 font-medium">
+                          <td colSpan={5} className="p-8 text-center text-gray-400 font-medium">
                             ไม่พบรายการฝากของในขณะนี้
                           </td>
                         </tr>

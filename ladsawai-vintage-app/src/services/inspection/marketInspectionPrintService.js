@@ -1,5 +1,5 @@
 import { formatPrice, formatPriceInt, parseNumber, cleanStallName } from '@/utils/numberHelper';
-import { dayNamesShort, monthNamesFull } from '@/utils/thaiDateHelper';
+import { dayNamesShort, monthNamesFull, formatPhoneDisplay, formatThaiDateRangeShort } from '@/utils/thaiDateHelper';
 
 /**
  * Compares stalls alphanumeric naturally (e.g. 1, 2, 10, 13/1, 13/2, ส1, ส2)
@@ -571,50 +571,101 @@ export function printElectricityInspectionA4(options) {
  */
 export function prepareStorageInspectionData({
   storageList = [],
-  monthlyList = []
+  monthlyList = [],
+  selectedDate = null
 }) {
-  const items = [];
+  const groups = new Map();
 
-  // 1. Regular Storage items
+  // Determine target month from selectedDate if provided (e.g. "2026-11")
+  const selectedMonth = selectedDate ? String(selectedDate).substring(0, 7) : null;
+  const hasMonthMatches = selectedMonth && (monthlyList || []).some(
+    m => m.status !== 'ยกเลิก' && parseNumber(m.storage_fee) > 0 && String(m.start_date).substring(0, 7) === selectedMonth
+  );
+
+  // 1. Regular Storage items (Daily / Weekly deposits)
   (storageList || []).forEach(item => {
     if (item.status === 'Active' || item.status === 'Overdue') {
-      items.push({
-        id: item.id,
-        source: 'STORAGE',
-        stallName: cleanStallName(item.stall_name || '-'),
-        ownerName: item.owner_name || '-',
-        phone: item.phone || '-',
-        itemNote: item.note || 'ฝากของทั่วไป',
-        typeLabel: 'ฝากสะสม (สัปดาห์)',
-        startDate: item.start_date || '-',
-        endDate: item.end_date || '-',
-        status: item.status === 'Overdue' ? 'เกินกำหนด' : 'ปกติ (Active)',
-        isOverdue: item.status === 'Overdue'
-      });
+      const owner = (item.owner_name || '').trim();
+      const phone = (item.phone || '').trim();
+      const groupKey = 'daily_' + (owner ? owner.toLowerCase() : item.id) + '_' + phone;
+      const rawStallStr = item.stall_name || item.stall_id || '';
+      const stallNames = rawStallStr.split(',').map(s => cleanStallName(s)).filter(Boolean);
+      const period = formatThaiDateRangeShort(item.start_date, item.end_date);
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          id: item.id,
+          source: 'STORAGE',
+          type: 'รายวัน',
+          ownerName: owner || '-',
+          phone: phone || '-',
+          stallsSet: new Set(stallNames),
+          period: period,
+          startDate: item.start_date || '-',
+          endDate: item.end_date || '-',
+          status: item.status === 'Overdue' ? 'เกินกำหนด' : 'ปกติ',
+          isOverdue: item.status === 'Overdue',
+          note: item.note || ''
+        });
+      } else {
+        const g = groups.get(groupKey);
+        stallNames.forEach(s => g.stallsSet.add(s));
+      }
     }
   });
 
   // 2. Monthly bookings with storage fee
   (monthlyList || []).forEach(m => {
     if (m.status !== 'ยกเลิก' && parseNumber(m.storage_fee) > 0) {
-      items.push({
-        id: m.id,
-        source: 'MONTHLY',
-        stallName: cleanStallName(m.stalls || '-'),
-        ownerName: m.booker_name || m.customer_name || '-',
-        phone: m.phone || '-',
-        itemNote: `ค่าฝากรายเดือน ${formatPriceInt(m.storage_fee)}.- (${m.product || 'ทั่วไป'})`,
-        typeLabel: 'ฝากรายเดือน',
-        startDate: m.start_date || '-',
-        endDate: m.end_date || '-',
-        status: m.status || 'ชำระแล้ว',
-        isOverdue: false
-      });
+      if (hasMonthMatches && m.start_date) {
+        const contractMonth = String(m.start_date).substring(0, 7);
+        if (contractMonth !== selectedMonth) return;
+      }
+
+      const owner = (m.booker_name || m.customer_name || '').trim();
+      const phone = (m.phone || '').trim();
+      const groupKey = 'monthly_' + (owner ? owner.toLowerCase() : m.id) + '_' + phone;
+      const rawStallStr = m.stalls || m.stall_name || '';
+      const stallNames = rawStallStr.split(',').map(s => cleanStallName(s)).filter(Boolean);
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          id: m.id,
+          source: 'MONTHLY',
+          type: 'รายเดือน',
+          ownerName: owner || '-',
+          phone: phone || '-',
+          stallsSet: new Set(stallNames),
+          period: 'ทั้งเดือน',
+          startDate: m.start_date || '-',
+          endDate: m.end_date || '-',
+          status: m.status || 'ชำระแล้ว',
+          isOverdue: false,
+          note: m.product || ''
+        });
+      } else {
+        const g = groups.get(groupKey);
+        stallNames.forEach(s => g.stallsSet.add(s));
+      }
     }
   });
 
-  // Sort by stall name
-  items.sort((a, b) => compareStallNames(a.stallName, b.stallName));
+  // Convert groups to sorted array
+  const items = Array.from(groups.values()).map(g => {
+    const sortedStalls = Array.from(g.stallsSet).sort(compareStallNames);
+    const displayStalls = sortedStalls.join(', ') || '-';
+
+    return {
+      ...g,
+      stallName: displayStalls,
+      displayStalls,
+      stallsList: sortedStalls,
+      firstStall: sortedStalls[0] || ''
+    };
+  });
+
+  // Sort by first stall naturally
+  items.sort((a, b) => compareStallNames(a.firstStall, b.firstStall));
 
   return items;
 }
@@ -625,52 +676,50 @@ export function prepareStorageInspectionData({
 export function generateStorageInspectionA4HTML({
   storageList = [],
   monthlyList = [],
-  adminUser = null
+  adminUser = null,
+  selectedDate = null
 }) {
-  const items = prepareStorageInspectionData({ storageList, monthlyList });
+  const items = prepareStorageInspectionData({ storageList, monthlyList, selectedDate });
+  const totalStallsCount = items.reduce((sum, i) => sum + (i.stallsList?.length || 1), 0);
 
   const now = new Date();
   const printTimeStr = now.toLocaleDateString('th-TH', {
     day: 'numeric',
-    month: 'long',
+    month: 'numeric',
     year: 'numeric'
   }) + ' ' + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' น.';
 
+  const formattedDate = formatThaiDateLong(selectedDate || new Date().toISOString().split('T')[0]);
   const inspectorName = adminUser?.name || 'เจ้าหน้าที่ตรวจตลาด';
 
   const rowsHtml = items.map((item, idx) => {
-    const typeBadge = item.source === 'MONTHLY'
-      ? `<span class="type-monthly">ฝากรายเดือน</span>`
-      : `<span class="type-storage">ฝากสะสม</span>`;
+    const typeBadge = item.type === 'รายเดือน'
+      ? `<span class="type-monthly">รายเดือน</span>`
+      : `<span class="type-daily">รายวัน</span>`;
 
-    const statusBadge = item.isOverdue
-      ? `<span class="overdue-badge">เกินกำหนด</span>`
-      : `<span class="active-badge">${item.status}</span>`;
+    const phoneHtml = item.phone && item.phone !== '-' 
+      ? `<div class="owner-phone">📞 ${formatPhoneDisplay(item.phone)}</div>` 
+      : '';
 
     return `
       <tr class="${idx % 2 === 1 ? 'row-alt' : ''}">
         <td class="col-num">${idx + 1}</td>
+        <td class="col-type">${typeBadge}</td>
+        <td class="col-owner">
+          <div class="owner-name">${item.ownerName}</div>
+          ${phoneHtml}
+        </td>
         <td class="col-stall">
           <div class="stall-badge">${item.stallName}</div>
         </td>
-        <td class="col-owner">
-          <div class="owner-name">${item.ownerName}</div>
-          <div class="owner-phone">${item.phone && item.phone !== '-' ? `📞 ${item.phone}` : ''}</div>
-        </td>
-        <td class="col-note-item">
-          <div>${item.itemNote}</div>
-        </td>
-        <td class="col-type">${typeBadge}</td>
         <td class="col-dates">
-          <div>${item.startDate}</div>
-          <div style="font-size: 7.5pt; color: #6b7280;">ถึง ${item.endDate}</div>
+          <div class="period-text">${item.period}</div>
         </td>
-        <td class="col-status">${statusBadge}</td>
         <td class="col-checklist">
           <div class="check-box-group">
             <span class="chk-item">[ ] มีของ</span>
-            <span class="chk-item">[ ] นำออกแล้ว</span>
-            <span class="chk-item">[ ] เกินกำหนด</span>
+            <span class="chk-item">[ ] ไม่พบของ</span>
+            <span class="chk-item">[ ] แอบฝาก/วางเกิน</span>
           </div>
         </td>
         <td class="col-note">
@@ -685,7 +734,7 @@ export function generateStorageInspectionA4HTML({
     <html lang="th">
       <head>
         <meta charset="utf-8">
-        <title>ใบตรวจการฝากของประจำตลาด (A4)</title>
+        <title>ใบตรวจการฝากของประจำตลาด (A4) - ${selectedDate || ''}</title>
         <style>
           @page {
             size: A4 portrait;
@@ -801,29 +850,30 @@ export function generateStorageInspectionA4HTML({
             background-color: #faf8f5;
           }
           
-          .col-num { width: 22px; text-align: center; font-weight: bold; color: #6b7280; font-size: 8pt; }
-          .col-stall { width: 55px; text-align: center; }
-          .col-owner { width: 130px; }
-          .col-note-item { width: 140px; }
-          .col-type { width: 65px; text-align: center; }
-          .col-dates { width: 75px; text-align: center; font-size: 8pt; }
-          .col-status { width: 65px; text-align: center; }
-          .col-checklist { width: 150px; }
-          .col-note { width: 100px; }
+          .col-num { width: 28px; text-align: center; font-weight: bold; color: #6b7280; font-size: 8pt; }
+          .col-type { width: 60px; text-align: center; }
+          .col-owner { width: 155px; }
+          .col-stall { width: 75px; text-align: center; }
+          .col-dates { width: 115px; text-align: center; }
+          .col-checklist { width: 135px; }
+          .col-note { width: 120px; }
 
           .stall-badge {
-            font-size: 10pt;
+            font-size: 9.5pt;
             font-weight: 900;
             color: #7c2d12;
             background: #ffedd5;
             border: 1px solid #fdba74;
             border-radius: 4px;
-            padding: 1px 4px;
+            padding: 1.5px 4px;
             display: inline-block;
+            line-height: 1.25;
+            word-break: break-word;
           }
           .owner-name {
             font-weight: 800;
             color: #1f2937;
+            font-size: 8.5pt;
           }
           .owner-phone {
             font-size: 7.5pt;
@@ -837,15 +887,7 @@ export function generateStorageInspectionA4HTML({
             padding: 1px 4px;
             border-radius: 3px;
           }
-          .type-storage {
-            font-size: 7.5pt;
-            font-weight: 800;
-            color: #854d0e;
-            background: #fef9c3;
-            padding: 1px 4px;
-            border-radius: 3px;
-          }
-          .active-badge {
+          .type-daily {
             font-size: 7.5pt;
             font-weight: 800;
             color: #065f46;
@@ -853,18 +895,15 @@ export function generateStorageInspectionA4HTML({
             padding: 1px 4px;
             border-radius: 3px;
           }
-          .overdue-badge {
-            font-size: 7.5pt;
-            font-weight: 800;
-            color: #991b1b;
-            background: #fee2e2;
-            padding: 1px 4px;
-            border-radius: 3px;
+          .period-text {
+            font-weight: 700;
+            font-size: 8.5pt;
+            color: #374151;
           }
           .check-box-group {
             display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
+            flex-direction: column;
+            gap: 2px;
             font-size: 7.5pt;
             font-weight: 700;
             color: #374151;
@@ -874,7 +913,7 @@ export function generateStorageInspectionA4HTML({
           }
           .note-dots {
             border-bottom: 1px dotted #9ca3af;
-            height: 14px;
+            height: 16px;
             width: 100%;
           }
 
@@ -915,7 +954,7 @@ export function generateStorageInspectionA4HTML({
         <div class="no-print">
           <div>
             <span>📦 ตลาดนัดลาดสวายวินเทจ - ใบตรวจการฝากของประจำตลาด (A4)</span>
-            <span style="margin-left: 10px; font-weight: normal; font-size: 11px;">[ทั้งหมด ${items.length} รายการ]</span>
+            <span style="margin-left: 10px; font-weight: normal; font-size: 11px;">[ทั้งหมด ${items.length} ร้าน (${totalStallsCount} ล็อค)]</span>
           </div>
           <div>
             <button class="close-btn" onclick="window.close()">ปิดหน้าต่าง</button>
@@ -933,9 +972,10 @@ export function generateStorageInspectionA4HTML({
               </div>
             </div>
             <div class="meta-info">
+              <div><strong>ประจำวัน/รอบสัปดาห์:</strong> ${formattedDate}</div>
               <div><strong>พิมพ์เมื่อ:</strong> ${printTimeStr}</div>
               <div><strong>ผู้สั่งพิมพ์:</strong> ${inspectorName}</div>
-              <div><strong>รายการทั้งหมด:</strong> ${items.length} รายการ</div>
+              <div><strong>รายการที่ตรวจ:</strong> ${items.length} ร้าน (${totalStallsCount} ล็อค)</div>
             </div>
           </div>
         </div>
@@ -943,19 +983,17 @@ export function generateStorageInspectionA4HTML({
         <table class="checklist-table">
           <thead>
             <tr>
-              <th class="col-num">#</th>
-              <th class="col-stall">ล็อค</th>
-              <th class="col-owner">ผู้ฝาก / เบอร์โทร</th>
-              <th class="col-note-item">รายละเอียดสิ่งของที่ฝาก</th>
+              <th class="col-num">ลำดับ</th>
               <th class="col-type">ประเภท</th>
-              <th class="col-dates">ช่วงเวลาฝาก</th>
-              <th class="col-status">สถานะ</th>
+              <th class="col-owner">ผู้ฝาก / เบอร์โทร</th>
+              <th class="col-stall">ล็อค</th>
+              <th class="col-dates">ช่วงเวลา</th>
               <th class="col-checklist">ผลตรวจหน้างาน</th>
-              <th class="col-note">บันทึกเพิ่มเติม</th>
+              <th class="col-note">สิ่งของที่ตรวจพบ / บันทึก</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || `<tr><td colspan="9" style="text-align:center; padding: 20px; color:#6b7280;">ไม่พบรายการฝากของในขณะนี้</td></tr>`}
+            ${rowsHtml || `<tr><td colspan="7" style="text-align:center; padding: 20px; color:#6b7280;">ไม่พบรายการฝากของในขณะนี้</td></tr>`}
           </tbody>
         </table>
 

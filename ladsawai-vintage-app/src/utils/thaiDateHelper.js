@@ -250,3 +250,36 @@ export const formatPhoneDisplay = (phoneStr) => {
   }
   return str;
 };
+
+/**
+ * Format Thai date range short: e.g. "8 พ.ย. - 14 พ.ย. 69"
+ */
+export const formatThaiDateRangeShort = (startDateStr, endDateStr) => {
+  if (!startDateStr || startDateStr === '-') return '-';
+  const parseD = (s) => {
+    if (!s) return null;
+    const parts = String(s).split('-');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const d1 = parseD(startDateStr);
+  const d2 = parseD(endDateStr);
+
+  if (!d1) return startDateStr;
+
+  const day1 = d1.getDate();
+  const m1 = monthNamesShort[d1.getMonth()] || '';
+  const y1 = String(d1.getFullYear() + 543).slice(-2);
+
+  if (!d2) return `${day1} ${m1} ${y1}`;
+
+  const day2 = d2.getDate();
+  const m2 = monthNamesShort[d2.getMonth()] || '';
+  const y2 = String(d2.getFullYear() + 543).slice(-2);
+
+  return `${day1} ${m1} - ${day2} ${m2} ${y2}`;
+};
