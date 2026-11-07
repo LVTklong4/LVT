@@ -59,8 +59,8 @@ export default function MonthlyReceiptPreviewModal() {
     stallDetailsList = [];
   }
 
-  const cleanStall = (name) => (name || '').replace(/[\[\]]/g, '').trim();
-  const rawStallNames = (item.stalls || '').replace(/[\[\]]/g, '').split(',').map(x => x.trim()).filter(Boolean);
+  const cleanStall = (name) => String(name || '').replace(/[\[\]]/g, '').trim();
+  const rawStallNames = String(item.stalls || '').replace(/[\[\]]/g, '').split(',').map(x => x.trim()).filter(Boolean);
 
   // Active days
   const activeDays = [];
@@ -275,7 +275,7 @@ export default function MonthlyReceiptPreviewModal() {
 
   const percentage = grandTotal > 0 ? Math.round((totalPaid / grandTotal) * 100) : 0;
   const remaining = grandTotal - totalPaid;
-  const txnNo = customCounts?.txnNo || item.receipt_no || `TXN-${item.id ? item.id.replace(/\D/g, '') : Date.now()}`;
+  const txnNo = customCounts?.txnNo || item.receipt_no || `TXN-${item.id ? String(item.id).replace(/\D/g, '') : Date.now()}`;
   const productName = customCounts?.product || item.product || 'ของชำทั่วไป';
   const empCode = adminUser?.email ? adminUser.email.replace(/[@.]/g, '') : (adminUser?.name || 'admin');
   const filename = `monthly-receipt-${cleanStall(item.stalls)}-${item.booker_name || ''}.png`;

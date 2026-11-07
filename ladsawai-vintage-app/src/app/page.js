@@ -6,6 +6,7 @@ import { AuthAdminProvider } from '@/context/AuthAdminContext';
 import { MonthlyBookingProvider } from '@/context/MonthlyBookingContext';
 import { StorageProvider } from '@/context/StorageContext';
 import { KlongThomProvider } from '@/context/KlongThomContext';
+import { FinanceProvider } from '@/context/FinanceContext';
 import MonthlyManagerLayout from '@/components/booking/MonthlyManagerLayout';
 import StandardBookingLayout from '@/components/booking/StandardBookingLayout';
 import KlongThomBookingLayout from '@/components/booking/KlongThomBookingLayout';
@@ -39,13 +40,15 @@ function BookingPageContent() {
 export default function BookingPage() {
   return (
     <AuthAdminProvider>
-      <MonthlyBookingProvider>
-        <BookingProvider>
-          <StorageProvider>
-            <BookingPageContent />
-          </StorageProvider>
-        </BookingProvider>
-      </MonthlyBookingProvider>
+      <FinanceProvider>
+        <MonthlyBookingProvider>
+          <BookingProvider>
+            <StorageProvider>
+              <BookingPageContent />
+            </StorageProvider>
+          </BookingProvider>
+        </MonthlyBookingProvider>
+      </FinanceProvider>
     </AuthAdminProvider>
   );
 }

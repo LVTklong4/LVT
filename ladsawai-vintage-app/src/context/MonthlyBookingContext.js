@@ -593,9 +593,10 @@ export function MonthlyBookingProvider({ children }) {
     // Check if customer has earlier unpaid monthly contracts (e.g. October not fully paid when attempting to pay November)
     const earlierDebts = findEarlierUnpaidContracts(booking, monthlyList);
     if (earlierDebts.length > 0) {
-      const debtDetails = earlierDebts.map(d =>
-        `• รอบเดือน ${formatBookingMonth(d.booking_month)}: ล็อค ${d.stalls} ค้างชำระ ${d.remaining.toLocaleString()} บ.`
-      ).join('\n');
+      const debtDetails = earlierDebts.map(d => {
+        const rem = d.remaining !== undefined ? d.remaining : Math.max(0, parseNumber(d.total_price || 0) - parseNumber(d.paid_amount || 0));
+        return `• รอบเดือน ${formatBookingMonth(d.booking_month)}: ล็อค ${cleanStallName(d.stalls) || '-'} ค้างชำระ ${rem.toLocaleString()} บ.`;
+      }).join('\n');
 
       const isConfirmed = await showConfirm({
         title: '⚠️ แจ้งเตือน: มียอดค้างชำระเดือนก่อนหน้า',

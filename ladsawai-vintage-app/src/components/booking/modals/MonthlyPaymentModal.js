@@ -5,6 +5,7 @@ import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { CreditCard, Banknote, Tag, Loader2, X, AlertTriangle } from 'lucide-react';
 import { findEarlierUnpaidContracts } from '@/services/monthly/monthlyPaymentService';
 import { formatBookingMonth } from '@/utils/thaiDateHelper';
+import { cleanStallName } from '@/utils/numberHelper';
 
 export default function MonthlyPaymentModal() {
   const {
@@ -53,7 +54,7 @@ export default function MonthlyPaymentModal() {
             {activeMonthlyBooking?.booker_name && (
               <p className="text-[11px] text-gray-500 font-semibold mt-0.5">
                 ผู้เช่า: <span className="text-[#8B4513] font-bold">{activeMonthlyBooking.booker_name}</span>
-                {activeMonthlyBooking.stalls && <span> | ล็อค: <span className="text-[#8B4513] font-bold">{activeMonthlyBooking.stalls}</span></span>}
+                {activeMonthlyBooking.stalls && <span> | ล็อค: <span className="text-[#8B4513] font-bold">{cleanStallName(activeMonthlyBooking.stalls) || '-'}</span></span>}
               </p>
             )}
           </div>
@@ -85,12 +86,15 @@ export default function MonthlyPaymentModal() {
                 <span>แจ้งเตือน: พบยอดค้างชำระเดือนก่อนหน้า</span>
               </div>
               <div className="flex flex-col gap-1 pl-5 text-[11px] text-amber-800">
-                {earlierDebts.map(d => (
-                  <div key={d.id} className="flex justify-between items-center bg-amber-100/60 px-2 py-1 rounded-md">
-                    <span>รอบ {formatBookingMonth(d.booking_month)} (ล็อค {d.stalls})</span>
-                    <span className="font-extrabold text-red-600">ค้าง {d.remaining.toLocaleString()} บ.</span>
-                  </div>
-                ))}
+                {earlierDebts.map(d => {
+                  const rem = d.remaining !== undefined ? d.remaining : Math.max(0, parseNumber(d.total_price || 0) - parseNumber(d.paid_amount || 0));
+                  return (
+                    <div key={d.id} className="flex justify-between items-center bg-amber-100/60 px-2 py-1 rounded-md">
+                      <span>รอบ {formatBookingMonth(d.booking_month)} (ล็อค {cleanStallName(d.stalls) || '-'})</span>
+                      <span className="font-extrabold text-red-600">ค้าง {rem.toLocaleString()} บ.</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -123,12 +127,14 @@ export default function MonthlyPaymentModal() {
               <div className="grid grid-cols-4 gap-1.5">
                 {[25, 50, 75, 100].map((pct) => {
                   const total = parseNumber(activeMonthlyBooking.total_price || 0);
-                  const remaining = total - parseNumber(activeMonthlyBooking.paid_amount || 0);
+                  const paid = parseNumber(activeMonthlyBooking.paid_amount || 0);
+                  const remaining = Math.max(0, total - paid);
                   const isClose = pct === 100;
-                  const val = isClose ? (remaining > 0 ? remaining : 0) : (total * (pct / 100));
+                  const rawVal = isClose ? remaining : (total * (pct / 100));
+                  const val = isNaN(rawVal) ? 0 : Math.max(0, rawVal);
                   
                   const formAmt = parseNumber(monthlyPaymentForm.amount);
-                  const isActive = isClose ? (formAmt === remaining) : (formAmt === val);
+                  const isActive = isClose ? (formAmt === remaining && remaining > 0) : (formAmt === val && val > 0);
 
                   return (
                     <button
@@ -136,10 +142,11 @@ export default function MonthlyPaymentModal() {
                       type="button"
                       disabled={loadingMonthly}
                       onClick={() => {
-                        setMonthlyPaymentForm({
-                          ...monthlyPaymentForm,
-                          amount: String(Math.round(val * 100) / 100)
-                        });
+                        const safeVal = Math.round(val * 100) / 100;
+                        setMonthlyPaymentForm(prev => ({
+                          ...prev,
+                          amount: String(safeVal)
+                        }));
                       }}
                       className={`flex flex-col items-center justify-center py-1 border rounded-lg transition-all ${
                         isActive 
@@ -148,7 +155,9 @@ export default function MonthlyPaymentModal() {
                       } disabled:opacity-50 disabled:pointer-events-none`}
                     >
                       <span className="text-[10px] font-bold">{isClose ? 'ปิดยอด' : `${pct}%`}</span>
-                      <span className={`text-[9px] ${isActive ? 'text-blue-700' : 'text-gray-400'}`}>{val.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                      <span className={`text-[9px] ${isActive ? 'text-blue-700' : 'text-gray-400'}`}>
+                        {(isNaN(val) ? 0 : val).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
                     </button>
                   );
                 })}

@@ -1,7 +1,8 @@
 // Number and parsing helpers for LVT Booking System
 
 export const parseNumber = (val) => {
-  const num = parseFloat(String(val));
+  if (val === null || val === undefined || val === '') return 0;
+  const num = parseFloat(String(val).replace(/,/g, ''));
   return isNaN(num) ? 0 : num;
 };
 
