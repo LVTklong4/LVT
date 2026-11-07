@@ -19,6 +19,8 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const [countedCash, setCountedCash] = useState('');
   const [discrepancyNote, setDiscrepancyNote] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [excludeAdvanceCash, setExcludeAdvanceCash] = useState(true);
+  const [showAdvanceDetails, setShowAdvanceDetails] = useState(false);
 
   // Denominations state
   const [denominations, setDenominations] = useState({
@@ -100,8 +102,12 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const cashIn = summary?.cashIn || 0;
   const cashOut = summary?.cashOut || 0;
   
-  // Expected Cash = Opening Float + Cash In - Cash Out
-  const expectedCashInDrawer = floatVal + cashIn - cashOut;
+  const effectiveCashIn = (excludeAdvanceCash && summary?.cashInAdvance > 0)
+    ? (summary.cashInToday !== undefined ? summary.cashInToday : cashIn)
+    : cashIn;
+
+  // Expected Cash = Opening Float + Effective Cash In - Cash Out
+  const expectedCashInDrawer = floatVal + effectiveCashIn - cashOut;
 
   // Counted Cash
   const countedCashVal = countedCash !== '' ? parseNum(countedCash) : null;
@@ -117,13 +123,19 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
       return;
     }
 
+    let finalNote = discrepancyNote || '';
+    if (excludeAdvanceCash && summary?.cashInAdvance > 0 && !finalNote.includes('รับล่วงหน้า')) {
+      const noteAppend = `*นับเฉพาะเงินสดรับในกะวันนี้ ${effectiveCashIn.toLocaleString()} บ. (ไม่รวมเงินสดรับล่วงหน้า ${summary.cashInAdvance.toLocaleString()} บ. ที่นำส่งในกะก่อนหน้าแล้ว)`;
+      finalNote = finalNote ? `${finalNote} | ${noteAppend}` : noteAppend;
+    }
+
     const payload = {
       date: selectedDate,
       status: 'CLOSED',
       floatAmount: floatVal,
       countedCash: countedCashVal,
       cashShortageSurplus: shortageSurplus,
-      discrepancyNote,
+      discrepancyNote: finalNote,
       summary,
       officer: adminUser?.name || 'Admin'
     };
@@ -414,9 +426,66 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                     <Wallet className="w-4 h-4 text-emerald-700" /> สรุปกระแสเงินสด (Cash Stream)
                   </span>
                   <div className="flex justify-between items-center text-xs font-bold text-gray-600 border-b pb-1.5">
-                    <span>เงินสดรับรวม (Cash In):</span>
-                    <span className="text-emerald-700">+{summary.cashIn.toLocaleString()} ฿</span>
+                    <span>เงินสดรับรวมทั้งสิ้น:</span>
+                    <span className="text-emerald-700 font-extrabold">+{summary.cashIn.toLocaleString()} ฿</span>
                   </div>
+
+                  {summary?.cashInAdvance > 0 && (
+                    <div className="bg-amber-100/70 border border-amber-300 rounded-lg p-2 flex flex-col gap-1 text-[11px] my-1">
+                      <div className="flex justify-between items-center font-bold text-emerald-900">
+                        <span>🟢 เงินสดรับจริงในกะวันนี้:</span>
+                        <span className="font-black text-emerald-800">+{summary.cashInToday.toLocaleString()} ฿</span>
+                      </div>
+                      <div className="flex justify-between items-center font-bold text-amber-900">
+                        <span>⏳ เงินสดรับล่วงหน้าในวันก่อน:</span>
+                        <span className="font-extrabold text-amber-800">+{summary.cashInAdvance.toLocaleString()} ฿</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-amber-200/80">
+                        <label className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-950 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={excludeAdvanceCash}
+                            onChange={(e) => setExcludeAdvanceCash(e.target.checked)}
+                            className="w-3.5 h-3.5 accent-amber-800 rounded cursor-pointer"
+                          />
+                          <span>ตรวจนับเฉพาะเงินสดรับจริงวันนี้</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAdvanceDetails(!showAdvanceDetails)}
+                          className="text-[10px] text-amber-800 underline hover:text-amber-950 font-bold cursor-pointer"
+                        >
+                          {showAdvanceDetails ? 'ซ่อน' : `ดู ${summary.advancePaymentItems?.length || 0} ล็อค`}
+                        </button>
+                      </div>
+
+                      {showAdvanceDetails && summary.advancePaymentItems?.length > 0 && (
+                        <div className="mt-1 max-h-28 overflow-y-auto bg-white/90 rounded border border-amber-200 p-1.5 text-[10px]">
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="border-b text-gray-500 font-bold">
+                                <th>ล็อค</th>
+                                <th>ผู้ค้า</th>
+                                <th>วันที่รับเงิน</th>
+                                <th className="text-right">เงินสด</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {summary.advancePaymentItems.map((it, idx) => (
+                                <tr key={it.id || idx} className="border-b border-gray-100">
+                                  <td className="font-bold text-gray-800">{it.stall}</td>
+                                  <td>{it.booker}</td>
+                                  <td className="text-gray-500">{it.payDate}</td>
+                                  <td className="text-right font-bold text-emerald-800">+{it.cash.toLocaleString()} ฿</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center text-xs font-bold text-gray-600 border-b pb-1.5">
                     <span>เงินสดจ่ายรวม (Cash Out):</span>
                     <span className="text-red-600">-{summary.cashOut.toLocaleString()} ฿</span>
@@ -525,7 +594,10 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                       {expectedCashInDrawer.toLocaleString()} ฿
                     </strong>
                     <span className="text-[9px] text-amber-700 text-center font-semibold">
-                      (เงินทอน {floatVal.toLocaleString()} + สดรับ {cashIn.toLocaleString()} - สดจ่าย {cashOut.toLocaleString()})
+                      (เงินทอน {floatVal.toLocaleString()} + สดรับ {effectiveCashIn.toLocaleString()} - สดจ่าย {cashOut.toLocaleString()})
+                      {excludeAdvanceCash && summary?.cashInAdvance > 0 && (
+                        <span className="block text-emerald-800 font-bold">*นับเฉพาะสดรับกะวันนี้ {summary.cashInToday.toLocaleString()} ฿</span>
+                      )}
                     </span>
                   </div>
 

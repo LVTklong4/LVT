@@ -55,6 +55,18 @@ export function parsePaymentBreakdown(methodStr, totalAmount = 0) {
   return { cash: 0, transfer: amt, isDiscount: false };
 }
 
+// Helper: Extract Bangkok date string YYYY-MM-DD from timestamp/ISO string
+export function getPaymentDateStr(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return String(isoStr).slice(0, 10);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  } catch (e) {
+    return String(isoStr).slice(0, 10);
+  }
+}
+
 export function FinanceProvider({ children }) {
   const [incomeList, setIncomeList] = useState([]);
   const [expenseList, setExpenseList] = useState([]);
@@ -108,9 +120,16 @@ export function FinanceProvider({ children }) {
       }
 
       // 1. Fetch from unified transactions table
+      const dateMode = filters.dateFilterType || 'marketDate';
       let txnQuery = supabase.from('transactions').select('*').order('date', { ascending: false }).order('timestamp', { ascending: false });
-      if (filters.startDate) txnQuery = txnQuery.gte('date', filters.startDate);
-      if (filters.endDate) txnQuery = txnQuery.lte('date', filters.endDate);
+      
+      if (dateMode === 'paymentDate') {
+        if (filters.startDate) txnQuery = txnQuery.gte('timestamp', `${filters.startDate}T00:00:00.000Z`);
+        if (filters.endDate) txnQuery = txnQuery.lte('timestamp', `${filters.endDate}T23:59:59.999Z`);
+      } else {
+        if (filters.startDate) txnQuery = txnQuery.gte('date', filters.startDate);
+        if (filters.endDate) txnQuery = txnQuery.lte('date', filters.endDate);
+      }
       if (!filters.startDate && !filters.endDate) {
         txnQuery = txnQuery.limit(300);
       }
@@ -125,10 +144,18 @@ export function FinanceProvider({ children }) {
         const amt = parseFloat(t.total_amount || t.amount || 0);
         const rawMethod = t.payment_method || t.method || 'โอนเงิน';
         const breakdown = parsePaymentBreakdown(rawMethod, amt);
+        const payTimestamp = t.timestamp || t.created_at || t.date;
+        const payDate = getPaymentDateStr(payTimestamp);
+        const marketDate = t.date;
 
         const itemObj = {
           id: t.id,
-          date: t.date,
+          date: marketDate,
+          paymentTimestamp: payTimestamp,
+          paymentDate: payDate,
+          isPaidAdvance: Boolean(payDate && marketDate && payDate < marketDate),
+          isPaidRetro: Boolean(payDate && marketDate && payDate > marketDate),
+          isPaidDifferentDate: Boolean(payDate && marketDate && payDate !== marketDate),
           category: t.category || (isExp ? 'ค่าใช้จ่ายทั่วไป' : 'รายรับทั่วไป'),
           description: t.description || t.note || t.booking_ref || '',
           item: t.description || t.note || t.booking_ref || '',
@@ -137,7 +164,7 @@ export function FinanceProvider({ children }) {
           cashAmount: breakdown.cash,
           transferAmount: breakdown.transfer,
           officer: t.officer || 'Admin',
-          timestamp: t.timestamp || t.created_at
+          timestamp: payTimestamp
         };
 
         if (isExp) {
@@ -156,8 +183,14 @@ export function FinanceProvider({ children }) {
           .from('bookings')
           .select('*')
           .in('status', ['ชำระแล้ว', 'จ่ายแล้ว']);
-        if (filters.startDate) bookingQuery = bookingQuery.gte('date', filters.startDate);
-        if (filters.endDate) bookingQuery = bookingQuery.lte('date', filters.endDate);
+        
+        if (dateMode === 'paymentDate') {
+          if (filters.startDate) bookingQuery = bookingQuery.gte('updated_at', `${filters.startDate}T00:00:00.000Z`);
+          if (filters.endDate) bookingQuery = bookingQuery.lte('updated_at', `${filters.endDate}T23:59:59.999Z`);
+        } else {
+          if (filters.startDate) bookingQuery = bookingQuery.gte('date', filters.startDate);
+          if (filters.endDate) bookingQuery = bookingQuery.lte('date', filters.endDate);
+        }
         if (!filters.startDate && !filters.endDate) {
           bookingQuery = bookingQuery.limit(300);
         }
@@ -178,10 +211,18 @@ export function FinanceProvider({ children }) {
           const breakdown = parsePaymentBreakdown(rawMethod, amt);
           const stallLabel = b.stall_name || b.stall_id || '';
           const tenantName = b.booker_name || b.customer_name || 'ลูกค้าทั่วไป';
+          const payTimestamp = b.updated_at || b.created_at || b.date;
+          const payDate = getPaymentDateStr(payTimestamp);
+          const marketDate = b.date;
 
           incList.push({
             id: b.id,
-            date: b.date,
+            date: marketDate,
+            paymentTimestamp: payTimestamp,
+            paymentDate: payDate,
+            isPaidAdvance: Boolean(payDate && marketDate && payDate < marketDate),
+            isPaidRetro: Boolean(payDate && marketDate && payDate > marketDate),
+            isPaidDifferentDate: Boolean(payDate && marketDate && payDate !== marketDate),
             category: b.type === 'ประจำ' ? 'ค่าล็อคประจำ' : 'ค่าล็อครายวัน',
             description: `ค่าล็อค ${stallLabel} (${tenantName})`,
             item: `ค่าล็อค ${stallLabel}`,
@@ -190,7 +231,7 @@ export function FinanceProvider({ children }) {
             cashAmount: breakdown.cash,
             transferAmount: breakdown.transfer,
             officer: 'Staff',
-            timestamp: b.updated_at || b.created_at || b.date
+            timestamp: payTimestamp
           });
         });
       } catch (err) {
@@ -208,6 +249,18 @@ export function FinanceProvider({ children }) {
 
       let filteredIncome = incList;
       let filteredExpense = expList;
+
+      // Apply date filter for paymentDate mode if specified
+      if (dateMode === 'paymentDate') {
+        if (filters.startDate) {
+          filteredIncome = filteredIncome.filter(item => item.paymentDate >= filters.startDate);
+          filteredExpense = filteredExpense.filter(item => item.paymentDate >= filters.startDate);
+        }
+        if (filters.endDate) {
+          filteredIncome = filteredIncome.filter(item => item.paymentDate <= filters.endDate);
+          filteredExpense = filteredExpense.filter(item => item.paymentDate <= filters.endDate);
+        }
+      }
 
       // Apply category filter in-memory if needed
       if (filters.category && filters.category !== 'ทั้งหมด') {
@@ -321,6 +374,10 @@ export function FinanceProvider({ children }) {
       // 1. Transactions
       const expenseItems = [];
       let transferTxnCount = 0;
+      const advancePaymentItems = [];
+      const todayPaymentItems = [];
+      let cashInToday = 0;
+      let cashInAdvance = 0;
 
       txns.forEach(t => {
         const amt = parseFloat(t.total_amount || t.amount) || 0;
@@ -356,6 +413,28 @@ export function FinanceProvider({ children }) {
           transferIn += payment.transfer;
           if (payment.transfer > 0) {
             transferTxnCount++;
+          }
+
+          const ts = t.timestamp || t.created_at;
+          const payDate = getPaymentDateStr(ts);
+          if (payment.cash > 0) {
+            const itemData = {
+              id: t.id,
+              stall: t.note || t.booking_ref || t.category || 'รายรับ',
+              booker: t.officer || 'Admin',
+              amount: amt,
+              cash: payment.cash,
+              transfer: payment.transfer,
+              payDate,
+              payTimestamp: ts
+            };
+            if (payDate && payDate < selectedDate) {
+              cashInAdvance += payment.cash;
+              advancePaymentItems.push(itemData);
+            } else {
+              cashInToday += payment.cash;
+              todayPaymentItems.push(itemData);
+            }
           }
 
           if (t.category?.includes('คลองถม') || t.bill_type === 'KlongThom') {
@@ -405,6 +484,28 @@ export function FinanceProvider({ children }) {
             breakdown.dailyStall.cash += bPayment.cash;
             breakdown.dailyStall.transfer += bPayment.transfer;
             breakdown.dailyStall.total += amt;
+
+            if (bPayment.cash > 0) {
+              const ts = b.updated_at || b.created_at;
+              const payDate = getPaymentDateStr(ts);
+              const itemData = {
+                id: b.id,
+                stall: b.stall_name,
+                booker: b.booker_name || b.customer_name || 'ลูกค้า',
+                amount: amt,
+                cash: bPayment.cash,
+                transfer: bPayment.transfer,
+                payDate,
+                payTimestamp: ts
+              };
+              if (payDate && payDate < selectedDate) {
+                cashInAdvance += bPayment.cash;
+                advancePaymentItems.push(itemData);
+              } else {
+                cashInToday += bPayment.cash;
+                todayPaymentItems.push(itemData);
+              }
+            }
           }
         }
       });
@@ -425,6 +526,10 @@ export function FinanceProvider({ children }) {
       const summary = {
         date: selectedDate,
         suggestedFloat,
+        cashInToday,
+        cashInAdvance,
+        advancePaymentItems,
+        todayPaymentItems,
         carryForward: {
           cash: 0,
           transfer: 0,

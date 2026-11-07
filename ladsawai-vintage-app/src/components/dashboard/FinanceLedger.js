@@ -11,6 +11,46 @@ import DailyClosingModal from './DailyClosingModal';
 import FinanceTransactionForm, { incomeCategories, expenseCategories } from './FinanceTransactionForm';
 import FinanceTransactionFilter from './FinanceTransactionFilter';
 
+// Helper: format Thai short date e.g. "07/11/69"
+function formatThaiDateOnly(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10) + 543;
+      return `${parts[2]}/${parts[1]}/${String(y).slice(-2)}`;
+    }
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+// Helper: format Thai date and time e.g. "07/11/69 09:00 น."
+function formatThaiDateTime(isoStr) {
+  if (!isoStr) return '-';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return String(isoStr);
+    
+    const day = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit' });
+    const month = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', month: '2-digit' });
+    const fullYear = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', year: 'numeric' });
+    const thaiYearShort = String((parseInt(fullYear, 10) + 543) % 100).padStart(2, '0');
+    
+    const time = d.toLocaleTimeString('th-TH', { 
+      timeZone: 'Asia/Bangkok', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false
+    });
+
+    return `${day}/${month}/${thaiYearShort} ${time} น.`;
+  } catch (e) {
+    return String(isoStr);
+  }
+}
+
 export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
   const { 
     incomeList, 
@@ -37,6 +77,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
   const [endDate, setEndDate] = useState(() => defaultDate || new Date().toISOString().split('T')[0]);
   const [categoryFilter, setCategoryFilter] = useState('ทั้งหมด');
   const [methodFilter, setMethodFilter] = useState('ทั้งหมด');
+  const [dateFilterType, setDateFilterType] = useState('marketDate');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -63,9 +104,10 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
       endDate,
       category: categoryFilter,
       method: methodFilter,
-      searchQuery: debouncedSearchQuery
+      searchQuery: debouncedSearchQuery,
+      dateFilterType
     });
-  }, [fetchFinanceData, startDate, endDate, categoryFilter, methodFilter, debouncedSearchQuery]);
+  }, [fetchFinanceData, startDate, endDate, categoryFilter, methodFilter, debouncedSearchQuery, dateFilterType]);
 
   useEffect(() => {
     loadData();
@@ -135,6 +177,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
     setEndDate(today);
     setCategoryFilter('ทั้งหมด');
     setMethodFilter('ทั้งหมด');
+    setDateFilterType('marketDate');
     setSearchQuery('');
     setCurrentPage(1);
   };
@@ -269,6 +312,8 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
             setCategoryFilter={setCategoryFilter}
             methodFilter={methodFilter}
             setMethodFilter={setMethodFilter}
+            dateFilterType={dateFilterType}
+            setDateFilterType={setDateFilterType}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             onResetFilters={handleResetFilters}
@@ -312,7 +357,8 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                       : 'bg-amber-50/70 text-amber-950 border-amber-200'
                   }`}>
                     <tr>
-                      <th className="p-3">วันที่</th>
+                      <th className="p-3 whitespace-nowrap">วันที่ทำการค้า</th>
+                      <th className="p-3 whitespace-nowrap">วัน-เวลารับชำระ</th>
                       <th className="p-3">หมวดหมู่</th>
                       <th className="p-3">รายการ/คำอธิบาย</th>
                       <th className="p-3 text-right">จำนวนเงิน</th>
@@ -324,14 +370,14 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                   <tbody className="divide-y divide-gray-100 font-semibold text-gray-700">
                     {loadingFinance ? (
                       <tr>
-                        <td colSpan="7" className="p-8 text-center text-gray-400">
+                        <td colSpan="8" className="p-8 text-center text-gray-400">
                           <Loader2 className="w-6 h-6 animate-spin mx-auto text-amber-800 mb-2" />
                           <span>กำลังดึงข้อมูลบัญชี...</span>
                         </td>
                       </tr>
                     ) : currentList.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="p-8 text-center text-gray-400 font-bold">
+                        <td colSpan="8" className="p-8 text-center text-gray-400 font-bold">
                           <AlertCircle className="w-6 h-6 mx-auto text-amber-800/30 mb-2" />
                           <span>ไม่พบรายการที่ตรงกับฟิลเตอร์ตัวกรอง</span>
                         </td>
@@ -371,7 +417,28 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
 
                         return (
                           <tr key={`${item.id}-${item.entryType}`} className="hover:bg-amber-50/20 transition-colors">
-                            <td className="p-3 whitespace-nowrap text-gray-800 font-bold">{item.date}</td>
+                            <td className="p-3 whitespace-nowrap text-gray-800 font-bold">
+                              <div className="flex flex-col">
+                                <span>{formatThaiDateOnly(item.date)}</span>
+                                <span className="text-[9px] text-gray-400 font-medium">{item.date}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 whitespace-nowrap">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-bold text-gray-800 text-[11px]">
+                                  {formatThaiDateTime(item.paymentTimestamp)}
+                                </span>
+                                {item.isPaidDifferentDate && (
+                                  <span className={`inline-block w-fit text-[9px] px-1.5 py-0.2 rounded font-semibold ${
+                                    item.isPaidAdvance 
+                                      ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                      : 'bg-blue-100 text-blue-900 border border-blue-300'
+                                  }`}>
+                                    {item.isPaidAdvance ? '⏳ จ่ายล่วงหน้า' : '↩️ จ่ายย้อนหลัง'}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="p-3">
                               <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
                                 isInc 

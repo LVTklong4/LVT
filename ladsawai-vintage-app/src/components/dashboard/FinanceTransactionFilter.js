@@ -14,6 +14,8 @@ export default function FinanceTransactionFilter({
   setCategoryFilter,
   methodFilter,
   setMethodFilter,
+  dateFilterType = 'marketDate',
+  setDateFilterType,
   searchQuery,
   setSearchQuery,
   onResetFilters
@@ -60,10 +62,37 @@ export default function FinanceTransactionFilter({
   return (
     <div className="p-3.5 bg-amber-50/30 border border-amber-200/70 rounded-xl flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-black text-[#4A3B32] flex items-center gap-1">
             <Filter className="w-3.5 h-3.5 text-amber-800" /> คัดกรอง:
           </span>
+
+          {/* Mode Toggle: Market Date vs Payment Date */}
+          <div className="flex items-center bg-white p-0.5 rounded-lg border border-amber-300 text-[10px] font-bold shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setDateFilterType?.('marketDate')}
+              className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                dateFilterType === 'marketDate'
+                  ? 'bg-amber-800 text-white font-black shadow-2xs'
+                  : 'text-amber-900 hover:bg-amber-50'
+              }`}
+            >
+              📅 วันที่ทำการค้า
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateFilterType?.('paymentDate')}
+              className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                dateFilterType === 'paymentDate'
+                  ? 'bg-amber-800 text-white font-black shadow-2xs'
+                  : 'text-amber-900 hover:bg-amber-50'
+              }`}
+            >
+              ⏱️ วันที่รับเงินจริง
+            </button>
+          </div>
+
           {/* Quick Date Chips */}
           <div className="flex items-center gap-1">
             <button
@@ -107,7 +136,9 @@ export default function FinanceTransactionFilter({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] text-gray-500 font-bold">วันที่เริ่มต้น</span>
+          <span className="text-[9px] text-gray-500 font-bold">
+            {dateFilterType === 'paymentDate' ? '⏱️ วันรับเงิน (เริ่มต้น)' : '📅 วันค้า (เริ่มต้น)'}
+          </span>
           <input 
             type="date"
             value={startDate}
@@ -117,7 +148,9 @@ export default function FinanceTransactionFilter({
         </div>
 
         <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] text-gray-500 font-bold">วันที่สิ้นสุด</span>
+          <span className="text-[9px] text-gray-500 font-bold">
+            {dateFilterType === 'paymentDate' ? '⏱️ วันรับเงิน (สิ้นสุด)' : '📅 วันค้า (สิ้นสุด)'}
+          </span>
           <input 
             type="date"
             value={endDate}
