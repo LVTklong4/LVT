@@ -213,15 +213,6 @@ export default function StandardBookingTopBar({
                         <button 
                           onClick={() => {
                             setShowGearDropdown(false);
-                            onOpenCopyStallMap?.();
-                          }} 
-                          className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
-                        >
-                          <Copy className="w-4 h-4 text-amber-800 shrink-0" /> คัดลอกผังจากวันอื่น
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setShowGearDropdown(false);
                             setShowMonthlyMgmtModal(true);
                           }} 
                           className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
@@ -253,7 +244,7 @@ export default function StandardBookingTopBar({
                           }} 
                           className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                         >
-                          <Info className="w-4 h-4 text-emerald-700 shrink-0" /> ประวัติทีมงาน (Audit Logs)
+                          <Info className="w-4 h-4 text-emerald-700 shrink-0" /> ประวัติทีมงาน
                         </button>
                         <button 
                           onClick={() => {
@@ -262,7 +253,7 @@ export default function StandardBookingTopBar({
                           }} 
                           className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-amber-100/70 bg-amber-50/50 text-amber-950 font-bold flex items-center gap-2 transition-colors cursor-pointer border-t border-amber-100"
                         >
-                          <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0" /> 🛡️ เจ้าหน้าที่ตรวจสอบ
+                          <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0" /> เจ้าหน้าที่ตรวจสอบ
                         </button>
                       </div>
                     </>
@@ -305,40 +296,40 @@ export default function StandardBookingTopBar({
                     {/* Menu Items */}
                     <div className="py-1 text-xs">
                       <a 
-                        href="/dashboard" 
+                        href="/kiosk" 
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={() => setShowProfileDropdown(false)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-amber-900 font-bold flex items-center gap-2.5 transition-colors"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-blue-600 shrink-0" /> สรุปยอด (Dashboard)
+                        <Store className="w-4 h-4 text-amber-700 shrink-0" /> 🖥️ จอแสดงผลลูกค้า (Kiosk)
                       </a>
                       <a 
                         href="/dashboard/finance" 
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={() => setShowProfileDropdown(false)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors border-t border-amber-100/60"
                       >
                         <Banknote className="w-4 h-4 text-emerald-600 shrink-0" /> บันทึกรายรับ-รายจ่าย
                       </a>
                       <a 
-                        href="/kiosk" 
+                        href="/dashboard" 
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={() => setShowProfileDropdown(false)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-amber-900 font-bold flex items-center gap-2.5 transition-colors border-t border-amber-100/60"
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors border-t border-amber-100/60"
                       >
-                        <Store className="w-4 h-4 text-amber-700 shrink-0" /> 🖥️ จอแสดงผลลูกค้า (Kiosk)
+                        <LayoutDashboard className="w-4 h-4 text-blue-600 shrink-0" /> สรุปยอด (Dashboard)
                       </a>
                       <button 
                         onClick={() => {
                           setShowProfileDropdown(false);
-                          onOpenDailyClosing?.();
+                          onOpenCopyStallMap?.();
                         }} 
-                        className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 text-emerald-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
                       >
-                        <Lock className="w-4 h-4 text-emerald-700 shrink-0" /> 🔒 ปิดยอดประจำวัน
+                        <Copy className="w-4 h-4 text-amber-800 shrink-0" /> คัดลอกผังจากวันอื่น
                       </button>
                       <button 
                         onClick={() => {
@@ -347,14 +338,14 @@ export default function StandardBookingTopBar({
                         }} 
                         className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
                       >
-                        <RefreshCw className="w-4 h-4 text-emerald-600 shrink-0" /> อัปเดตผังล่าสุด
+                        <RefreshCw className="w-4 h-4 text-emerald-600 shrink-0" /> อัพเดทผังล่าสุด
                       </button>
                       <button 
                         onClick={() => {
                           setShowProfileDropdown(false);
                           setShowSettingsMgmtModal(true);
                         }} 
-                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
+                        className="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-gray-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
                       >
                         <Settings className="w-4 h-4 text-amber-600 shrink-0" /> ตั้งค่าระบบ
                       </button>
@@ -363,7 +354,7 @@ export default function StandardBookingTopBar({
                           setShowProfileDropdown(false);
                           handleLogout();
                         }} 
-                        className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
+                        className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-700 font-bold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-100/60"
                       >
                         <LogOut className="w-4 h-4 text-red-600 shrink-0" /> ออกจากระบบ
                       </button>
