@@ -153,8 +153,7 @@ export default function MonthlyManagerLayout() {
     showCancelled,
     setShowCancelled,
     stalls,
-    confirmInfo,
-    setShowDebtFollowUpModal
+    confirmInfo
   } = useMonthlyBooking();
   const { setShowSettingsMgmtModal } = useBooking();
 
@@ -211,15 +210,6 @@ export default function MonthlyManagerLayout() {
             >
               <RotateCcw className="w-4 h-4" />
               ต่อสัญญา
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDebtFollowUpModal(true)}
-              className="px-3 py-1.5 bg-[#5D4037] hover:bg-[#4A2E1B] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
-              title="พิมพ์ใบตรวจติดตามยอดค้างชำระค่าเช่ารายเดือน (A4)"
-            >
-              <Printer className="w-4 h-4 text-amber-200" />
-              ใบตรวจยอดค้าง (A4)
             </button>
           </div>
 
