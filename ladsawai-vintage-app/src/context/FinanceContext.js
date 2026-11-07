@@ -217,8 +217,25 @@ export function FinanceProvider({ children }) {
 
       // Apply payment method filter in-memory if needed
       if (filters.method && filters.method !== 'ทั้งหมด') {
-        filteredIncome = filteredIncome.filter(item => item.method === filters.method);
-        filteredExpense = filteredExpense.filter(item => item.method === filters.method);
+        const isCash = filters.method === 'เงินสด';
+        const isTransfer = filters.method === 'โอนเงิน';
+
+        const matchesMethod = (item) => {
+          if (isCash) {
+            return (item.cashAmount > 0) || 
+                   item.method?.includes('สด') || 
+                   item.method?.toLowerCase().includes('cash');
+          }
+          if (isTransfer) {
+            return (item.transferAmount > 0) || 
+                   item.method?.includes('โอน') || 
+                   item.method?.toLowerCase().includes('transfer');
+          }
+          return item.method === filters.method;
+        };
+
+        filteredIncome = filteredIncome.filter(matchesMethod);
+        filteredExpense = filteredExpense.filter(matchesMethod);
       }
 
       // Apply search query in-memory if needed

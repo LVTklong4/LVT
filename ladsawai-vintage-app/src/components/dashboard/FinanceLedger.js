@@ -345,6 +345,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                           item.bill_type === 'Monthly' || 
                           item.category?.includes('รายเดือน') || 
                           item.category?.includes('รายวัน') || 
+                          item.category?.includes('ประจำ') || 
                           item.category?.includes('ส่วนลด') || 
                           item.category?.includes('ค่าไฟ') || 
                           item.category?.includes('ฝากของ') || 
@@ -360,6 +361,9 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                         } else if (item.category?.includes('คลองถม') || item.bill_type === 'klongthom') {
                           originLabel = '🎪 คลองถม';
                           originBg = 'bg-blue-100 text-blue-800 border-blue-200';
+                        } else if (item.category?.includes('ประจำ')) {
+                          originLabel = '🗓️ ล็อคประจำ';
+                          originBg = 'bg-amber-100 text-amber-900 border-amber-200';
                         } else if (isSystemOrigin) {
                           originLabel = '🗓️ จองรายวัน';
                           originBg = 'bg-amber-100 text-amber-900 border-amber-200';
@@ -393,13 +397,19 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                               {isInc ? '+' : '-'}{item.amount.toLocaleString()}.-
                             </td>
                             <td className="p-3 text-center whitespace-nowrap">
-                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                item.method?.includes('สด') 
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-200' 
-                                  : 'bg-blue-50 text-blue-800 border border-blue-200'
-                              }`}>
-                                {item.method?.includes('สด') ? '💵 เงินสด' : '📱 โอนเงิน'}
-                              </span>
+                              {item.cashAmount > 0 && item.transferAmount > 0 ? (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-900 border border-purple-200">
+                                  💵 สด + 📱 โอน
+                                </span>
+                              ) : (item.cashAmount > 0 || item.method?.includes('สด') || item.method?.toLowerCase() === 'cash') ? (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                                  💵 เงินสด
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                                  📱 โอนเงิน
+                                </span>
+                              )}
                             </td>
                             <td className="p-3 text-[10px] text-gray-500 whitespace-nowrap font-medium">{item.officer}</td>
                             <td className="p-3 text-center">
