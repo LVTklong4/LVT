@@ -3,7 +3,7 @@
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useStorage } from '@/context/StorageContext';
-import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Tag, CalendarX, Package, Archive, Lock, HelpCircle } from 'lucide-react';
+import { Search, Settings, LayoutDashboard, CalendarDays, RotateCcw, RefreshCw, User, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, CheckCircle, AlertCircle, LogOut, X, CreditCard, FileText, Zap, Phone, Store, Info, Sun, Leaf, ShoppingBag, PlusCircle, Printer, Utensils, Shirt, Banknote, Check, Copy, Tag, CalendarX, Package, Archive, Lock, HelpCircle } from 'lucide-react';
 
 import LoginModal from './modals/LoginModal';
 import StorageMgmtModal from './modals/StorageMgmtModal';
@@ -87,6 +87,32 @@ export default function StandardBookingLayout() {
   // Copy Stall Map Modal State
   const [showCopyStallMapModal, setShowCopyStallMapModal] = React.useState(false);
 
+  // State & Handler for copying text from confirm modal (e.g. transfer amount)
+  const [copiedConfirmText, setCopiedConfirmText] = React.useState(false);
+
+  const handleCopyConfirmText = () => {
+    if (!confirmInfo?.copyText) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(confirmInfo.copyText);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = confirmInfo.copyText;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedConfirmText(true);
+      setTimeout(() => setCopiedConfirmText(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+    }
+  };
+
   // States & memo for vacating multiple monthly stalls
   const [selectedVacateStallIds, setSelectedVacateStallIds] = React.useState([]);
   
@@ -146,9 +172,29 @@ export default function StandardBookingLayout() {
       {confirmInfo && (
         <div className="print:hidden fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-[#FFFDF9] rounded-2xl shadow-2xl w-full max-w-sm border-2 border-[#8B4513] overflow-hidden flex flex-col animate-pop-in text-[#4A3B32]">
-            <div className={`px-5 py-4 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
+            <div className={`px-5 py-3.5 flex items-center gap-2.5 border-b text-white ${confirmInfo.isDanger ? 'bg-red-700 border-red-800' : 'bg-[#5D4037] border-[#8B4513]'}`}>
               {confirmInfo.isDanger ? <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" /> : <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />}
-              <h3 className="font-extrabold text-sm flex-1">{confirmInfo.title}</h3>
+              <h3 className="font-extrabold text-sm flex-1 truncate">{confirmInfo.title}</h3>
+              {confirmInfo.copyText && (
+                <button
+                  type="button"
+                  onClick={handleCopyConfirmText}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 active:scale-95 text-amber-200 hover:text-white border border-amber-400/40 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs"
+                  title={`คัดลอก: "${confirmInfo.copyText}"`}
+                >
+                  {copiedConfirmText ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-300" />
+                      <span className="text-[11px] font-bold text-emerald-200">คัดลอกแล้ว</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-amber-200" />
+                      <span className="text-[11px] font-bold">ก๊อปปี้</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             <div className="p-5 flex flex-col gap-3">
               <p className="text-xs font-bold text-gray-700 whitespace-pre-line leading-relaxed">

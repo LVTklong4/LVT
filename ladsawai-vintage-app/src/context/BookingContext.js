@@ -377,7 +377,7 @@ export function BookingProvider({ children }) {
     }, duration);
   };
 
-  const showConfirm = ({ title = 'ยืนยันการทำรายการ', message, confirmText = 'ตกลง', cancelText = 'ยกเลิก', isDanger = false }) => {
+  const showConfirm = ({ title = 'ยืนยันการทำรายการ', message, confirmText = 'ตกลง', cancelText = 'ยกเลิก', isDanger = false, copyText = null }) => {
     return new Promise((resolve) => {
       setConfirmInfo({
         title,
@@ -385,6 +385,7 @@ export function BookingProvider({ children }) {
         confirmText,
         cancelText,
         isDanger,
+        copyText,
         onConfirm: () => {
           setConfirmInfo(null);
           resolve(true);
@@ -882,11 +883,14 @@ export function BookingProvider({ children }) {
 
     if (status === 'ค้างชำระ' && totalPaid < totalVal) {
       const remaining = totalVal - totalPaid;
+      const transferAmount = totalPaid > 0 ? remaining : totalVal;
+      const copyText = `ยอดโอน ${transferAmount} ครับ/ค่ะ`;
       const isConfirmed = await showConfirm({
         title: 'แจ้งเตือนชำระเงินไม่ครบ',
         message: `ยอดเงินที่รับชำระ (${totalPaid} บ.) ยังไม่ครบตามยอดรวมทั้งสิ้น (${totalVal} บ.)\nจะมีส่วนต่างค้างจ่าย ${remaining} บ. ต้องการบันทึกรายการนี้เป็นยอดค้างชำระหรือไม่?`,
         confirmText: 'บันทึกค้างจ่าย',
-        cancelText: 'ยกเลิก'
+        cancelText: 'ยกเลิก',
+        copyText
       });
       if (!isConfirmed) return;
     }
