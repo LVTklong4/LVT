@@ -245,44 +245,7 @@ export default function MarketInspectionModal() {
           
           {/* TAB 1: ELECTRICITY */}
           {activeTab === 'ELECTRICITY' && (
-            <div className="flex flex-col gap-4">
-              
-              {/* Stat Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
-                  <div>
-                    <span className="text-gray-500 font-bold block text-[11px]">ลงขายทั้งหมดวันนี้</span>
-                    <span className="text-base sm:text-lg font-black text-amber-950">
-                      {elecData.stats.totalOccupied} ร้าน <span className="text-xs font-normal text-amber-800">({elecData.stats.totalStallsCount} ล็อค)</span>
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 font-black">
-                    🏪
-                  </div>
-                </div>
-
-                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
-                  <div>
-                    <span className="text-emerald-700 font-bold block text-[11px]">แจ้งขอใช้ไฟ (รายวัน+รายเดือน)</span>
-                    <span className="text-base sm:text-lg font-black text-emerald-900">
-                      {elecData.stats.withElecCount} ร้าน <span className="text-xs font-normal">({elecData.stats.totalElecUnits} หน่วย = {formatPriceInt(elecData.stats.totalElecAmount)}.-)</span>
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-800 font-black">
-                    ⚡
-                  </div>
-                </div>
-
-                <div className="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
-                  <div>
-                    <span className="text-rose-700 font-bold block text-[11px]">ไม่ขอใช้ไฟ (ตรวจจับแอบใช้)</span>
-                    <span className="text-base sm:text-lg font-black text-rose-950">{elecData.stats.noElecCount} ร้าน</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-800 font-black">
-                    🔌
-                  </div>
-                </div>
-              </div>
+            <div className="flex flex-col gap-3">
 
               {/* Action Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-2.5 bg-gray-50/80 border border-gray-200 rounded-xl p-2.5 text-xs font-bold">
@@ -368,15 +331,15 @@ export default function MarketInspectionModal() {
 
               {/* Table Preview */}
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto max-h-[46vh]">
+                <div className="overflow-x-auto max-h-[58vh]">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-[#4A2E1B] text-white font-bold sticky top-0 z-10 text-[11px]">
                       <tr>
-                        <th className="p-2 w-10 text-center">#</th>
-                        <th className="p-2 w-28 text-center">ล็อค</th>
-                        <th className="p-2">ชื่อร้านค้า / สินค้า</th>
+                        <th className="p-2 w-10 text-center">ลำดับ</th>
                         <th className="p-2 w-24 text-center">ประเภท</th>
-                        <th className="p-2 w-36 text-center">ไฟฟ้าที่แจ้งขอ</th>
+                        <th className="p-2">ชื่อร้านค้า / สินค้า</th>
+                        <th className="p-2 w-28 text-center">ล็อค</th>
+                        <th className="p-2 w-28 text-center">ไฟฟ้าที่แจ้ง</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -387,8 +350,12 @@ export default function MarketInspectionModal() {
                             <tr key={item.id || idx} className={`hover:bg-amber-50/40 transition-colors ${item.isAbsent ? 'bg-gray-50 text-gray-400' : ''}`}>
                               <td className="p-2 text-center text-gray-400 font-semibold">{idx + 1}</td>
                               <td className="p-2 text-center">
-                                <span className="font-extrabold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded text-xs inline-block">
-                                  {item.stallName}
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                  item.type === 'รายเดือน'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {item.type}
                                 </span>
                               </td>
                               <td className="p-2">
@@ -403,21 +370,17 @@ export default function MarketInspectionModal() {
                                 <div className="text-[10px] text-gray-500 font-medium">{item.product}</div>
                               </td>
                               <td className="p-2 text-center">
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                  item.type === 'รายเดือน'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-emerald-100 text-emerald-800'
-                                }`}>
-                                  {item.type}
+                                <span className="font-extrabold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded text-xs inline-block">
+                                  {item.stallName}
                                 </span>
                               </td>
                               <td className="p-2 text-center font-bold">
                                 {hasElec ? (
                                   <span className="text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-xs font-black">
-                                    ⚡ {item.elecUnit} หน่วย ({formatPriceInt(item.elecPrice)}.-)
+                                    ⚡ {item.elecUnit} หน่วย
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400 text-[11px] font-medium">ไม่ขอใช้ไฟ (0)</span>
+                                  <span className="text-gray-400 text-[11px] font-medium">0 หน่วย</span>
                                 )}
                               </td>
                             </tr>

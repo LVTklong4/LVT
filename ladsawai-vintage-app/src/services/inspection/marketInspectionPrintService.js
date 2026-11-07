@@ -211,8 +211,8 @@ export function generateElectricityInspectionA4HTML({
   const rowsHtml = items.map((item, idx) => {
     const hasElec = item.elecUnit > 0;
     const elecBadge = hasElec
-      ? `<span class="elec-badge">⚡ ${item.elecUnit} หน่วย (${formatPriceInt(item.elecPrice)}.-)</span>`
-      : `<span class="no-elec-tag">ไม่ขอใช้ไฟ (0)</span>`;
+      ? `<span class="elec-badge">⚡ ${item.elecUnit} หน่วย</span>`
+      : `<span class="no-elec-tag">0 หน่วย</span>`;
 
     const typeBadge = item.type === 'รายเดือน'
       ? `<span class="type-monthly">รายเดือน</span>`
@@ -225,14 +225,14 @@ export function generateElectricityInspectionA4HTML({
     return `
       <tr class="${idx % 2 === 1 ? 'row-alt' : ''} ${item.isAbsent ? 'row-absent' : ''}">
         <td class="col-num">${idx + 1}</td>
-        <td class="col-stall">
-          <div class="stall-badge">${item.stallName}</div>
-        </td>
+        <td class="col-type">${typeBadge}</td>
         <td class="col-tenant">
           <div class="tenant-name">${item.bookerName} ${statusBadge}</div>
           <div class="tenant-product">${item.product || '-'}</div>
         </td>
-        <td class="col-type">${typeBadge}</td>
+        <td class="col-stall">
+          <div class="stall-badge">${item.stallName}</div>
+        </td>
         <td class="col-elec">${elecBadge}</td>
         <td class="col-checklist">
           <div class="check-box-group">
@@ -344,29 +344,6 @@ export function generateElectricityInspectionA4HTML({
             line-height: 1.4;
           }
 
-          /* Summary Stat Badges */
-          .stats-bar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 7px;
-            background: #fdf8f4;
-            border: 1px solid #fed7aa;
-            border-radius: 6px;
-            padding: 5px 8px;
-            font-size: 9pt;
-            font-weight: bold;
-            justify-content: space-between;
-          }
-          .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-          .stat-val {
-            font-weight: 900;
-            color: #9a3412;
-          }
-
           /* Checklist Table */
           table.checklist-table {
             width: 100%;
@@ -395,11 +372,11 @@ export function generateElectricityInspectionA4HTML({
             color: #9ca3af;
           }
           
-          .col-num { width: 24px; text-align: center; font-weight: bold; color: #6b7280; font-size: 8pt; }
-          .col-stall { width: 70px; text-align: center; }
+          .col-num { width: 26px; text-align: center; font-weight: bold; color: #6b7280; font-size: 8pt; }
+          .col-type { width: 55px; text-align: center; }
           .col-tenant { width: 175px; }
-          .col-type { width: 60px; text-align: center; }
-          .col-elec { width: 120px; text-align: center; }
+          .col-stall { width: 75px; text-align: center; }
+          .col-elec { width: 85px; text-align: center; }
           .col-checklist { width: 135px; }
           .col-note { width: 135px; }
 
@@ -537,21 +514,14 @@ export function generateElectricityInspectionA4HTML({
           </div>
         </div>
 
-        <div class="stats-bar">
-          <div class="stat-item">ลงขายทั้งหมด: <span class="stat-val">${stats.totalOccupied} ร้าน (${stats.totalStallsCount} ล็อค)</span></div>
-          <div class="stat-item">แจ้งขอใช้ไฟ: <span class="stat-val">${stats.withElecCount} ร้าน (${stats.totalElecUnits} หน่วย = ${formatPriceInt(stats.totalElecAmount)}.-)</span></div>
-          <div class="stat-item">ไม่ขอใช้ไฟ: <span class="stat-val">${stats.noElecCount} ร้าน</span></div>
-          <div class="stat-item">รายการที่ตรวจ: <span class="stat-val">${items.length} ร้าน</span></div>
-        </div>
-
         <table class="checklist-table">
           <thead>
             <tr>
-              <th class="col-num">#</th>
-              <th class="col-stall">ล็อค</th>
-              <th class="col-tenant">ชื่อร้านค้า / สินค้า</th>
+              <th class="col-num">ลำดับ</th>
               <th class="col-type">ประเภท</th>
-              <th class="col-elec">ไฟฟ้าที่แจ้งขอ</th>
+              <th class="col-tenant">ชื่อร้านค้า / สินค้า</th>
+              <th class="col-stall">ล็อค</th>
+              <th class="col-elec">ไฟฟ้าที่แจ้ง</th>
               <th class="col-checklist">ผลตรวจหน้างาน</th>
               <th class="col-note">อุปกรณ์ที่ตรวจพบ / บันทึก</th>
             </tr>
