@@ -65,6 +65,18 @@ export default function MonthlyManagerMobile({ onClose }) {
     return list;
   }, [filteredMonthlyList, statusFilter]);
 
+  // Reset selected card drawer when search query, month filter, or status filter changes
+  useEffect(() => {
+    setSelectedMobileItem(null);
+  }, [monthlySearchQuery, monthlyMonthFilter, statusFilter]);
+
+  // If display list changes and currently selected item is no longer in the list, clear it
+  useEffect(() => {
+    if (selectedMobileItem && !displayList.some(item => item.id === selectedMobileItem.id)) {
+      setSelectedMobileItem(null);
+    }
+  }, [displayList, selectedMobileItem]);
+
   const totalPages = Math.max(1, Math.ceil(displayList.length / pageSize));
   const paginatedList = useMemo(() => {
     if (pageSize >= 9999) return displayList;
@@ -564,7 +576,7 @@ export default function MonthlyManagerMobile({ onClose }) {
                 }}
                 className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
-                <Banknote className="w-4 h-4" /> บันทึกชำระเงิน
+                <Banknote className="w-4 h-4" /> บันทึกชำระเงิน ({cleanStallName(selectedMobileItem.stalls) || 'สัญญา'})
               </button>
 
               <button

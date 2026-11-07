@@ -363,6 +363,21 @@ export function MonthlyBookingProvider({ children }) {
     });
   }, [monthlyList, monthlyMonthFilter, monthlySearchQuery, monthlySortField, monthlySortOrder, showCancelled]);
 
+  // Clear active monthly booking & transactions whenever search query or month filter changes
+  // to prevent human error where staff accidentally submits payment for a previously selected stall
+  useEffect(() => {
+    setActiveMonthlyBooking(null);
+    setActiveMonthlyTransactions([]);
+  }, [monthlySearchQuery, monthlyMonthFilter]);
+
+  // If filtered list changes and currently active booking is no longer in the list, clear it
+  useEffect(() => {
+    if (activeMonthlyBooking && !filteredMonthlyList.some(item => item.id === activeMonthlyBooking.id)) {
+      setActiveMonthlyBooking(null);
+      setActiveMonthlyTransactions([]);
+    }
+  }, [filteredMonthlyList, activeMonthlyBooking]);
+
   const handleSortToggle = useCallback((field) => {
     if (monthlySortField === field) {
       setMonthlySortOrder(prev => prev === 'asc' ? 'desc' : 'asc');

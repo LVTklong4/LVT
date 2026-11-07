@@ -452,6 +452,26 @@ export default function MonthlyManagerLayout() {
             {activeMonthlyBooking ? (
               <div className="flex flex-col gap-3 h-full overflow-hidden min-h-0">
                 <div className="border-b pb-2 shrink-0">
+                  {/* Current Active Selection Banner */}
+                  <div className="bg-amber-100/70 border border-amber-300 rounded-lg px-2.5 py-1.5 mb-2 flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[10px] font-black text-amber-900 bg-amber-200/90 px-1.5 py-0.5 rounded shrink-0">
+                        กำลังเลือก
+                      </span>
+                      <span className="font-extrabold text-xs text-gray-900 truncate">
+                        {activeMonthlyBooking.customer_type === 'Room' ? 'ห้องเช่า' : `ล็อค ${cleanStallName(activeMonthlyBooking.stalls) || '-'}`} : {activeMonthlyBooking.booker_name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveMonthlyBooking(null)}
+                      className="text-[10px] text-gray-500 hover:text-red-700 font-bold px-1.5 py-0.5 rounded hover:bg-white/80 transition-colors cursor-pointer shrink-0"
+                      title="ยกเลิกการเลือกนี้"
+                    >
+                      ✕ ปิด
+                    </button>
+                  </div>
+
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-bold text-xs text-[#3E2723] flex items-center gap-1.5 mt-1"><Banknote className="w-4 h-4" /> ประวัติการชำระเงิน</h4>
                     {activeMonthlyBooking.customer_type !== 'Regular' && (
@@ -463,9 +483,9 @@ export default function MonthlyManagerLayout() {
                             if (loadingMonthly) return;
                             handleOpenMonthlyPaymentModal(activeMonthlyBooking);
                           }}
-                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer w-28 justify-center disabled:opacity-50 disabled:pointer-events-none"
+                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer min-w-28 justify-center disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          <Plus className="w-3 h-3" /> ชำระเงิน
+                          <Plus className="w-3 h-3" /> ชำระเงิน ({cleanStallName(activeMonthlyBooking.stalls) || 'สัญญา'})
                         </button>
                         {parseNumber(activeMonthlyBooking.paid_amount || 0) > 0 || activeMonthlyTransactions.length > 0 ? (
                           <button
