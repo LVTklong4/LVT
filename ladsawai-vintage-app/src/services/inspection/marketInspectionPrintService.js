@@ -1132,7 +1132,7 @@ export function generateStorageInspectionA4HTML({
               <img src="/logo.png" class="logo-img" alt="Logo" />
               <div>
                 <div class="brand-title">ตลาดนัดลาดสวายวินเทจ</div>
-                <div class="report-subtitle">📦 ใบตรวจการฝากของและตรวจตราล็อคตลาด (Market Storage & Patrol Inspection)</div>
+                <div class="report-subtitle">📦 ใบตรวจการฝากของและตรวจตราล็อคตลาด</div>
               </div>
             </div>
             <div class="meta-info">
@@ -1144,13 +1144,13 @@ export function generateStorageInspectionA4HTML({
               </div>
             </div>
           </div>
-          <div class="patrol-desc">
-            * <strong>คำชี้แจงสำหรับเจ้าหน้าที่:</strong> ล็อคที่ชำระค่าฝากของถูกต้องระบุป้ายสีเขียว <strong style="color: #15803d;">✅ ฝากถูกต้อง</strong> พร้อมชื่อร้านค้าและช่วงเวลาไว้แล้ว / สำหรับล็อคทั่วไปหากพบว่าว่าง ให้ติ๊ก <strong>[ ] ว่าง</strong> / หากพบล็อคใดที่ไม่มีสิทธิ์แต่มีของวาง ให้ติ๊ก <strong style="color: #dc2626;">[ ] ⚠️ แอบฝาก</strong> และระบุสิ่งของลงในตารางบันทึกด้านล่างเพื่อดำเนินการติดตาม
-          </div>
         </div>
 
+        <!-- Stall Checklist by Zones -->
+        ${patrolZonesHtml || '<div style="padding: 20px; text-align: center; color: #6b7280;">ไม่พบข้อมูลล็อคตลาดในระบบ</div>'}
+
         <!-- Incident Log Table -->
-        <div class="incident-log-section">
+        <div class="incident-log-section" style="margin-top: 15px; page-break-inside: avoid;">
           <div class="section-title">📝 ตารางบันทึกสรุปการตรวจพบของแอบฝากหน้างาน (สำหรับติดตามผู้ค้า / คิดเงินย้อนหลัง)</div>
           <table class="incident-table">
             <thead>
@@ -1173,10 +1173,7 @@ export function generateStorageInspectionA4HTML({
           </table>
         </div>
 
-        <!-- Stall Checklist by Zones -->
-        ${patrolZonesHtml || '<div style="padding: 20px; text-align: center; color: #6b7280;">ไม่พบข้อมูลล็อคตลาดในระบบ</div>'}
-
-        <div class="signature-section" style="margin-top: 20px;">
+        <div class="signature-section" style="margin-top: 15px; page-break-inside: avoid;">
           <div class="sign-box">
             <div class="sign-line"></div>
             <div class="sign-label">ลงชื่อ ................................................................ (ผู้ตรวจ)</div>
