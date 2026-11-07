@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet, Printer } from 'lucide-react';
 import DailyClosingRemittancePrint from './DailyClosingRemittancePrint';
 import { generateDailyClosingRemittanceHTML, printDailyRemittanceA4 } from '@/services/finance/dailyClosingPrintService';
+
+function parseNum(val) {
+  const n = parseFloat(val);
+  return isNaN(n) ? 0 : n;
+}
 
 export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const { fetchDailySummary, saveDailyClosing, loading } = useFinance();
@@ -118,11 +123,6 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   if (!isOpen) return null;
 
   // Calculations
-  const parseNum = (val) => {
-    const n = parseFloat(val);
-    return isNaN(n) ? 0 : n;
-  };
-
   const floatVal = parseNum(floatAmount);
   const cashIn = summary?.cashIn || 0;
   const cashOut = summary?.cashOut || 0;
@@ -143,36 +143,33 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const shortageSurplus = countedCashVal !== null ? countedCashVal - expectedCashInDrawer : 0;
 
   // Effective summary for reports & saving (excluding advance cash if not checked)
-  const effectiveSummary = useMemo(() => {
-    if (!summary) return null;
-    if (isAdmin && includeAdvanceCash) return summary;
+  const advanceCash = summary?.cashInAdvance || 0;
+  const baseDailyCash = summary?.breakdown?.dailyStall?.cash || 0;
+  const adjustedDailyCash = Math.max(0, baseDailyCash - advanceCash);
+  const dailyTransfer = summary?.breakdown?.dailyStall?.transfer || 0;
+  const grossTransfer = summary?.breakdown?.totalIncome?.transfer ?? summary?.transferIn ?? 0;
 
-    const advanceCash = summary.cashInAdvance || 0;
-    if (advanceCash === 0) return summary;
-
-    const baseDailyCash = summary.breakdown?.dailyStall?.cash || 0;
-    const adjustedDailyCash = Math.max(0, baseDailyCash - advanceCash);
-    const dailyTransfer = summary.breakdown?.dailyStall?.transfer || 0;
-    const grossTransfer = summary.breakdown?.totalIncome?.transfer ?? summary.transferIn ?? 0;
-
-    return {
-      ...summary,
-      cashIn: effectiveCashIn,
-      breakdown: {
-        ...summary.breakdown,
-        dailyStall: {
-          ...summary.breakdown?.dailyStall,
-          cash: adjustedDailyCash,
-          total: adjustedDailyCash + dailyTransfer
-        },
-        totalIncome: {
-          ...summary.breakdown?.totalIncome,
-          cash: effectiveCashIn,
-          total: effectiveCashIn + grossTransfer
+  const effectiveSummary = (!summary || (isAdmin && includeAdvanceCash) || advanceCash === 0)
+    ? summary
+    : {
+        ...summary,
+        cashIn: effectiveCashIn,
+        breakdown: {
+          ...summary.breakdown,
+          dailyStall: {
+            ...summary.breakdown?.dailyStall,
+            cash: adjustedDailyCash,
+            total: adjustedDailyCash + dailyTransfer
+          },
+          totalIncome: {
+            ...summary.breakdown?.totalIncome,
+            cash: effectiveCashIn,
+            total: effectiveCashIn + grossTransfer
+          }
         }
-      }
-    };
-  }, [summary, isAdmin, includeAdvanceCash, effectiveCashIn]);
+      };
+
+  const displaySummary = effectiveSummary || summary;
 
   // Submission handler
   const handleSubmitClosing = async (e) => {
@@ -338,101 +335,101 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                       <tr>
                         <td className="p-2.5 flex items-center gap-1.5">🏷️ ค่าจองแผงรายวัน (Daily Stalls)</td>
                         <td className="p-2.5 text-right text-emerald-700">
-                          {(summary.breakdown?.dailyStall?.cash ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.dailyStall?.cash ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-blue-700">
-                          {(summary.breakdown?.dailyStall?.transfer ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.dailyStall?.transfer ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right font-extrabold text-emerald-900">
-                          {(summary.breakdown?.dailyStall?.total ?? summary.dailyStallIncome ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.dailyStall?.total ?? displaySummary.dailyStallIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
                       <tr>
                         <td className="p-2.5 flex items-center gap-1.5">📅 ค่างวดรายเดือนชำระในวัน (Monthly)</td>
                         <td className="p-2.5 text-right text-emerald-700">
-                          {(summary.breakdown?.monthly?.cash ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.monthly?.cash ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-blue-700">
-                          {(summary.breakdown?.monthly?.transfer ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.monthly?.transfer ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right font-extrabold text-emerald-900">
-                          {(summary.breakdown?.monthly?.total ?? summary.monthlyIncome ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.monthly?.total ?? displaySummary.monthlyIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
                       <tr>
                         <td className="p-2.5 flex items-center gap-1.5">⛺ บัตรตั๋ว & ค่าไฟคลองถม (KlongThom)</td>
                         <td className="p-2.5 text-right text-emerald-700">
-                          {(summary.breakdown?.klongthom?.cash ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.klongthom?.cash ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-blue-700">
-                          {(summary.breakdown?.klongthom?.transfer ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.klongthom?.transfer ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right font-extrabold text-emerald-900">
-                          {(summary.breakdown?.klongthom?.total ?? summary.klongthomIncome ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.klongthom?.total ?? displaySummary.klongthomIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
                       <tr>
                         <td className="p-2.5 flex items-center gap-1.5">📦 ค่าบริการฝากของ (Storage)</td>
                         <td className="p-2.5 text-right text-emerald-700">
-                          {(summary.breakdown?.storage?.cash ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.storage?.cash ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-blue-700">
-                          {(summary.breakdown?.storage?.transfer ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.storage?.transfer ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right font-extrabold text-emerald-900">
-                          {(summary.breakdown?.storage?.total ?? summary.storageIncome ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.storage?.total ?? displaySummary.storageIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
                       <tr>
                         <td className="p-2.5 flex items-center gap-1.5">📥 รายรับอื่นๆ (Other Income)</td>
                         <td className="p-2.5 text-right text-emerald-700">
-                          {(summary.breakdown?.otherIncome?.cash ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.otherIncome?.cash ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-blue-700">
-                          {(summary.breakdown?.otherIncome?.transfer ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.otherIncome?.transfer ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right font-extrabold text-emerald-900">
-                          {(summary.breakdown?.otherIncome?.total ?? summary.otherIncome ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.otherIncome?.total ?? displaySummary.otherIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
-                      {summary.carryForward && summary.carryForward.total !== 0 && (
+                      {displaySummary.carryForward && displaySummary.carryForward.total !== 0 && (
                         <tr className="bg-amber-50/80 border-y border-amber-200">
                           <td className="p-2.5 flex items-center gap-1.5 font-bold text-amber-900">
                             🔄 ยอดยกมาจากวันก่อนหน้าที่ยังไม่ได้ปิดรอบ (Carry-Forward)
                           </td>
                           <td className="p-2.5 text-right font-bold text-amber-800">
-                            {(summary.carryForward.cash ?? 0).toLocaleString()} ฿
+                            {(displaySummary.carryForward.cash ?? 0).toLocaleString()} ฿
                           </td>
                           <td className="p-2.5 text-right font-bold text-blue-700">
-                            {(summary.carryForward.transfer ?? 0).toLocaleString()} ฿
+                            {(displaySummary.carryForward.transfer ?? 0).toLocaleString()} ฿
                           </td>
                           <td className="p-2.5 text-right font-extrabold text-amber-950">
-                            {(summary.carryForward.total ?? 0).toLocaleString()} ฿
+                            {(displaySummary.carryForward.total ?? 0).toLocaleString()} ฿
                           </td>
                         </tr>
                       )}
                       <tr className="bg-emerald-50/70 font-black">
                         <td className="p-2.5 text-emerald-950">รวมรายรับทั้งหมด (Total Income)</td>
                         <td className="p-2.5 text-right text-emerald-800 font-extrabold">
-                          {(summary.breakdown?.totalIncome?.cash ?? summary.cashIn ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.totalIncome?.cash ?? displaySummary.cashIn ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-blue-800 font-extrabold">
-                          {(summary.breakdown?.totalIncome?.transfer ?? summary.transferIn ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.totalIncome?.transfer ?? displaySummary.transferIn ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-emerald-950 font-black text-sm">
-                          {(summary.breakdown?.totalIncome?.total ?? summary.totalIncome ?? 0).toLocaleString()} ฿
+                          {(displaySummary.breakdown?.totalIncome?.total ?? displaySummary.totalIncome ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
                       <tr className="bg-red-50/60 font-black text-red-950">
                         <td className="p-2.5">หัก: รายจ่ายประจำวัน (Total Expenses)</td>
                         <td className="p-2.5 text-right text-red-700 font-bold">
-                          -{(summary.breakdown?.expenses?.cash ?? summary.cashOut ?? 0).toLocaleString()} ฿
+                          -{(displaySummary.breakdown?.expenses?.cash ?? displaySummary.cashOut ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-red-700 font-bold">
-                          -{(summary.breakdown?.expenses?.transfer ?? summary.transferOut ?? 0).toLocaleString()} ฿
+                          -{(displaySummary.breakdown?.expenses?.transfer ?? displaySummary.transferOut ?? 0).toLocaleString()} ฿
                         </td>
                         <td className="p-2.5 text-right text-red-950 font-black text-sm">
-                          -{(summary.breakdown?.expenses?.total ?? summary.totalExpenses ?? 0).toLocaleString()} ฿
+                          -{(displaySummary.breakdown?.expenses?.total ?? displaySummary.totalExpenses ?? 0).toLocaleString()} ฿
                         </td>
                       </tr>
                     </tbody>
