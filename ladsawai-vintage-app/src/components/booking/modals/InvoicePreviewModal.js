@@ -33,14 +33,13 @@ export default function InvoicePreviewModal() {
     } catch (e) {}
 
     const isFullPackage = checkIsFullPackage(invoicePreviewItem);
-    const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
     const dayNames = { 3: 'วันพุธ', 5: 'วันศุกร์', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
 
     const dayGroups = { 3: [], 5: [], 6: [], 0: [] };
 
     details.forEach((stallDetail) => {
       const stallName = stallDetail.name;
-      const sMaster = stalls.find(s => s.name === stallName);
+      const sMaster = stalls.find(s => s.name === stallName || cleanStallName(s.name) === cleanStallName(stallName));
       if (!sMaster) return;
 
       const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
@@ -49,8 +48,7 @@ export default function InvoicePreviewModal() {
           const price = calculateStallDayPrice(sMaster, dNum, invoicePreviewItem.customer_type, isFullPackage);
           dayGroups[dNum].push({
             name: stallName,
-            price: price,
-            elec: elecRate
+            price: price
           });
         }
       });
@@ -66,9 +64,9 @@ export default function InvoicePreviewModal() {
         if (count > 0) {
           totalNadsCount += count;
           const totalStallPrice = group.reduce((sum, item) => sum + item.price, 0);
-          const totalElecRate = group.reduce((sum, item) => sum + item.elec, 0);
-          const subTotal = (totalStallPrice + totalElecRate) * count;
+          const subTotal = totalStallPrice * count;
           const stallNamesStr = group.map(item => cleanStallName(item.name)).join(', ');
+          const isFriFree = dNum === 5 && totalStallPrice === 0;
 
           itemsHtml += `
             <tr>
@@ -76,7 +74,7 @@ export default function InvoicePreviewModal() {
               <td class="val">${subTotal.toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
             </tr>
             <tr class="calc-row">
-              <td>(${totalStallPrice} x ${count}) + (${totalElecRate} x ${count})</td>
+              <td>${count} วัน x ${totalStallPrice.toLocaleString()}.-${isFriFree ? ' (ฟรีค่าล็อค)' : ''}</td>
               <td></td>
             </tr>
           `;
@@ -84,11 +82,33 @@ export default function InvoicePreviewModal() {
       }
     });
 
+    // Electricity fee row (separate)
+    const elecUnits = parseNumber(invoicePreviewItem.elec_unit || 0);
+    if (elecUnits > 0 && totalNadsCount > 0) {
+      const totalElecPrice = totalNadsCount * elecUnits * 10;
+      itemsHtml += `
+        <tr>
+          <td class="bold">⚡ ค่าไฟ: ${totalNadsCount} วัน x (${elecUnits} หน่วย x 10บ.)</td>
+          <td class="val">${totalElecPrice.toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+        </tr>
+      `;
+    }
+
     if (parseNumber(invoicePreviewItem.storage_fee) > 0) {
       itemsHtml += `
         <tr>
           <td class="bold">📦 ค่าฝากของ</td>
           <td class="val">${parseNumber(invoicePreviewItem.storage_fee).toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
+        </tr>
+      `;
+    }
+
+    if (!itemsHtml) {
+      const rawStalls = cleanStallName(invoicePreviewItem.stalls || '-');
+      itemsHtml += `
+        <tr>
+          <td class="bold">ค่าบริการเช่าพื้นที่ / ล็อค : ${rawStalls}</td>
+          <td class="val">${parseNumber(invoicePreviewItem.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})} บ.</td>
         </tr>
       `;
     }
@@ -457,8 +477,7 @@ export default function InvoicePreviewModal() {
                       } catch (e) {}
 
                       const isFullPackage = checkIsFullPackage(invoicePreviewItem);
-                      const elecRate = parseNumber(invoicePreviewItem.elec_unit || 0) * 10;
-                      let itemsHtml = [];
+                      let itemsElements = [];
                       let totalNadsCount = 0;
                       const dayNames = { 3: 'วันพุธ', 5: 'วันศุกร์', 6: 'วันเสาร์', 0: 'วันอาทิตย์' };
 
@@ -467,7 +486,7 @@ export default function InvoicePreviewModal() {
 
                       details.forEach((stallDetail) => {
                         const stallName = stallDetail.name;
-                        const sMaster = stalls.find(s => s.name === stallName);
+                        const sMaster = stalls.find(s => s.name === stallName || cleanStallName(s.name) === cleanStallName(stallName));
                         if (!sMaster) return;
 
                         const stallDays = Array.isArray(stallDetail.days) ? stallDetail.days : [];
@@ -476,8 +495,7 @@ export default function InvoicePreviewModal() {
                             const price = calculateStallDayPrice(sMaster, dNum, invoicePreviewItem.customer_type, isFullPackage);
                             dayGroups[dNum].push({
                               name: stallName,
-                              price: price,
-                              elec: elecRate
+                              price: price
                             });
                           }
                         });
@@ -491,18 +509,22 @@ export default function InvoicePreviewModal() {
                           if (count > 0) {
                             totalNadsCount += count;
                             const totalStallPrice = group.reduce((sum, item) => sum + item.price, 0);
-                            const totalElecRate = group.reduce((sum, item) => sum + item.elec, 0);
-                            const subTotal = (totalStallPrice + totalElecRate) * count;
+                            const subTotal = totalStallPrice * count;
                             const stallNamesStr = group.map(item => cleanStallName(item.name)).join(', ');
+                            const isFriFree = dNum === 5 && totalStallPrice === 0;
 
-                            itemsHtml.push(
+                            itemsElements.push(
                               <div key={dNum} className="py-2 flex flex-col gap-0.5">
-                                <span className="font-extrabold text-gray-800">
-                                  {dayNames[dNum]} ล็อค : {stallNamesStr}
-                                </span>
-                                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                                  <span>({totalStallPrice} x {count}) + ({totalElecRate} x {count})</span>
-                                  <span className="font-extrabold text-gray-700 text-xs">{subTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                <div className="flex justify-between items-baseline gap-2">
+                                  <span className="font-extrabold text-gray-800">
+                                    {dayNames[dNum]} ล็อค : {stallNamesStr}
+                                  </span>
+                                  <span className="font-extrabold text-gray-800 text-xs shrink-0">
+                                    {subTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-gray-400 font-bold">
+                                  <span>{count} วัน x {totalStallPrice.toLocaleString()}.-{isFriFree ? ' (ฟรีค่าล็อค)' : ''}</span>
                                 </div>
                               </div>
                             );
@@ -510,12 +532,45 @@ export default function InvoicePreviewModal() {
                         }
                       });
 
-                      // Storage fee row
+                      // Electricity fee row (separate)
+                      const elecUnits = parseNumber(invoicePreviewItem.elec_unit || 0);
+                      if (elecUnits > 0 && totalNadsCount > 0) {
+                        const totalElecPrice = totalNadsCount * elecUnits * 10;
+                        itemsElements.push(
+                          <div key="elec" className="py-2 flex justify-between items-center font-bold text-amber-900 bg-amber-50/70 -mx-1.5 px-2 rounded-md border border-amber-200/80 my-1">
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <span>⚡</span>
+                              <span>ค่าไฟ: {totalNadsCount} วัน x ({elecUnits} หน่วย x 10บ.)</span>
+                            </span>
+                            <span className="font-extrabold text-amber-950 text-xs shrink-0">
+                              {totalElecPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      // Storage fee row (separate)
                       if (parseNumber(invoicePreviewItem.storage_fee) > 0) {
-                        itemsHtml.push(
-                          <div key="storage" className="py-2 flex justify-between font-bold">
-                            <span className="text-gray-800">📦 ค่าฝากของ</span>
-                            <span className="text-gray-700">{parseNumber(invoicePreviewItem.storage_fee).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        itemsElements.push(
+                          <div key="storage" className="py-2 flex justify-between items-center font-bold text-gray-800">
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <span>📦</span>
+                              <span>ค่าฝากของ</span>
+                            </span>
+                            <span className="font-extrabold text-gray-800 text-xs shrink-0">
+                              {parseNumber(invoicePreviewItem.storage_fee).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (itemsElements.length === 0) {
+                        itemsElements.push(
+                          <div key="fallback" className="py-2 flex justify-between items-baseline font-bold">
+                            <span className="text-gray-800">ค่าบริการเช่าพื้นที่ / ล็อค : {cleanStallName(invoicePreviewItem.stalls || '-')}</span>
+                            <span className="font-extrabold text-gray-800 text-xs shrink-0">
+                              {parseNumber(invoicePreviewItem.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
                           </div>
                         );
                       }
@@ -523,7 +578,7 @@ export default function InvoicePreviewModal() {
                       return (
                         <>
                           <div className="text-[10px] text-gray-400 font-bold mt-1.5 mb-1">จำนวนทั้งหมด {totalNadsCount} นัด</div>
-                          {itemsHtml}
+                          {itemsElements}
                         </>
                       );
                     })()}
