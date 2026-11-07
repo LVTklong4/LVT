@@ -693,44 +693,7 @@ export function generateStorageInspectionA4HTML({
   const formattedDate = formatThaiDateLong(selectedDate || new Date().toISOString().split('T')[0]);
   const inspectorName = adminUser?.name || 'เจ้าหน้าที่ตรวจตลาด';
 
-  // 1. Authorized Storage Rows
-  const rowsHtml = items.map((item, idx) => {
-    const typeBadge = item.type === 'รายเดือน'
-      ? `<span class="type-monthly">รายเดือน</span>`
-      : `<span class="type-daily">รายวัน</span>`;
-
-    const phoneHtml = item.phone && item.phone !== '-' 
-      ? `<div class="owner-phone">📞 ${formatPhoneDisplay(item.phone)}</div>` 
-      : '';
-
-    return `
-      <tr class="${idx % 2 === 1 ? 'row-alt' : ''}">
-        <td class="col-num">${idx + 1}</td>
-        <td class="col-type">${typeBadge}</td>
-        <td class="col-owner">
-          <div class="owner-name">${item.ownerName}</div>
-          ${phoneHtml}
-        </td>
-        <td class="col-stall">
-          <div class="stall-badge">${item.stallName}</div>
-        </td>
-        <td class="col-dates">
-          <div class="period-text">${item.period}</div>
-        </td>
-        <td class="col-checklist">
-          <div class="check-box-group">
-            <span class="chk-item">[ ] มีของวางถูกต้อง</span>
-            <span class="chk-item">[ ] ล็อคว่าง (ไม่พบของ)</span>
-          </div>
-        </td>
-        <td class="col-note">
-          <div class="note-dots"></div>
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  // 2. Build Stalls Map for Patrol / Unauthorized Check Sheet (ใบสุดท้าย)
+  // Build Stalls Map for Patrol / Storage Checklist
   const authorizedStallsMap = new Map();
   items.forEach(item => {
     (item.stallsList || []).forEach(sName => {
@@ -804,7 +767,7 @@ export function generateStorageInspectionA4HTML({
     <html lang="th">
       <head>
         <meta charset="utf-8">
-        <title>ใบตรวจการฝากของประจำตลาด (A4) - ${selectedDate || ''}</title>
+        <title>ใบตรวจการฝากของและตรวจตราล็อคตลาด (A4) - ${selectedDate || ''}</title>
         <style>
           @page {
             size: A4 portrait;
@@ -1014,11 +977,7 @@ export function generateStorageInspectionA4HTML({
             color: #374151;
           }
 
-          /* Sheet 2: Patrol & Unauthorized Check Styles */
-          .patrol-page {
-            page-break-before: always;
-            margin-top: 15px;
-          }
+          /* Patrol & Storage Checklist Styles */
           .patrol-header {
             border-bottom: 2px solid #7c2d12;
             padding-bottom: 6px;
@@ -1158,52 +1117,66 @@ export function generateStorageInspectionA4HTML({
       <body>
         <div class="no-print">
           <div>
-            <span>📦 ตลาดนัดลาดสวายวินเทจ - ชุดใบตรวจการฝากของและตรวจจับแอบฝาก (A4)</span>
-            <span style="margin-left: 10px; font-weight: normal; font-size: 11px;">[รายชื่อฝากถูกต้อง: ${items.length} ร้าน | ล็อคทั้งตลาด: ${allStallsSorted.length} ล็อค]</span>
+            <span>📦 ตลาดนัดลาดสวายวินเทจ - ใบตรวจการฝากของและตรวจตราล็อคตลาด (A4)</span>
+            <span style="margin-left: 10px; font-weight: normal; font-size: 11px;">[ฝากถูกต้อง: ${items.length} ร้าน (${totalStallsCount} ล็อค) | ล็อคทั้งตลาด: ${allStallsSorted.length} ล็อค]</span>
           </div>
           <div>
             <button class="close-btn" onclick="window.close()">ปิดหน้าต่าง</button>
-            <button class="print-btn" onclick="window.print()">🖨️ สั่งพิมพ์เอกสารครบชุด (Print All)</button>
+            <button class="print-btn" onclick="window.print()">🖨️ สั่งพิมพ์เอกสาร A4 (Print)</button>
           </div>
         </div>
 
-        <!-- SHEET 1: AUTHORIZED STORAGE SHEET -->
-        <div class="report-header">
+        <div class="report-header patrol-header">
           <div class="header-top">
             <div class="logo-title-group">
               <img src="/logo.png" class="logo-img" alt="Logo" />
               <div>
                 <div class="brand-title">ตลาดนัดลาดสวายวินเทจ</div>
-                <div class="report-subtitle">📦 ใบที่ 1: บัญชีรายชื่อผู้ได้รับสิทธิ์ฝากของ (Authorized Storage List)</div>
+                <div class="report-subtitle">📦 ใบตรวจการฝากของและตรวจตราล็อคตลาด (Market Storage & Patrol Inspection)</div>
               </div>
             </div>
             <div class="meta-info">
-              <div><strong>ประจำวัน/รอบสัปดาห์:</strong> ${formattedDate}</div>
+              <div><strong>ประจำสัปดาห์/รอบตรวจ:</strong> ${formattedDate} (วันจันทร์ - อังคาร)</div>
               <div><strong>พิมพ์เมื่อ:</strong> ${printTimeStr}</div>
-              <div><strong>ผู้สั่งพิมพ์:</strong> ${inspectorName}</div>
-              <div><strong>รายการที่ได้รับสิทธิ์:</strong> ${items.length} ร้าน (${totalStallsCount} ล็อค)</div>
+              <div><strong>ผู้ตรวจ:</strong> ${inspectorName}</div>
+              <div style="color: #15803d; font-weight: bold; margin-top: 2px;">
+                <strong>ได้รับสิทธิ์ฝากของ:</strong> ${items.length} ร้าน (${totalStallsCount} ล็อค)
+              </div>
             </div>
+          </div>
+          <div class="patrol-desc">
+            * <strong>คำชี้แจงสำหรับเจ้าหน้าที่:</strong> ล็อคที่ชำระค่าฝากของถูกต้องระบุป้ายสีเขียว <strong style="color: #15803d;">✅ ฝากถูกต้อง</strong> พร้อมชื่อร้านค้าและช่วงเวลาไว้แล้ว / สำหรับล็อคทั่วไปหากพบว่าว่าง ให้ติ๊ก <strong>[ ] ว่าง</strong> / หากพบล็อคใดที่ไม่มีสิทธิ์แต่มีของวาง ให้ติ๊ก <strong style="color: #dc2626;">[ ] ⚠️ แอบฝาก</strong> และระบุสิ่งของลงในตารางบันทึกด้านล่างเพื่อดำเนินการติดตาม
           </div>
         </div>
 
-        <table class="checklist-table">
-          <thead>
-            <tr>
-              <th class="col-num">ลำดับ</th>
-              <th class="col-type">ประเภท</th>
-              <th class="col-owner">ผู้ฝาก / เบอร์โทร</th>
-              <th class="col-stall">ล็อค</th>
-              <th class="col-dates">ช่วงเวลา</th>
-              <th class="col-checklist">ผลตรวจหน้างาน</th>
-              <th class="col-note">สิ่งของที่ตรวจพบ / บันทึก</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml || `<tr><td colspan="7" style="text-align:center; padding: 20px; color:#6b7280;">ไม่พบรายการฝากของในขณะนี้</td></tr>`}
-          </tbody>
-        </table>
+        <!-- Incident Log Table -->
+        <div class="incident-log-section">
+          <div class="section-title">📝 ตารางบันทึกสรุปการตรวจพบของแอบฝากหน้างาน (สำหรับติดตามผู้ค้า / คิดเงินย้อนหลัง)</div>
+          <table class="incident-table">
+            <thead>
+              <tr>
+                <th style="width: 24px;">#</th>
+                <th style="width: 65px;">เลขล็อค</th>
+                <th style="width: 175px;">ลักษณะสิ่งของที่แอบวาง</th>
+                <th style="width: 160px;">คาดว่าเป็นของร้านค้า / เบอร์โทร</th>
+                <th>มาตรการ (ตักเตือน / เคลื่อนย้าย / คิดเงินย้อนหลัง)</th>
+                <th style="width: 75px;">ผู้ตรวจ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="text-align:center;">1</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td style="text-align:center;">2</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td style="text-align:center;">3</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td style="text-align:center;">4</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td style="text-align:center;">5</td><td></td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <div class="signature-section">
+        <!-- Stall Checklist by Zones -->
+        ${patrolZonesHtml || '<div style="padding: 20px; text-align: center; color: #6b7280;">ไม่พบข้อมูลล็อคตลาดในระบบ</div>'}
+
+        <div class="signature-section" style="margin-top: 20px;">
           <div class="sign-box">
             <div class="sign-line"></div>
             <div class="sign-label">ลงชื่อ ................................................................ (ผู้ตรวจ)</div>
@@ -1215,71 +1188,6 @@ export function generateStorageInspectionA4HTML({
             <div style="font-size: 8pt; color: #6b7280; margin-top: 2px;">ผู้จัดการตลาด / ผู้ดูแลระบบ</div>
           </div>
         </div>
-
-        <!-- SHEET 2: MARKET PATROL & UNAUTHORIZED STORAGE SHEET (ใบสุดท้าย) -->
-        ${allStallsSorted.length > 0 ? `
-          <div class="patrol-page">
-            <div class="report-header patrol-header">
-              <div class="header-top">
-                <div class="logo-title-group">
-                  <img src="/logo.png" class="logo-img" alt="Logo" />
-                  <div>
-                    <div class="brand-title">ตลาดนัดลาดสวายวินเทจ</div>
-                    <div class="report-subtitle">🔍 ใบที่ 2: ใบตรวจผังล็อคและตรวจจับการแอบฝากของ (Market Patrol & Unauthorized Check)</div>
-                  </div>
-                </div>
-                <div class="meta-info">
-                  <div><strong>รอบตรวจตรา:</strong> วันจันทร์ - อังคาร</div>
-                  <div><strong>พิมพ์เมื่อ:</strong> ${printTimeStr}</div>
-                  <div><strong>ผู้ตรวจ:</strong> ${inspectorName}</div>
-                </div>
-              </div>
-              <div class="patrol-desc">
-                * สำหรับเจ้าหน้าที่เดินตรวจตราล็อคตลาดในวันหยุดเพื่อตรวจสอบสิ่งของที่วางไว้โดยไม่ได้รับอนุญาต (ล็อคที่จ่ายแล้วมีป้ายเขียว ✅ ระบุชื่อไว้แล้ว หากพบล็อคอื่นที่ไม่มีสิทธิ์แต่มีของวาง ให้ติ๊ก <strong>[ ] ⚠️ แอบฝาก</strong> และระบุสิ่งของลงในตารางสรุปด้านล่าง)
-              </div>
-            </div>
-
-            <!-- Incident Log Table -->
-            <div class="incident-log-section">
-              <div class="section-title">📝 ตารางบันทึกสรุปการตรวจพบของแอบฝากหน้างาน (สำหรับติดตามผู้ค้า / ดำเนินการ)</div>
-              <table class="incident-table">
-                <thead>
-                  <tr>
-                    <th style="width: 24px;">#</th>
-                    <th style="width: 65px;">เลขล็อค</th>
-                    <th style="width: 175px;">ลักษณะสิ่งของที่แอบวาง</th>
-                    <th style="width: 160px;">คาดว่าเป็นของร้านค้า / เบอร์โทร</th>
-                    <th>มาตรการ (ตักเตือน / เคลื่อนย้าย / คิดเงินย้อนหลัง)</th>
-                    <th style="width: 75px;">ผู้ตรวจ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td style="text-align:center;">1</td><td></td><td></td><td></td><td></td><td></td></tr>
-                  <tr><td style="text-align:center;">2</td><td></td><td></td><td></td><td></td><td></td></tr>
-                  <tr><td style="text-align:center;">3</td><td></td><td></td><td></td><td></td><td></td></tr>
-                  <tr><td style="text-align:center;">4</td><td></td><td></td><td></td><td></td><td></td></tr>
-                  <tr><td style="text-align:center;">5</td><td></td><td></td><td></td><td></td><td></td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Stall Checklist by Zones -->
-            ${patrolZonesHtml}
-
-            <div class="signature-section" style="margin-top: 20px;">
-              <div class="sign-box">
-                <div class="sign-line"></div>
-                <div class="sign-label">ลงชื่อ ................................................................ (ผู้ตรวจ)</div>
-                <div style="font-size: 8pt; color: #6b7280; margin-top: 2px;">เจ้าหน้าที่ตรวจตราความเรียบร้อย</div>
-              </div>
-              <div class="sign-box">
-                <div class="sign-line"></div>
-                <div class="sign-label">ลงชื่อ ................................................................ (ผู้รับทราบ)</div>
-                <div style="font-size: 8pt; color: #6b7280; margin-top: 2px;">ผู้จัดการตลาด / ผู้ดูแลระบบ</div>
-              </div>
-            </div>
-          </div>
-        ` : ''}
 
       </body>
     </html>
