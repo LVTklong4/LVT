@@ -734,17 +734,6 @@ export function BookingProvider({ children }) {
       let groupBookings = [];
       if (booking.master_id) {
         groupBookings = bookings.filter(b => b.date === booking.date && b.master_id === booking.master_id && b.status !== 'ลา');
-      } else if (booking.booker_name && booking.booker_name.trim() !== 'ไม่ระบุชื่อ' && booking.booker_name.trim() !== '') {
-        const sameCustomer = bookings.filter(b => 
-          b.date === booking.date && 
-          b.booker_name && 
-          b.booker_name.trim() === booking.booker_name.trim() &&
-          b.status !== 'ลา' &&
-          (!booking.product || !b.product || b.product.trim() === booking.product.trim())
-        );
-        if (sameCustomer.length > 1) {
-          groupBookings = sameCustomer;
-        }
       }
 
       if (groupBookings.length > 1) {

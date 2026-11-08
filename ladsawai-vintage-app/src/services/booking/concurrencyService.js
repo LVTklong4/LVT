@@ -75,11 +75,6 @@ export async function checkStallsAvailability({
       if (excludeBookingId && b.id === excludeBookingId) continue;
       if (excludeMasterId && b.master_id === excludeMasterId) continue;
 
-      // Exclude if conflicting booking belongs to the same booker (updating same customer's stall)
-      if (bookerName && b.booker_name && b.booker_name.trim().toLowerCase() === bookerName.trim().toLowerCase()) {
-        continue;
-      }
-
       // Exclude if conflicting booking is an orphaned record from legacy generation
       if (b.note?.includes('[ลูกค้าประจำ]') || b.master_id?.startsWith('BK-2610-')) {
         continue;

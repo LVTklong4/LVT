@@ -48,14 +48,6 @@ export function prepareElectricityInspectionData({
       groupKey = `monthly_${b.master_id}`;
     } else if (isMonthly && b.booker_name && b.booker_name !== '.' && b.booker_name !== '-') {
       groupKey = `monthly_${b.booker_name.trim().toLowerCase()}_${(b.product || '').trim().toLowerCase()}`;
-    } else if (
-      b.booker_name && 
-      !['.', '-', '0', '00', '000', 'ปจ'].includes(b.booker_name.trim()) && 
-      b.product && 
-      b.product.trim() && 
-      b.product.trim() !== '-'
-    ) {
-      groupKey = `daily_${b.booker_name.trim().toLowerCase()}_${b.product.trim().toLowerCase()}`;
     } else {
       groupKey = `daily_id_${b.id}`;
     }
