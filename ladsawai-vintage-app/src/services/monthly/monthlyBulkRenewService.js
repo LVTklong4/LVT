@@ -492,6 +492,18 @@ export async function renewBulkMonthlyBookings({
 
     const stallsString = details.map(d => d.name).join(', ');
 
+    let finalSelectedDays = selectedDays;
+    if (details.length > 0 && allDays.size > 0) {
+      const dayLabels = [];
+      if (allDays.has(3)) dayLabels.push('Wed');
+      if (allDays.has(5)) dayLabels.push('Fri');
+      if (allDays.has(6)) dayLabels.push('Sat');
+      if (allDays.has(0)) dayLabels.push('Sun');
+      if (dayLabels.length > 0) {
+        finalSelectedDays = dayLabels.join(', ');
+      }
+    }
+
     const monthlyData = {
       id: newBookingId,
       timestamp: new Date().toISOString(),
@@ -506,7 +518,7 @@ export async function renewBulkMonthlyBookings({
       paid_amount: 0,
       note: note.trim() || `ต่ออายุอัตโนมัติแบบกลุ่ม [${customerType}]`,
       payment_method: 'Cash',
-      selected_days: selectedDays,
+      selected_days: finalSelectedDays,
       booking_month: nextBookingMonthStr,
       phone: String(phone || '').replace(/\s|-/g, ''),
       stall_details: stallDetailsStr,
