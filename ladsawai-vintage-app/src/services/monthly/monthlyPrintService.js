@@ -303,15 +303,21 @@ export function generateMonthlyReceiptHTML({
       } else {
         pDateStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
       }
+      // Filter out boilerplate generic notes such as 'ชำระเงินรายเดือนเพิ่มเติม' or 'ชำระเงินห้องเช่า'
+      const cleanNote = (p.note || '')
+        .replace(/ชำระเงินรายเดือนเพิ่มเติม/g, '')
+        .replace(/ชำระเงินห้องเช่า/g, '')
+        .trim();
+
       paymentsHtml += `
         <tr>
           <td>${pDateStr}</td>
           <td style="text-align: center;">${normalizePaymentMethodThai(p.method)}</td>
           <td style="text-align: right;" class="bold">${formatPrice(amt)}</td>
         </tr>
-        ${p.note ? `
+        ${cleanNote ? `
         <tr>
-          <td colspan="3" style="font-size: 8.5pt; color: #444; padding-top: 0; padding-bottom: 1.5mm;">${p.note}</td>
+          <td colspan="3" style="font-size: 8pt; color: #444; padding-top: 0; padding-bottom: 0.8mm;">${cleanNote}</td>
         </tr>` : ''}
       `;
     });
@@ -348,47 +354,49 @@ export function generateMonthlyReceiptHTML({
       <head>
         <title>${isRoom ? 'พิมพ์ตั๋ว/ใบเสร็จ (ห้องเช่า)' : 'พิมพ์ตั๋ว/ใบเสร็จ (รายเดือน)'}</title>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
           @page { size: 80mm auto; margin: 0; }
+          * { box-sizing: border-box; }
           body {
-            font-family: 'Sarabun', sans-serif;
+            font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             width: 72mm;
             margin: 0 auto;
-            padding: 4mm 2mm;
+            padding: 2.5mm 1.5mm;
             background: #fff;
             color: #000;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-size: 9.5pt;
+            line-height: 1.25;
           }
           .center { text-align: center; }
           .bold { font-weight: bold; }
-          .logo { width: 32mm; height: auto; margin: 0 auto 2mm auto; display: block; }
-          .divider { border-top: 1.5px dashed #000; margin: 3mm 0; }
-          .title { font-size: 13pt; font-weight: 800; margin: 2mm 0 1mm 0; }
-          .subtitle { font-size: 9.5pt; font-weight: bold; color: #000; }
-          .info-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
-          .info-table td { padding: 1.2mm 0; vertical-align: top; font-size: 10.5pt; }
-          .info-table td.label { width: 32%; white-space: nowrap; }
+          .logo { width: 16mm; height: 16mm; margin: 0 auto 1mm auto; display: block; object-fit: contain; }
+          .divider { border-top: 1px dashed #000; margin: 1.6mm 0; }
+          .title { font-size: 11pt; font-weight: 800; margin: 0.8mm 0 0.3mm 0; line-height: 1.2; }
+          .subtitle { font-size: 8pt; font-weight: bold; color: #000; line-height: 1.25; margin: 0.2mm 0; }
+          .doc-title { font-size: 10pt; font-weight: 800; margin-bottom: 1mm; }
+          .info-table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+          .info-table td { padding: 0.5mm 0; vertical-align: top; font-size: 9pt; }
+          .info-table td.label { width: 34%; white-space: nowrap; color: #333; }
           .info-table td.val { text-align: right; font-weight: bold; }
-          .price-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
-          .price-table td { padding: 1.2mm 0; font-size: 10.5pt; }
+          .info-table td.large-val { text-align: right; font-size: 10pt; font-weight: 800; }
+          .price-table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+          .price-table td { padding: 0.5mm 0; font-size: 9pt; }
           .price-table td.val { text-align: right; font-weight: bold; }
-          .calc-row td { font-size: 9.5pt; color: #333; padding-top: 0 !important; padding-bottom: 2mm !important; }
-          .payment-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
-          .payment-table th { border-bottom: 1px dashed #000; padding: 1.5mm 0; font-size: 10pt; font-weight: bold; }
-          .payment-table td { padding: 1.5mm 0; font-size: 10pt; }
-          .total-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
-          .total-table td { padding: 1.2mm 0; }
-          .total-table td.label { text-align: right; font-size: 11pt; font-weight: bold; padding-right: 2mm; }
-          .total-table td.val { text-align: right; font-size: 11.5pt; font-weight: bold; }
-          .grand-total-row td { padding-top: 2mm; }
-          .grand-total-row td.label { font-size: 11.5pt; font-weight: 800; }
-          .grand-total-row td.val { font-size: 13pt; font-weight: 800; }
-          .remaining-row td { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding-top: 2.5mm !important; padding-bottom: 2.5mm !important; }
-          .remaining-row td.label { text-align: right; font-size: 11.5pt; font-weight: 800; padding-right: 2mm; }
-          .remaining-row td.val { text-align: right; font-size: 13pt; font-weight: 800; }
-          .info-table td.large-val { text-align: right; font-size: 12.5pt; font-weight: 800; }
-          .footer { margin-top: 4mm; font-size: 9.5pt; text-align: center; line-height: 1.5; }
+          .calc-row td { font-size: 8pt; color: #333; padding-top: 0 !important; padding-bottom: 0.8mm !important; }
+          .payment-table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+          .payment-table th { border-bottom: 1px dashed #000; padding: 0.8mm 0; font-size: 8.5pt; font-weight: bold; }
+          .payment-table td { padding: 0.7mm 0; font-size: 8.5pt; }
+          .total-table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+          .total-table td { padding: 0.6mm 0; }
+          .total-table td.label { text-align: right; font-size: 9pt; font-weight: bold; padding-right: 2mm; }
+          .total-table td.val { text-align: right; font-size: 9.5pt; font-weight: bold; }
+          .grand-total-row td { padding-top: 0.8mm; }
+          .grand-total-row td.label { font-size: 9.5pt; font-weight: 800; }
+          .grand-total-row td.val { font-size: 10.5pt; font-weight: 800; }
+          .remaining-row td { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding-top: 1.2mm !important; padding-bottom: 1.2mm !important; }
+          .remaining-row td.label { text-align: right; font-size: 9.5pt; font-weight: 800; padding-right: 2mm; }
+          .remaining-row td.val { text-align: right; font-size: 10.5pt; font-weight: 800; }
+          .footer { margin-top: 2.5mm; font-size: 8.5pt; text-align: center; line-height: 1.35; }
         </style>
       </head>
       <body>
@@ -399,11 +407,11 @@ export function generateMonthlyReceiptHTML({
           <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
         </div>
         <div class="divider"></div>
-        <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">${isRoom ? 'ตั๋ว/ใบเสร็จ (ห้องเช่า)' : 'ตั๋ว/ใบเสร็จ (รายเดือน)'}</div>
+        <div class="center bold doc-title">${isRoom ? 'ตั๋ว/ใบเสร็จ (ห้องเช่า)' : 'ตั๋ว/ใบเสร็จ (รายเดือน)'}</div>
         <table class="info-table">
-          <tr><td class="label">เลขที่ :</td><td style="text-align: right; font-family: monospace; font-size: 9.5pt;">${txnNo}</td></tr>
+          <tr><td class="label">เลขที่ :</td><td style="text-align: right; font-family: monospace; font-size: 8.5pt;">${txnNo}</td></tr>
           <tr><td class="label">วันที่ทำรายการ :</td><td style="text-align: right;">${formattedTransaction}</td></tr>
-          <tr><td class="label">รหัสพนักงาน :</td><td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td></tr>
+          <tr><td class="label">รหัสพนักงาน :</td><td style="text-align: right; font-family: monospace; font-size: 8.5pt;">${empCode}</td></tr>
           <tr><td class="label">ประจำเดือน :</td><td class="large-val">${invoiceMonth}</td></tr>
           <tr><td class="label">ผู้จอง :</td><td class="large-val">${item.booker_name}</td></tr>
           <tr><td class="label">${isRoom ? 'ประเภท :' : 'สินค้า :'}</td><td class="large-val">${isRoom ? 'ห้องเช่า/ห้องพัก' : productName}</td></tr>
@@ -424,15 +432,15 @@ export function generateMonthlyReceiptHTML({
         <div class="divider"></div>
         <table class="total-table">
           <tr class="grand-total-row"><td class="label">รวมเป็นเงินทั้งสิ้น :</td><td class="val">${formatPrice(grandTotal)}</td></tr>
-          <tr><td class="label" style="border-top: 1px dashed #000; padding-top: 1.5mm;">ชำระแล้วรวมทั้งสิ้น :</td><td class="val" style="border-top: 1px dashed #000; padding-top: 1.5mm;">${formatPrice(totalPaidFromPayments)}</td></tr>
+          <tr><td class="label" style="border-top: 1px dashed #000; padding-top: 0.8mm;">ชำระแล้วรวมทั้งสิ้น :</td><td class="val" style="border-top: 1px dashed #000; padding-top: 0.8mm;">${formatPrice(totalPaidFromPayments)}</td></tr>
           <tr><td class="label">คิดเป็นเปอร์เซ็นต์ :</td><td class="val">${percentage}%</td></tr>
           <tr class="remaining-row"><td class="label">ค้างชำระ/คงเหลือ :</td><td class="val">${formatPrice(remaining)}</td></tr>
         </table>
         <div class="divider"></div>
         <div class="footer">
           <div class="bold">สอบถามค่าล็อค ส่งสลิป ได้ที่</div>
-          <div class="bold" style="margin-top: 1mm; font-size: 10.5pt;">@ladsawaivintage</div>
-          <div style="font-size: 8pt; color: #555; margin-top: 3mm;">Power by PJMJK</div>
+          <div class="bold" style="margin-top: 0.6mm; font-size: 9.5pt;">@ladsawaivintage</div>
+          <div style="font-size: 7.5pt; color: #555; margin-top: 2mm;">Power by PJMJK</div>
         </div>
         <script>
           window.onload = function() {

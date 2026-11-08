@@ -543,13 +543,19 @@ export default function MonthlyReceiptPreviewModal() {
                       </td>
                       <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(p.amount)}</td>
                     </tr>
-                    {p.note && (
-                      <tr>
-                        <td colSpan={3} className="text-[8.5px] text-gray-500 font-medium pb-1 pl-0.5">
-                          {p.note}
-                        </td>
-                      </tr>
-                    )}
+                    {(() => {
+                      const cleanNote = (p.note || '')
+                        .replace(/ชำระเงินรายเดือนเพิ่มเติม/g, '')
+                        .replace(/ชำระเงินห้องเช่า/g, '')
+                        .trim();
+                      return cleanNote ? (
+                        <tr>
+                          <td colSpan={3} className="text-[8.5px] text-gray-500 font-medium pb-1 pl-0.5">
+                            {cleanNote}
+                          </td>
+                        </tr>
+                      ) : null;
+                    })()}
                   </React.Fragment>
                 ))}
               </tbody>
