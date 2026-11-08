@@ -41,6 +41,9 @@ export default function DailyClosingRemittancePrint({
     ));
   const advanceTotalCash = advanceItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || summary?.cashInAdvance || 0;
 
+  const adHocIncomeItems = summary?.adHocIncomeItems || [];
+  const adHocIncomeTotal = adHocIncomeItems.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
+
   return (
     <div className="hidden print:block w-full max-w-[210mm] mx-auto bg-white text-black p-1 font-sans text-xs leading-tight">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -350,11 +353,53 @@ export default function DailyClosingRemittancePrint({
             </div>
           </div>
 
-          {/* 3. Expense Itemization Table */}
+          {/* Ad-hoc Income Itemization Table (if any) */}
+          {adHocIncomeItems.length > 0 && (
+            <div>
+              <div className="flex justify-between items-center border-b-2 border-black pb-1 mb-1">
+                <h3 className="font-black text-sm text-black">
+                  3. รายการแจกแจงรายรับเฉพาะกิจ / เบ็ดเตล็ด (Ad-hoc Income Itemization)
+                </h3>
+                <span className="text-[11px] font-bold text-gray-700">
+                  {adHocIncomeItems.length} รายการ
+                </span>
+              </div>
+              <table className="w-full border-collapse border border-gray-400 text-xs">
+                <thead>
+                  <tr className="bg-gray-200 font-bold border-b border-gray-400 text-gray-900">
+                    <th className="py-1 px-2 border-r border-gray-400 w-10 text-center">#</th>
+                    <th className="py-1 px-2 border-r border-gray-400">รายการ / คำอธิบายรายรับ</th>
+                    <th className="py-1 px-2 border-r border-gray-400 w-32">หมวดหมู่</th>
+                    <th className="py-1 px-2 border-r border-gray-400 w-24 text-center">ช่องทางรับ</th>
+                    <th className="py-1 px-2 text-right w-28">จำนวนเงิน (บาท)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adHocIncomeItems.map((inc, idx) => (
+                    <tr key={inc.id || idx} className="border-b border-gray-300">
+                      <td className="py-0.5 px-2 border-r border-gray-300 text-center text-gray-600 font-mono">{idx + 1}</td>
+                      <td className="py-0.5 px-2 border-r border-gray-300 font-medium">{inc.description}</td>
+                      <td className="py-0.5 px-2 border-r border-gray-300 text-gray-700">{inc.category}</td>
+                      <td className="py-0.5 px-2 border-r border-gray-300 text-center font-bold">
+                        {inc.method}
+                      </td>
+                      <td className="py-0.5 px-2 text-right font-bold font-mono text-emerald-800">+{(parseFloat(inc.amount) || 0).toLocaleString()} ฿</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-100 font-black border-t-2 border-black">
+                    <td colSpan={4} className="py-1 px-2 border-r border-gray-400 text-right text-gray-900">รวมรายรับเฉพาะกิจทั้งสิ้น (Total Ad-hoc Income)</td>
+                    <td className="py-1 px-2 text-right font-black font-mono text-emerald-800">+{adHocIncomeTotal.toLocaleString()} ฿</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ${adHocIncomeItems.length > 0 ? '4' : '3'}. Expense Itemization Table */}
           <div>
             <div className="flex justify-between items-center border-b-2 border-black pb-1 mb-1">
               <h3 className="font-black text-sm text-black">
-                3. รายการแจกแจงรายจ่ายประจำวัน (Daily Expense Itemization)
+                {adHocIncomeItems.length > 0 ? '4' : '3'}. รายการแจกแจงรายจ่ายประจำวัน (Daily Expense Itemization)
               </h3>
               <span className="text-[11px] font-bold text-gray-700">
                 {summary.expenseItems?.length ? `${summary.expenseItems.length} รายการ` : 'ไม่มีรายการ'}

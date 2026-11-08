@@ -373,6 +373,7 @@ export function FinanceProvider({ children }) {
 
       // 1. Transactions
       const expenseItems = [];
+      const adHocIncomeItems = [];
       let transferTxnCount = 0;
       const advancePaymentItems = [];
       const todayPaymentItems = [];
@@ -409,6 +410,35 @@ export function FinanceProvider({ children }) {
             return;
           }
 
+          // Detect manual ad-hoc income from Finance ledger module (only ad-hoc income, not general stall bookings)
+          const isAdHocIncome = Boolean(
+            t.id?.startsWith('INC-') ||
+            (t.bill_type === 'รายรับ' && !t.booking_ref) ||
+            (!t.booking_ref && (
+              t.category?.includes('ปรับ') ||
+              t.category?.includes('มัดจำ') ||
+              t.category?.includes('ประกัน') ||
+              t.category?.includes('เบ็ดเตล็ด') ||
+              t.category?.includes('บริการอื่นๆ') ||
+              t.category?.includes('อื่นๆ') ||
+              t.category?.includes('รายได้อื่นๆ') ||
+              t.category?.includes('รายรับอื่นๆ')
+            ))
+          );
+
+          if (isAdHocIncome) {
+            adHocIncomeItems.push({
+              id: t.id,
+              description: t.description || t.note || t.category || 'รายรับเฉพาะกิจ',
+              category: t.category || 'รายรับอื่นๆ',
+              amount: amt,
+              cash: payment.cash,
+              transfer: payment.transfer,
+              method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
+              officer: t.officer || 'Admin'
+            });
+          }
+
           cashIn += payment.cash;
           transferIn += payment.transfer;
           if (payment.transfer > 0) {
@@ -428,7 +458,7 @@ export function FinanceProvider({ children }) {
               payDate,
               payTimestamp: ts
             };
-            if (payDate && payDate < selectedDate) {
+            if (payDate && payDate < selectedDate && !isAdHocIncome) {
               cashInAdvance += payment.cash;
               advancePaymentItems.push(itemData);
             } else {
@@ -452,7 +482,7 @@ export function FinanceProvider({ children }) {
             breakdown.monthly.cash += payment.cash;
             breakdown.monthly.transfer += payment.transfer;
             breakdown.monthly.total += amt;
-          } else if (t.category?.includes('รายได้อื่นๆ') || t.category?.includes('รายรับอื่นๆ')) {
+          } else if (isAdHocIncome || t.category?.includes('รายได้อื่นๆ') || t.category?.includes('รายรับอื่นๆ')) {
             otherIncTotal += amt;
             breakdown.otherIncome.cash += payment.cash;
             breakdown.otherIncome.transfer += payment.transfer;
@@ -550,6 +580,7 @@ export function FinanceProvider({ children }) {
         transferOut,
         expectedCashInDrawer: cashIn - cashOut, // before float
         expenseItems: allExpenseItems,
+        adHocIncomeItems,
         occupancy,
         transferTxnCount,
         breakdown: {
@@ -613,6 +644,9 @@ export function FinanceProvider({ children }) {
         const txnIdsToStamp = [];
         if (payload.summary?.expenseItems) {
           payload.summary.expenseItems.forEach(i => { if (i.id) txnIdsToStamp.push(i.id); });
+        }
+        if (payload.summary?.adHocIncomeItems) {
+          payload.summary.adHocIncomeItems.forEach(i => { if (i.id) txnIdsToStamp.push(i.id); });
         }
         if (payload.summary?.carryForward?.items) {
           payload.summary.carryForward.items.forEach(i => { if (i.id) txnIdsToStamp.push(i.id); });

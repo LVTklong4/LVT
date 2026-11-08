@@ -102,6 +102,22 @@ export function generateDailyClosingRemittanceHTML({
     `).join('');
   }
 
+  // Ad-hoc Income table rows (manual miscellaneous income from finance ledger)
+  const adHocIncomeItems = summary.adHocIncomeItems || [];
+  let adHocIncomeRowsHtml = '';
+  const adHocIncomeTotal = adHocIncomeItems.reduce((acc, it) => acc + (parseFloat(it.amount) || 0), 0);
+  if (adHocIncomeItems.length > 0) {
+    adHocIncomeRowsHtml = adHocIncomeItems.map((inc, idx) => `
+      <tr>
+        <td style="text-align:center; color:#555;">${idx + 1}</td>
+        <td>${inc.description || '-'}</td>
+        <td>${inc.category || '-'}</td>
+        <td style="text-align:center; font-weight:bold;">${inc.method || '-'}</td>
+        <td style="text-align:right; font-family:monospace; color:#059669; font-weight:bold;">+${fmt(inc.amount)} ฿</td>
+      </tr>
+    `).join('');
+  }
+
   // Carry forward row if applicable
   const carryForwardHtml = summary.carryForward && summary.carryForward.total !== 0 ? `
     <tr style="background:#fffbeb; color:#78350f;">
@@ -555,9 +571,35 @@ export function generateDailyClosingRemittanceHTML({
       </table>
     </div>
 
-    <!-- 3. Expenses List -->
+    <!-- Ad-hoc Income List (if any) -->
+    ${adHocIncomeItems.length > 0 ? `
+      <div class="section-title">
+        <span>3. รายการแจกแจงรายรับเฉพาะกิจ / เบ็ดเตล็ด (Ad-hoc Income Itemization)</span>
+        <span class="section-unit">${adHocIncomeItems.length} รายการ</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 6%;" class="text-center">#</th>
+            <th>รายการ / คำอธิบายรายรับ</th>
+            <th style="width: 25%;">หมวดหมู่</th>
+            <th style="width: 18%;" class="text-center">ช่องทางรับ</th>
+            <th style="width: 22%;" class="text-right">จำนวนเงิน (บาท)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${adHocIncomeRowsHtml}
+          <tr style="background:#f3f4f6; font-weight:bold; border-top:1.5px solid #000;">
+            <td colspan="4" class="text-right bolder">รวมรายรับเฉพาะกิจทั้งสิ้น (Total Ad-hoc Income)</td>
+            <td class="text-right font-mono bolder" style="color:#059669;">+${fmt(adHocIncomeTotal)} ฿</td>
+          </tr>
+        </tbody>
+      </table>
+    ` : ''}
+
+    <!-- ${adHocIncomeItems.length > 0 ? '4' : '3'}. Expenses List -->
     <div class="section-title">
-      <span>3. รายการแจกแจงรายจ่ายประจำวัน (Daily Expense Itemization)</span>
+      <span>${adHocIncomeItems.length > 0 ? '4' : '3'}. รายการแจกแจงรายจ่ายประจำวัน (Daily Expense Itemization)</span>
       <span class="section-unit">${expenseItems.length > 0 ? `${expenseItems.length} รายการ` : 'ไม่มีรายการ'}</span>
     </div>
     ${expenseItems.length > 0 ? `

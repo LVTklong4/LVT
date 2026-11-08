@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
-import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet, Printer } from 'lucide-react';
+import { X, Lock, CheckCircle2, AlertTriangle, RefreshCw, DollarSign, Calendar, FileText, Check, ShieldCheck, Wallet, Printer, TrendingUp } from 'lucide-react';
 import DailyClosingRemittancePrint from './DailyClosingRemittancePrint';
 import { generateDailyClosingRemittanceHTML, printDailyRemittanceA4 } from '@/services/finance/dailyClosingPrintService';
 
@@ -433,6 +433,52 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                   </table>
                 </div>
               </div>
+
+              {/* Ad-hoc Income Itemization (if any) */}
+              {summary.adHocIncomeItems && summary.adHocIncomeItems.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-xs font-extrabold text-emerald-950 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-700" /> 📥 รายการแจกแจงรายรับเฉพาะกิจ / เบ็ดเตล็ด ({summary.adHocIncomeItems.length} รายการ)
+                    </span>
+                    <span className="text-xs font-black text-emerald-700">
+                      รวม +{(summary.adHocIncomeItems.reduce((acc, it) => acc + (parseFloat(it.amount) || 0), 0)).toLocaleString()} ฿
+                    </span>
+                  </h4>
+                  <div className="border border-emerald-200 rounded-xl overflow-hidden shadow-xs">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-emerald-800 text-white font-bold">
+                        <tr>
+                          <th className="p-2 w-10 text-center">#</th>
+                          <th className="p-2">รายการ / คำอธิบาย</th>
+                          <th className="p-2">หมวดหมู่</th>
+                          <th className="p-2 text-center">ช่องทาง</th>
+                          <th className="p-2 text-right">จำนวนเงิน (บาท)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-100 bg-white font-medium text-gray-700">
+                        {summary.adHocIncomeItems.map((item, idx) => (
+                          <tr key={item.id || idx} className="hover:bg-emerald-50/30">
+                            <td className="p-2 text-center text-gray-400 font-bold">{idx + 1}</td>
+                            <td className="p-2 font-bold text-gray-800">{item.description}</td>
+                            <td className="p-2 text-gray-500">{item.category}</td>
+                            <td className="p-2 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.method?.includes('สด') ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {item.method}
+                              </span>
+                            </td>
+                            <td className="p-2 text-right font-black text-emerald-700">
+                              +{(parseFloat(item.amount) || 0).toLocaleString()} ฿
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Daily Expense Itemization (if any) */}
               {summary.expenseItems && summary.expenseItems.length > 0 && (
