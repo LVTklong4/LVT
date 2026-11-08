@@ -32,7 +32,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
 
   const [incomeForm, setIncomeForm] = useState({
     date: todayStr,
-    category: 'ค่าปรับ',
+    category: '',
     description: '',
     amount: '',
     method: ''
@@ -40,7 +40,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
 
   const [expenseForm, setExpenseForm] = useState({
     date: todayStr,
-    category: 'ค่าจ้างพนักงาน',
+    category: '',
     item: '',
     amount: '',
     method: ''
@@ -64,12 +64,16 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
       alert(`⚠️ วันที่ ${incomeForm.date} ได้ทำการปิดยอดประจำวันเรียบร้อยแล้ว ข้อมูลถูกล็อคไม่สามารถเพิ่มรายการได้`);
       return;
     }
+    if (!incomeForm.category || incomeForm.category === 'ตัวเลือก') {
+      alert('⚠️ กรุณาเลือกหมวดหมู่รายรับ');
+      return;
+    }
     if (!incomeForm.amount || !incomeForm.description.trim()) {
       alert('กรุณากรอกข้อมูลจำนวนเงินและรายละเอียดให้ครบถ้วน');
       return;
     }
     if (!incomeForm.method) {
-      alert('⚠️ กรุณาเลือกช่องทางการชำระเงิน (โอนเงิน หรือ เงินสด)');
+      alert('⚠️ กรุณาเลือกช่องทางการชำระเงิน (เงินสด หรือ โอนเงิน)');
       return;
     }
 
@@ -77,7 +81,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
     if (res.success) {
       setIncomeForm({
         date: new Date().toISOString().split('T')[0],
-        category: 'ค่าปรับ',
+        category: '',
         description: '',
         amount: '',
         method: ''
@@ -94,12 +98,16 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
       alert(`⚠️ วันที่ ${expenseForm.date} ได้ทำการปิดยอดประจำวันเรียบร้อยแล้ว ข้อมูลถูกล็อคไม่สามารถเพิ่มรายการได้`);
       return;
     }
+    if (!expenseForm.category || expenseForm.category === 'ตัวเลือก') {
+      alert('⚠️ กรุณาเลือกหมวดหมู่รายจ่าย');
+      return;
+    }
     if (!expenseForm.amount || !expenseForm.item.trim()) {
       alert('กรุณากรอกข้อมูลจำนวนเงินและรายการรายจ่ายให้ครบถ้วน');
       return;
     }
     if (!expenseForm.method) {
-      alert('⚠️ กรุณาเลือกวิธีการจ่ายเงิน (โอนเงิน หรือ เงินสด)');
+      alert('⚠️ กรุณาเลือกวิธีการจ่ายเงิน (เงินสด หรือ โอนเงิน)');
       return;
     }
 
@@ -107,7 +115,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
     if (res.success) {
       setExpenseForm({
         date: new Date().toISOString().split('T')[0],
-        category: 'ค่าจ้างพนักงาน',
+        category: '',
         item: '',
         amount: '',
         method: ''
@@ -172,14 +180,24 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
           </div>
           
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-gray-700">หมวดหมู่รายรับ</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-gray-700">หมวดหมู่รายรับ *</label>
+              {!incomeForm.category && (
+                <span className="text-[9px] text-amber-600 font-semibold animate-pulse">
+                  * กรุณาเลือก
+                </span>
+              )}
+            </div>
             <select 
               value={incomeForm.category} 
               onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
-              className="p-2 border border-emerald-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold"
+              className={`p-2 border rounded text-xs bg-white focus:outline-none font-bold ${
+                !incomeForm.category ? 'border-amber-300 text-gray-400' : 'border-emerald-300 text-gray-800 focus:ring-1 focus:ring-emerald-500'
+              }`}
             >
+              <option value="">ตัวเลือก</option>
               {incomeCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat} className="text-gray-800">{cat}</option>
               ))}
             </select>
           </div>
@@ -219,8 +237,8 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'โอนเงิน', label: 'โอนเงิน', icon: '📲' },
-                { id: 'เงินสด', label: 'เงินสด', icon: '💵' }
+                { id: 'เงินสด', label: 'เงินสด', icon: '💵' },
+                { id: 'โอนเงิน', label: 'โอนเงิน', icon: '📲' }
               ].map((opt) => {
                 const isSelected = incomeForm.method === opt.id;
                 return (
@@ -272,14 +290,24 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
           </div>
           
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-gray-700">หมวดหมู่รายจ่าย</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-gray-700">หมวดหมู่รายจ่าย *</label>
+              {!expenseForm.category && (
+                <span className="text-[9px] text-amber-600 font-semibold animate-pulse">
+                  * กรุณาเลือก
+                </span>
+              )}
+            </div>
             <select 
               value={expenseForm.category} 
               onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-              className="p-2 border border-red-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+              className={`p-2 border rounded text-xs bg-white focus:outline-none font-bold ${
+                !expenseForm.category ? 'border-amber-300 text-gray-400' : 'border-red-300 text-gray-800 focus:ring-1 focus:ring-red-500'
+              }`}
             >
+              <option value="">ตัวเลือก</option>
               {expenseCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat} className="text-gray-800">{cat}</option>
               ))}
             </select>
           </div>
@@ -319,8 +347,8 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'โอนเงิน', label: 'โอนเงิน', icon: '📲' },
-                { id: 'เงินสด', label: 'เงินสด', icon: '💵' }
+                { id: 'เงินสด', label: 'เงินสด', icon: '💵' },
+                { id: 'โอนเงิน', label: 'โอนเงิน', icon: '📲' }
               ].map((opt) => {
                 const isSelected = expenseForm.method === opt.id;
                 return (

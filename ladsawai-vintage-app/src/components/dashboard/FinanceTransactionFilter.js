@@ -198,8 +198,8 @@ export default function FinanceTransactionFilter({
             className="p-1.5 border border-amber-200 rounded-lg text-[10px] bg-white focus:outline-none font-bold text-gray-700"
           >
             <option value="ทั้งหมด">ทั้งหมด</option>
-            <option value="โอนเงิน">📱 โอนเงิน</option>
             <option value="เงินสด">💵 เงินสด</option>
+            <option value="โอนเงิน">📱 โอนเงิน</option>
           </select>
         </div>
       </div>
