@@ -117,7 +117,13 @@ export default function MonthlyReceiptPreviewModal() {
     });
   }
 
-  const grandTotal = parseNumber(item.total_price);
+  const isRoom = item.customer_type === 'Room';
+  const txns = customCounts?.payments || (activeMonthlyTransactions?.length > 0 ? activeMonthlyTransactions : []);
+  const totalElecFromPayments = isRoom ? txns.reduce((s, p) => s + parseNumber(p.elec_amt || 0), 0) : 0;
+  const totalWaterFromPayments = isRoom ? txns.reduce((s, p) => s + parseNumber(p.water_amt || 0), 0) : 0;
+
+  const baseGrandTotal = parseNumber(item.total_price);
+  const grandTotal = isRoom ? (baseGrandTotal + totalElecFromPayments + totalWaterFromPayments) : baseGrandTotal;
   const elecRate = item.elec_unit !== undefined && item.elec_unit !== null
     ? parseNumber(item.elec_unit) * 10
     : 20;
@@ -149,88 +155,119 @@ export default function MonthlyReceiptPreviewModal() {
 
   // Day breakdown rows (exactly matching thermal paper print with color accents)
   const dayBreakdownRows = [];
-  if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
-    const sName = dayGroups[6].length > 0 ? dayGroups[6].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
-    const sTotal = dayPrice * satCount;
-    dayBreakdownRows.push({
-      type: 'sat',
-      dayLabel: 'วันเสาร์',
-      dayColor: 'text-purple-700',
-      stallName: sName,
-      calc: `${formatPriceInt(dayPrice)} x ${satCount} วัน`,
-      total: sTotal
-    });
-  }
 
-  if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
-    const sName = dayGroups[0].length > 0 ? dayGroups[0].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
-    const sTotal = dayPrice * sunCount;
+  if (isRoom) {
     dayBreakdownRows.push({
-      type: 'sun',
-      dayLabel: 'วันอาทิตย์',
-      dayColor: 'text-rose-600',
-      stallName: sName,
-      calc: `${formatPriceInt(dayPrice)} x ${sunCount} วัน`,
-      total: sTotal
+      type: 'room',
+      dayLabel: 'ค่าเช่าห้องพักรายเดือน',
+      dayColor: 'text-indigo-800',
+      stallName: cleanStall(item.stalls) || 'ห้องเช่า',
+      calc: 'อัตราเหมาจ่ายค่าเช่าห้องรายเดือน (สัญญา)',
+      total: baseGrandTotal
     });
-  }
+    if (totalElecFromPayments > 0) {
+      dayBreakdownRows.push({
+        type: 'elec',
+        dayLabel: 'ค่าไฟฟ้า',
+        dayColor: 'text-amber-700',
+        stallName: null,
+        calc: 'ตามประวัติการบันทึกชำระเงิน',
+        total: totalElecFromPayments
+      });
+    }
+    if (totalWaterFromPayments > 0) {
+      dayBreakdownRows.push({
+        type: 'water',
+        dayLabel: 'ค่าน้ำประปา',
+        dayColor: 'text-cyan-800',
+        stallName: null,
+        calc: 'ตามประวัติการบันทึกชำระเงิน',
+        total: totalWaterFromPayments
+      });
+    }
+  } else {
+    if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
+      const sName = dayGroups[6].length > 0 ? dayGroups[6].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const dayPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+      const sTotal = dayPrice * satCount;
+      dayBreakdownRows.push({
+        type: 'sat',
+        dayLabel: 'วันเสาร์',
+        dayColor: 'text-purple-700',
+        stallName: sName,
+        calc: `${formatPriceInt(dayPrice)} x ${satCount} วัน`,
+        total: sTotal
+      });
+    }
 
-  if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
-    const sName = dayGroups[3].length > 0 ? dayGroups[3].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
-    const sTotal = dayPrice * wedCount;
-    dayBreakdownRows.push({
-      type: 'wed',
-      dayLabel: 'วันพุธ',
-      dayColor: 'text-emerald-700',
-      stallName: sName,
-      calc: `${formatPriceInt(dayPrice)} x ${wedCount} วัน`,
-      total: sTotal
-    });
-  }
+    if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
+      const sName = dayGroups[0].length > 0 ? dayGroups[0].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const dayPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+      const sTotal = dayPrice * sunCount;
+      dayBreakdownRows.push({
+        type: 'sun',
+        dayLabel: 'วันอาทิตย์',
+        dayColor: 'text-rose-600',
+        stallName: sName,
+        calc: `${formatPriceInt(dayPrice)} x ${sunCount} วัน`,
+        total: sTotal
+      });
+    }
 
-  if (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5))) {
-    const sName = dayGroups[5].length > 0 ? dayGroups[5].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const dayPrice = dayGroups[5].reduce((sum, x) => sum + x.price, 0);
-    const sTotal = dayPrice * friCount;
-    dayBreakdownRows.push({
-      type: 'fri',
-      dayLabel: 'วันศุกร์',
-      dayColor: 'text-blue-700',
-      stallName: sName,
-      calc: `${formatPriceInt(dayPrice)} x ${friCount} วัน`,
-      total: sTotal
-    });
-  }
+    if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
+      const sName = dayGroups[3].length > 0 ? dayGroups[3].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const dayPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+      const sTotal = dayPrice * wedCount;
+      dayBreakdownRows.push({
+        type: 'wed',
+        dayLabel: 'วันพุธ',
+        dayColor: 'text-emerald-700',
+        stallName: sName,
+        calc: `${formatPriceInt(dayPrice)} x ${wedCount} วัน`,
+        total: sTotal
+      });
+    }
 
-  if (elecRate > 0) {
-    const allDays = totalTradingDays || 1;
-    const totalElec = elecRate * allDays;
-    dayBreakdownRows.push({
-      type: 'elec',
-      dayLabel: `ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)`,
-      dayColor: 'text-amber-700',
-      stallName: null,
-      calc: `${formatPriceInt(elecRate)} x ${allDays} วัน`,
-      total: totalElec
-    });
-  }
+    if (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5))) {
+      const sName = dayGroups[5].length > 0 ? dayGroups[5].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const dayPrice = dayGroups[5].reduce((sum, x) => sum + x.price, 0);
+      const sTotal = dayPrice * friCount;
+      dayBreakdownRows.push({
+        type: 'fri',
+        dayLabel: 'วันศุกร์',
+        dayColor: 'text-blue-700',
+        stallName: sName,
+        calc: `${formatPriceInt(dayPrice)} x ${friCount} วัน`,
+        total: sTotal
+      });
+    }
 
-  if (storageFee > 0) {
-    dayBreakdownRows.push({
-      type: 'storage',
-      dayLabel: `ค่าฝากของรายเดือน`,
-      dayColor: 'text-blue-700',
-      stallName: null,
-      calc: null,
-      total: storageFee
-    });
+    if (elecRate > 0) {
+      const allDays = totalTradingDays || 1;
+      const totalElec = elecRate * allDays;
+      dayBreakdownRows.push({
+        type: 'elec',
+        dayLabel: `ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)`,
+        dayColor: 'text-amber-700',
+        stallName: null,
+        calc: `${formatPriceInt(elecRate)} x ${allDays} วัน`,
+        total: totalElec
+      });
+    }
+
+    if (storageFee > 0) {
+      dayBreakdownRows.push({
+        type: 'storage',
+        dayLabel: `ค่าฝากของรายเดือน`,
+        dayColor: 'text-blue-700',
+        stallName: null,
+        calc: null,
+        total: storageFee
+      });
+    }
   }
 
   // Transactions list
-  const txns = customCounts?.payments || (activeMonthlyTransactions?.length > 0 ? activeMonthlyTransactions : []);
   let payments = [];
   let totalPaid = 0;
 
@@ -253,7 +290,8 @@ export default function MonthlyReceiptPreviewModal() {
       return {
         date: pDateStr,
         method: p.method || 'โอนเงิน',
-        amount: amt
+        amount: amt,
+        note: p.note
       };
     });
   } else if (item.paid_amount > 0) {
@@ -409,7 +447,7 @@ export default function MonthlyReceiptPreviewModal() {
 
             {/* 2. Document Title */}
             <div className="text-center font-black text-xs text-black mb-1.5">
-              ตั๋ว/ใบเสร็จ (รายเดือน)
+              {isRoom ? 'ตั๋ว/ใบเสร็จ (ห้องเช่า)' : 'ตั๋ว/ใบเสร็จ (รายเดือน)'}
             </div>
 
             {/* 3. Metadata Table with colored highlights */}
@@ -436,8 +474,8 @@ export default function MonthlyReceiptPreviewModal() {
                   <td className="text-right py-0.5 font-black text-xs text-[#8B4513]">{item.booker_name || item.customer_name || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">สินค้า :</td>
-                  <td className="text-right py-0.5 font-bold text-xs text-gray-800">{productName}</td>
+                  <td className="py-0.5 font-bold whitespace-nowrap text-gray-600">{isRoom ? 'ประเภท :' : 'สินค้า :'}</td>
+                  <td className="text-right py-0.5 font-bold text-xs text-gray-800">{isRoom ? 'ห้องเช่า/ห้องพัก' : productName}</td>
                 </tr>
               </tbody>
             </table>
@@ -453,7 +491,7 @@ export default function MonthlyReceiptPreviewModal() {
                       <td className="font-bold text-left py-0.5 text-gray-800">
                         <span className={`${d.dayColor} font-black`}>{d.dayLabel}</span>
                         {d.stallName && (
-                          <span> ล็อค : <strong className="text-[#8B4513] font-black">{d.stallName}</strong></span>
+                          <span> {isRoom ? 'ห้อง' : 'ล็อค'} : <strong className="text-[#8B4513] font-black">{d.stallName}</strong></span>
                         )}
                       </td>
                       <td className="font-bold font-mono text-right py-0.5 text-gray-900">{formatPrice(d.total)}</td>
@@ -483,15 +521,24 @@ export default function MonthlyReceiptPreviewModal() {
               </thead>
               <tbody className="divide-y-0">
                 {payments.map((p, i) => (
-                  <tr key={i}>
-                    <td className="py-1 font-semibold text-gray-700">{p.date}</td>
-                    <td className="py-1 text-center font-bold">
-                      <span className={p.method === 'เงินสด' ? 'text-emerald-700' : 'text-blue-700'}>
-                        {normalizePaymentMethodThai(p.method)}
-                      </span>
-                    </td>
-                    <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(p.amount)}</td>
-                  </tr>
+                  <React.Fragment key={i}>
+                    <tr>
+                      <td className="py-1 font-semibold text-gray-700">{p.date}</td>
+                      <td className="py-1 text-center font-bold">
+                        <span className={p.method === 'เงินสด' ? 'text-emerald-700' : 'text-blue-700'}>
+                          {normalizePaymentMethodThai(p.method)}
+                        </span>
+                      </td>
+                      <td className="py-1 text-right font-mono font-bold text-gray-900">{formatPrice(p.amount)}</td>
+                    </tr>
+                    {p.note && (
+                      <tr>
+                        <td colSpan={3} className="text-[8.5px] text-gray-500 font-medium pb-1 pl-0.5">
+                          {p.note}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

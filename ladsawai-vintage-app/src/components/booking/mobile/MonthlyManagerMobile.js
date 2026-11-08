@@ -32,6 +32,7 @@ export default function MonthlyManagerMobile({ onClose }) {
     handleDeleteMonthlyBooking,
     handleToggleNonRenewal,
     handleOpenMonthlyPaymentModal,
+    handleDeleteMonthlyTransaction,
     handleShowMonthlyReceiptPreview,
     handlePrintMonthlyInvoice,
     fetchMonthlyTransactions,
@@ -539,22 +540,58 @@ export default function MonthlyManagerMobile({ onClose }) {
                   </div>
                 ) : activeMonthlyTransactions && activeMonthlyTransactions.length > 0 ? (
                   <div className="divide-y border rounded-xl overflow-hidden bg-white shadow-2xs">
-                    {activeMonthlyTransactions.map((txn, idx) => (
-                      <div key={txn.id || idx} className="p-2.5 flex justify-between items-center text-[11px]">
-                        <div>
-                          <div className="font-bold text-gray-800 flex items-center gap-1">
-                            <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded text-[10px]">
-                              {txn.method || 'เงินสด'}
-                            </span>
-                            <span className="font-mono text-gray-500">{txn.date}</span>
+                    {activeMonthlyTransactions.map((txn, idx) => {
+                      const txTime = new Date(txn.timestamp || txn.date).getTime();
+                      const diffHours = (new Date().getTime() - txTime) / (1000 * 60 * 60);
+                      const canDelete = diffHours <= 24;
+                      return (
+                        <div key={txn.id || idx} className="p-2.5 flex justify-between items-start text-[11px] gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-gray-800 flex items-center gap-1 flex-wrap">
+                              <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded text-[10px]">
+                                {txn.method || 'เงินสด'}
+                              </span>
+                              <span className="font-mono text-gray-500">{txn.date}</span>
+                            </div>
+                            {(parseNumber(txn.stall_amt) > 0 || parseNumber(txn.elec_amt) > 0 || parseNumber(txn.water_amt) > 0) && (
+                              <div className="flex flex-wrap gap-1 text-[9px] font-bold mt-1">
+                                {parseNumber(txn.stall_amt) > 0 && (
+                                  <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                    🏠 ค่าเช่า: {parseNumber(txn.stall_amt).toLocaleString()}.-
+                                  </span>
+                                )}
+                                {parseNumber(txn.elec_amt) > 0 && (
+                                  <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                    ⚡ ค่าไฟ: {parseNumber(txn.elec_amt).toLocaleString()}.-
+                                  </span>
+                                )}
+                                {parseNumber(txn.water_amt) > 0 && (
+                                  <span className="px-1.5 py-0.2 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">
+                                    💧 ค่าน้ำ: {parseNumber(txn.water_amt).toLocaleString()}.-
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {txn.note && <div className="text-[10px] text-gray-400 mt-0.5">{txn.note}</div>}
                           </div>
-                          {txn.note && <div className="text-[10px] text-gray-400 mt-0.5">{txn.note}</div>}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <strong className="text-emerald-700 font-mono text-xs">
+                              +{formatPrice(txn.total_amount || txn.amount)} บ.
+                            </strong>
+                            {canDelete && typeof handleDeleteMonthlyTransaction === 'function' && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMonthlyTransaction(txn)}
+                                className="text-red-400 hover:text-red-650 p-1 rounded hover:bg-red-50 transition-colors"
+                                title="ยกเลิก/ลบรายการชำระเงิน"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <strong className="text-emerald-700 font-mono text-xs">
-                          +{formatPrice(txn.total_amount || txn.amount)} บ.
-                        </strong>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="p-3 text-center text-gray-400 border border-dashed rounded-xl bg-gray-50/50 text-[11px]">

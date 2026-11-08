@@ -148,95 +148,126 @@ export function generateMonthlyReceiptHTML({
   }
 
   let dayDetailsHtml = '';
+  const isRoom = item.customer_type === 'Room';
+  const txns = customCounts?.payments || (activeMonthlyTransactions?.length > 0 ? activeMonthlyTransactions : []);
+  const totalElecFromPayments = isRoom ? txns.reduce((s, p) => s + parseNumber(p.elec_amt || 0), 0) : 0;
+  const totalWaterFromPayments = isRoom ? txns.reduce((s, p) => s + parseNumber(p.water_amt || 0), 0) : 0;
 
-  if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
-    const satStalls = dayGroups[6].length > 0 ? dayGroups[6].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const satStallPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
-    const satTotal = satStallPrice * satCount;
+  if (isRoom) {
     dayDetailsHtml += `
       <tr>
-        <td class="bold">วันเสาร์ ล็อค : ${satStalls}</td>
-        <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
+        <td class="bold">ค่าเช่าห้องพักรายเดือน</td>
+        <td class="val" style="text-align: right;">${formatPrice(item.total_price)}</td>
       </tr>
       <tr class="calc-row">
-        <td>${formatPriceInt(satStallPrice)} x ${satCount} วัน</td>
-        <td></td>
+        <td colspan="2" style="font-size: 9pt; color: #555;">ห้อง : ${cleanStall(item.stalls) || 'ห้องเช่า'} (อัตราเหมาจ่ายค่าเช่าห้อง)</td>
       </tr>
     `;
-  }
-  if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
-    const sunStalls = dayGroups[0].length > 0 ? dayGroups[0].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const sunStallPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
-    const sunTotal = sunStallPrice * sunCount;
-    dayDetailsHtml += `
-      <tr>
-        <td class="bold">วันอาทิตย์ ล็อค : ${sunStalls}</td>
-        <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
-      </tr>
-      <tr class="calc-row">
-        <td>${formatPriceInt(sunStallPrice)} x ${sunCount} วัน</td>
-        <td></td>
-      </tr>
-    `;
-  }
-  if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
-    const wedStalls = dayGroups[3].length > 0 ? dayGroups[3].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const wedStallPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
-    const wedTotal = wedStallPrice * wedCount;
-    dayDetailsHtml += `
-      <tr>
-        <td class="bold">วันพุธ ล็อค : ${wedStalls}</td>
-        <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
-      </tr>
-      <tr class="calc-row">
-        <td>${formatPriceInt(wedStallPrice)} x ${wedCount} วัน</td>
-        <td></td>
-      </tr>
-    `;
-  }
-  if (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5))) {
-    const friStalls = dayGroups[5].length > 0 ? dayGroups[5].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
-    const friStallPrice = dayGroups[5].reduce((sum, x) => sum + x.price, 0);
-    const friTotal = friStallPrice * friCount;
-    dayDetailsHtml += `
-      <tr>
-        <td class="bold">วันศุกร์ ล็อค : ${friStalls}</td>
-        <td class="val" style="text-align: right;">${formatPrice(friTotal)}</td>
-      </tr>
-      <tr class="calc-row">
-        <td>${formatPriceInt(friStallPrice)} x ${friCount} วัน</td>
-        <td></td>
-      </tr>
-    `;
-  }
+    if (totalElecFromPayments > 0) {
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">ค่าไฟฟ้า</td>
+          <td class="val" style="text-align: right;">${formatPrice(totalElecFromPayments)}</td>
+        </tr>
+      `;
+    }
+    if (totalWaterFromPayments > 0) {
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">ค่าน้ำประปา</td>
+          <td class="val" style="text-align: right;">${formatPrice(totalWaterFromPayments)}</td>
+        </tr>
+      `;
+    }
+  } else {
+    if (satCount > 0 && (dayGroups[6].length > 0 || activeDays.includes(6))) {
+      const satStalls = dayGroups[6].length > 0 ? dayGroups[6].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const satStallPrice = dayGroups[6].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+      const satTotal = satStallPrice * satCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันเสาร์ ล็อค : ${satStalls}</td>
+          <td class="val" style="text-align: right;">${formatPrice(satTotal)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>${formatPriceInt(satStallPrice)} x ${satCount} วัน</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (sunCount > 0 && (dayGroups[0].length > 0 || activeDays.includes(0))) {
+      const sunStalls = dayGroups[0].length > 0 ? dayGroups[0].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const sunStallPrice = dayGroups[0].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+      const sunTotal = sunStallPrice * sunCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันอาทิตย์ ล็อค : ${sunStalls}</td>
+          <td class="val" style="text-align: right;">${formatPrice(sunTotal)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>${formatPriceInt(sunStallPrice)} x ${sunCount} วัน</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (wedCount > 0 && (dayGroups[3].length > 0 || activeDays.includes(3))) {
+      const wedStalls = dayGroups[3].length > 0 ? dayGroups[3].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const wedStallPrice = dayGroups[3].reduce((sum, x) => sum + x.price, 0) || fallbackPricePerDay;
+      const wedTotal = wedStallPrice * wedCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันพุธ ล็อค : ${wedStalls}</td>
+          <td class="val" style="text-align: right;">${formatPrice(wedTotal)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>${formatPriceInt(wedStallPrice)} x ${wedCount} วัน</td>
+          <td></td>
+        </tr>
+      `;
+    }
+    if (friCount > 0 && (dayGroups[5].length > 0 || activeDays.includes(5))) {
+      const friStalls = dayGroups[5].length > 0 ? dayGroups[5].map(x => cleanStall(x.name)).join(', ') : cleanStall(item.stalls);
+      const friStallPrice = dayGroups[5].reduce((sum, x) => sum + x.price, 0);
+      const friTotal = friStallPrice * friCount;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">วันศุกร์ ล็อค : ${friStalls}</td>
+          <td class="val" style="text-align: right;">${formatPrice(friTotal)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>${formatPriceInt(friStallPrice)} x ${friCount} วัน</td>
+          <td></td>
+        </tr>
+      `;
+    }
 
-  if (elecRate > 0) {
-    const allDays = totalTradingDays || 1;
-    const totalElec = elecRate * allDays;
-    dayDetailsHtml += `
-      <tr>
-        <td class="bold">ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)</td>
-        <td class="val" style="text-align: right;">${formatPrice(totalElec)}</td>
-      </tr>
-      <tr class="calc-row">
-        <td>${formatPriceInt(elecRate)} x ${allDays} วัน</td>
-        <td></td>
-      </tr>
-    `;
-  }
+    if (elecRate > 0) {
+      const allDays = totalTradingDays || 1;
+      const totalElec = elecRate * allDays;
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">ค่าไฟฟ้า (${item.elec_unit || 0} หน่วย)</td>
+          <td class="val" style="text-align: right;">${formatPrice(totalElec)}</td>
+        </tr>
+        <tr class="calc-row">
+          <td>${formatPriceInt(elecRate)} x ${allDays} วัน</td>
+          <td></td>
+        </tr>
+      `;
+    }
 
-  if (parseNumber(item.storage_fee) > 0) {
-    dayDetailsHtml += `
-      <tr>
-        <td class="bold">ค่าฝากของรายเดือน</td>
-        <td class="val" style="text-align: right;">${formatPrice(item.storage_fee)}</td>
-      </tr>
-    `;
+    if (parseNumber(item.storage_fee) > 0) {
+      dayDetailsHtml += `
+        <tr>
+          <td class="bold">ค่าฝากของรายเดือน</td>
+          <td class="val" style="text-align: right;">${formatPrice(item.storage_fee)}</td>
+        </tr>
+      `;
+    }
   }
 
   let paymentsHtml = '';
   let totalPaidFromPayments = 0;
-  const txns = customCounts?.payments || (activeMonthlyTransactions?.length > 0 ? activeMonthlyTransactions : []);
 
   if (txns.length > 0) {
     txns.forEach(p => {
@@ -264,6 +295,10 @@ export function generateMonthlyReceiptHTML({
           <td style="text-align: center;">${normalizePaymentMethodThai(p.method)}</td>
           <td style="text-align: right;" class="bold">${formatPrice(amt)}</td>
         </tr>
+        ${p.note ? `
+        <tr>
+          <td colspan="3" style="font-size: 8.5pt; color: #444; padding-top: 0; padding-bottom: 1.5mm;">${p.note}</td>
+        </tr>` : ''}
       `;
     });
   } else if (item.paid_amount > 0) {
@@ -287,7 +322,8 @@ export function generateMonthlyReceiptHTML({
     `;
   }
 
-  const grandTotal = parseNumber(item.total_price);
+  const baseGrandTotal = parseNumber(item.total_price);
+  const grandTotal = isRoom ? (baseGrandTotal + totalElecFromPayments + totalWaterFromPayments) : baseGrandTotal;
   const percentage = grandTotal > 0 ? Math.round((totalPaidFromPayments / grandTotal) * 100) : 0;
   const remaining = grandTotal - totalPaidFromPayments;
   const txnNo = customCounts?.txnNo || item.receipt_no || `TXN-${Math.floor(1000000000000 + Math.random() * 9000000000000)}`;
@@ -296,7 +332,7 @@ export function generateMonthlyReceiptHTML({
   return `
     <html>
       <head>
-        <title>พิมพ์ตั๋ว/ใบเสร็จ (รายเดือน)</title>
+        <title>${isRoom ? 'พิมพ์ตั๋ว/ใบเสร็จ (ห้องเช่า)' : 'พิมพ์ตั๋ว/ใบเสร็จ (รายเดือน)'}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
           @page { size: 80mm auto; margin: 0; }
@@ -349,14 +385,14 @@ export function generateMonthlyReceiptHTML({
           <div class="subtitle">โทร: 0-92-869-7774 , 0-92-869-7775</div>
         </div>
         <div class="divider"></div>
-        <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">ตั๋ว/ใบเสร็จ (รายเดือน)</div>
+        <div class="center bold" style="font-size: 12pt; margin-bottom: 2mm;">${isRoom ? 'ตั๋ว/ใบเสร็จ (ห้องเช่า)' : 'ตั๋ว/ใบเสร็จ (รายเดือน)'}</div>
         <table class="info-table">
           <tr><td class="label">เลขที่ :</td><td style="text-align: right; font-family: monospace; font-size: 9.5pt;">${txnNo}</td></tr>
           <tr><td class="label">วันที่ทำรายการ :</td><td style="text-align: right;">${formattedTransaction}</td></tr>
           <tr><td class="label">รหัสพนักงาน :</td><td style="text-align: right; font-family: monospace; font-size: 9pt;">${empCode}</td></tr>
           <tr><td class="label">ประจำเดือน :</td><td class="large-val">${invoiceMonth}</td></tr>
           <tr><td class="label">ผู้จอง :</td><td class="large-val">${item.booker_name}</td></tr>
-          <tr><td class="label">สินค้า :</td><td class="large-val">${productName}</td></tr>
+          <tr><td class="label">${isRoom ? 'ประเภท :' : 'สินค้า :'}</td><td class="large-val">${isRoom ? 'ห้องเช่า/ห้องพัก' : productName}</td></tr>
         </table>
         <div class="divider"></div>
         <table class="price-table">${dayDetailsHtml}</table>

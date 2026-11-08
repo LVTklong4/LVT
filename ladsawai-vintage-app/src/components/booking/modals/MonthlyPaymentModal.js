@@ -31,6 +31,8 @@ export default function MonthlyPaymentModal() {
 
   if (!showMonthlyPaymentModal || !activeMonthlyBooking) return null;
 
+  const isRoom = activeMonthlyBooking?.customer_type === 'Room';
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 overflow-hidden animate-pop-in flex flex-col p-6 gap-3.5 relative">
@@ -115,7 +117,7 @@ export default function MonthlyPaymentModal() {
           {/* ยอดเต็ม & ค้างชำระ Card */}
           <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-900 flex flex-col gap-2.5">
             <div className="flex justify-between font-bold">
-              <span>ยอดเต็ม: {parseNumber(activeMonthlyBooking.total_price || 0).toLocaleString()}.-</span>
+              <span>{isRoom ? 'ค่าเช่าห้องหลัก' : 'ยอดเต็ม'}: {parseNumber(activeMonthlyBooking.total_price || 0).toLocaleString()}.-</span>
               <span className="text-red-600">ค้างชำระ: {(parseNumber(activeMonthlyBooking.total_price || 0) - parseNumber(activeMonthlyBooking.paid_amount || 0)).toLocaleString()}.-</span>
             </div>
             
@@ -123,7 +125,9 @@ export default function MonthlyPaymentModal() {
             
             {/* ตัวช่วยคำนวณ */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-center text-gray-500">ตัวช่วยคำนวณยอดชำระ</span>
+              <span className="text-[10px] font-bold text-center text-gray-500">
+                {isRoom ? 'ตัวช่วยคำนวณค่าเช่าห้อง' : 'ตัวช่วยคำนวณยอดชำระ'}
+              </span>
               <div className="grid grid-cols-4 gap-1.5">
                 {[25, 50, 75, 100].map((pct) => {
                   const total = parseNumber(activeMonthlyBooking.total_price || 0);
@@ -133,8 +137,8 @@ export default function MonthlyPaymentModal() {
                   const rawVal = isClose ? remaining : (total * (pct / 100));
                   const val = isNaN(rawVal) ? 0 : Math.max(0, rawVal);
                   
-                  const formAmt = parseNumber(monthlyPaymentForm.amount);
-                  const isActive = isClose ? (formAmt === remaining && remaining > 0) : (formAmt === val && val > 0);
+                  const targetAmt = isRoom ? parseNumber(monthlyPaymentForm?.rent_amt) : parseNumber(monthlyPaymentForm?.amount);
+                  const isActive = isClose ? (targetAmt === remaining && remaining > 0) : (targetAmt === val && val > 0);
 
                   return (
                     <button
@@ -143,10 +147,22 @@ export default function MonthlyPaymentModal() {
                       disabled={loadingMonthly}
                       onClick={() => {
                         const safeVal = Math.round(val * 100) / 100;
-                        setMonthlyPaymentForm(prev => ({
-                          ...prev,
-                          amount: String(safeVal)
-                        }));
+                        if (isRoom) {
+                          setMonthlyPaymentForm(prev => {
+                            const newRent = String(safeVal);
+                            const totalSum = safeVal + parseNumber(prev.elec_amt) + parseNumber(prev.water_amt);
+                            return {
+                              ...prev,
+                              rent_amt: newRent,
+                              amount: String(Math.round(totalSum * 100) / 100)
+                            };
+                          });
+                        } else {
+                          setMonthlyPaymentForm(prev => ({
+                            ...prev,
+                            amount: String(safeVal)
+                          }));
+                        }
                       }}
                       className={`flex flex-col items-center justify-center py-1 border rounded-lg transition-all ${
                         isActive 
@@ -165,20 +181,129 @@ export default function MonthlyPaymentModal() {
             </div>
           </div>
 
-          {/* ยอดชำระ (บาท) */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-gray-700">ยอดชำระ (บาท)</label>
-            <input 
-              type="number" 
-              step="any"
-              disabled={loadingMonthly}
-              value={monthlyPaymentForm.amount} 
-              onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, amount: e.target.value })}
-              placeholder="0.00"
-              className="w-full py-3 border border-green-200 rounded-xl text-center text-2xl font-extrabold text-green-800 bg-green-50/30 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-green-400 disabled:opacity-50"
-              required
-            />
-          </div>
+          {/* ฟอร์มกรอกจำนวนเงิน (แยก UI ห้องเช่า vs แผงค้ารายเดือน) */}
+          {isRoom ? (
+            <div className="flex flex-col gap-2.5 bg-blue-50/40 p-3 rounded-xl border border-blue-200">
+              <div className="flex items-center justify-between border-b border-blue-200/60 pb-1.5">
+                <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                  <span>🏠</span> แจกแจงยอดชำระห้องเช่า
+                </span>
+                <span className="text-[10px] text-blue-700 font-semibold bg-blue-100/60 px-1.5 py-0.5 rounded">
+                  ระบุยอดเงิน (บาท)
+                </span>
+              </div>
+
+              {/* 1. ค่าเช่าห้อง */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                  <span>🏠 ค่าเช่าห้อง (บาท)</span>
+                  <span className="text-[10px] text-gray-500 font-medium">
+                    ค้างชำระ: {Math.max(0, parseNumber(activeMonthlyBooking.total_price || 0) - parseNumber(activeMonthlyBooking.paid_amount || 0)).toLocaleString()}.-
+                  </span>
+                </div>
+                <input 
+                  type="number" 
+                  step="any"
+                  disabled={loadingMonthly}
+                  value={monthlyPaymentForm.rent_amt ?? ''} 
+                  onChange={(e) => {
+                    const rentInput = e.target.value;
+                    const r = parseNumber(rentInput);
+                    const el = parseNumber(monthlyPaymentForm.elec_amt);
+                    const wt = parseNumber(monthlyPaymentForm.water_amt);
+                    const totalSum = r + el + wt;
+                    setMonthlyPaymentForm(prev => ({
+                      ...prev,
+                      rent_amt: rentInput,
+                      amount: String(Math.round(totalSum * 100) / 100)
+                    }));
+                  }}
+                  placeholder="0.00"
+                  className="w-full py-2 px-3 border border-gray-300 rounded-lg text-right text-base font-bold text-blue-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                />
+              </div>
+
+              {/* 2. ค่าไฟ & ค่าน้ำ 2 คอลัมน์ */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* ค่าไฟ */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                    <span>⚡ ค่าไฟฟ้า (บาท)</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    disabled={loadingMonthly}
+                    value={monthlyPaymentForm.elec_amt ?? ''} 
+                    onChange={(e) => {
+                      const elecInput = e.target.value;
+                      const r = parseNumber(monthlyPaymentForm.rent_amt);
+                      const el = parseNumber(elecInput);
+                      const wt = parseNumber(monthlyPaymentForm.water_amt);
+                      const totalSum = r + el + wt;
+                      setMonthlyPaymentForm(prev => ({
+                        ...prev,
+                        elec_amt: elecInput,
+                        amount: String(Math.round(totalSum * 100) / 100)
+                      }));
+                    }}
+                    placeholder="0.00"
+                    className="w-full py-2 px-2.5 border border-amber-200 rounded-lg text-right text-sm font-bold text-amber-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                  />
+                </div>
+
+                {/* ค่าน้ำ */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-cyan-900 flex items-center gap-1">
+                    <span>💧 ค่าน้ำประปา (บาท)</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    disabled={loadingMonthly}
+                    value={monthlyPaymentForm.water_amt ?? ''} 
+                    onChange={(e) => {
+                      const waterInput = e.target.value;
+                      const r = parseNumber(monthlyPaymentForm.rent_amt);
+                      const el = parseNumber(monthlyPaymentForm.elec_amt);
+                      const wt = parseNumber(waterInput);
+                      const totalSum = r + el + wt;
+                      setMonthlyPaymentForm(prev => ({
+                        ...prev,
+                        water_amt: waterInput,
+                        amount: String(Math.round(totalSum * 100) / 100)
+                      }));
+                    }}
+                    placeholder="0.00"
+                    className="w-full py-2 px-2.5 border border-cyan-200 rounded-lg text-right text-sm font-bold text-cyan-900 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              {/* สรุปยอดรวมที่ต้องรับเงินจริง */}
+              <div className="bg-emerald-50/80 border border-emerald-300 rounded-xl p-2.5 flex items-center justify-between mt-0.5 shadow-2xs">
+                <span className="text-xs font-bold text-emerald-900">💵 ยอดรวมชำระทั้งสิ้น:</span>
+                <span className="text-xl font-black text-emerald-800">
+                  {(parseNumber(monthlyPaymentForm.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.-
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* ยอดชำระ (บาท) สำหรับแผงค้ารายเดือนทั่วไป */
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-gray-700">ยอดชำระ (บาท)</label>
+              <input 
+                type="number" 
+                step="any"
+                disabled={loadingMonthly}
+                value={monthlyPaymentForm.amount} 
+                onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, amount: e.target.value })}
+                placeholder="0.00"
+                className="w-full py-3 border border-green-200 rounded-xl text-center text-2xl font-extrabold text-green-800 bg-green-50/30 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-green-400 disabled:opacity-50"
+                required
+              />
+            </div>
+          )}
 
           {/* ประเภทการบันทึก */}
           <div className="flex flex-col gap-1.5">

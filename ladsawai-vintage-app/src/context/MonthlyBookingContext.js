@@ -156,6 +156,9 @@ export function MonthlyBookingProvider({ children }) {
   const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({
     date: new Date().toISOString().split('T')[0],
     amount: '',
+    rent_amt: '',
+    elec_amt: '',
+    water_amt: '',
     method: '',
     note: '',
     slip_base64: null,
@@ -609,9 +612,16 @@ export function MonthlyBookingProvider({ children }) {
     }
 
     setActiveMonthlyBooking(booking);
+    const isRoom = booking.customer_type === 'Room';
+    const remainingRent = Math.max(0, parseNumber(booking.total_price || 0) - parseNumber(booking.paid_amount || 0));
+    const initRentStr = isRoom ? (remainingRent > 0 ? String(remainingRent) : '') : '';
+
     setMonthlyPaymentForm({
       date: new Date().toISOString().split('T')[0],
-      amount: '',
+      amount: initRentStr,
+      rent_amt: initRentStr,
+      elec_amt: '',
+      water_amt: '',
       method: '',
       note: '',
       slip_base64: null,
@@ -883,7 +893,7 @@ export function MonthlyBookingProvider({ children }) {
       });
       showAlert("บันทึกการชำระเงินสำเร็จ", "สำเร็จ");
       setShowMonthlyPaymentModal(false);
-      setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', method: '', note: '', slip_base64: null, slip_file: null });
+      setMonthlyPaymentForm({ date: new Date().toISOString().split('T')[0], amount: '', rent_amt: '', elec_amt: '', water_amt: '', method: '', note: '', slip_base64: null, slip_file: null });
       setSlipPreviewUrl(null);
       setActiveMonthlyBooking(updatedBooking);
       fetchMonthlyBookings();

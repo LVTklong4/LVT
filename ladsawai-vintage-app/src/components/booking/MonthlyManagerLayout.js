@@ -571,6 +571,25 @@ export default function MonthlyManagerLayout() {
                             <span>วันที่: {new Date(txn.timestamp || txn.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                             <span className="bg-[#F5E6D3] text-[#8B4513] px-1.5 py-0.5 rounded font-bold">{txn.method || 'โอนจ่าย'}</span>
                           </div>
+                          {(parseNumber(txn.stall_amt) > 0 || parseNumber(txn.elec_amt) > 0 || parseNumber(txn.water_amt) > 0) && (
+                            <div className="flex flex-wrap gap-1 text-[10px] font-bold mt-0.5">
+                              {parseNumber(txn.stall_amt) > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                  🏠 ค่าเช่า: {parseNumber(txn.stall_amt).toLocaleString()}.-
+                                </span>
+                              )}
+                              {parseNumber(txn.elec_amt) > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                  ⚡ ค่าไฟ: {parseNumber(txn.elec_amt).toLocaleString()}.-
+                                </span>
+                              )}
+                              {parseNumber(txn.water_amt) > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">
+                                  💧 ค่าน้ำ: {parseNumber(txn.water_amt).toLocaleString()}.-
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {txn.note && (
                             <div className="text-[10px] text-gray-500 italic bg-white p-1 rounded border border-gray-100 mt-0.5">
                               โน้ต: {txn.note}

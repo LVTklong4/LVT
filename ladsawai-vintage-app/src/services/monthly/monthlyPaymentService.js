@@ -61,8 +61,15 @@ export async function submitMonthlyPayment({
     throw new Error("ไม่พบข้อมูลสัญญาที่กำลังเลือก กรุณาเลือกลูกค้ารายเดือนใหม่อีกครั้ง");
   }
 
-  const amountVal = parseNumber(paymentForm.amount);
-  if (amountVal <= 0) throw new Error("กรุณาระบุจำนวนเงินที่ถูกต้อง");
+  const isRoom = activeMonthlyBooking.customer_type === 'Room';
+  const rentVal = isRoom && (paymentForm.rent_amt !== undefined && paymentForm.rent_amt !== '')
+    ? parseNumber(paymentForm.rent_amt)
+    : (isRoom ? 0 : parseNumber(paymentForm.amount));
+  const elecVal = isRoom ? parseNumber(paymentForm.elec_amt || 0) : 0;
+  const waterVal = isRoom ? parseNumber(paymentForm.water_amt || 0) : 0;
+
+  const amountVal = isRoom ? (rentVal + elecVal + waterVal) : parseNumber(paymentForm.amount);
+  if (amountVal <= 0) throw new Error("กรุณาระบุจำนวนเงินที่ถูกต้อง (อย่างน้อย 1 รายการ)");
 
   if (!paymentForm.method) {
     throw new Error("กรุณาเลือกประเภทการบันทึก (เงินสด / โอนจ่าย / ส่วนลด)");
@@ -89,17 +96,20 @@ export async function submitMonthlyPayment({
   // 2. Fetch fresh contract data from database to prevent stale in-memory race conditions
   const { data: freshBooking } = await supabase
     .from('monthly_bookings')
-    .select('id, paid_amount, total_price, status')
+    .select('id, paid_amount, total_price, status, customer_type')
     .eq('id', activeMonthlyBooking.id)
     .single();
 
   const currentPaid = freshBooking ? parseNumber(freshBooking.paid_amount || 0) : parseNumber(activeMonthlyBooking.paid_amount || 0);
   const totalPrice = freshBooking ? parseNumber(freshBooking.total_price || 0) : parseNumber(activeMonthlyBooking.total_price || 0);
-  const newPaid = currentPaid + amountVal;
+  
+  // For Room, only rentVal contributes to paid_amount of the room contract
+  const rentContrib = isRoom ? rentVal : amountVal;
+  const newPaid = currentPaid + rentContrib;
 
   if (totalPrice > 0 && newPaid > totalPrice + 0.01) {
     const remaining = Math.max(0, totalPrice - currentPaid);
-    throw new Error(`ยอดเงินชำระ (${amountVal.toLocaleString()} บาท) ร่วมกับยอดที่เคยชำระแล้ว (${currentPaid.toLocaleString()} บาท) เกินกว่ายอดรวมค่าเช่ารายเดือนทั้งหมด (${totalPrice.toLocaleString()} บาท)\n\nกรุณากรอกยอดชำระไม่เกินยอดคงเหลือค้างชำระ: ${remaining.toLocaleString()} บาท`);
+    throw new Error(`ยอดค่าเช่าห้อง (${rentContrib.toLocaleString()} บาท) ร่วมกับยอดที่เคยชำระแล้ว (${currentPaid.toLocaleString()} บาท) เกินกว่ายอดค่าเช่าห้องทั้งหมด (${totalPrice.toLocaleString()} บาท)\n\nกรุณากรอกยอดค่าเช่าไม่เกินยอดคงเหลือ: ${remaining.toLocaleString()} บาท`);
   }
 
   const isDiscount = paymentForm.method === 'ส่วนลด';
@@ -127,24 +137,61 @@ export async function submitMonthlyPayment({
     }
   }
 
+  // Build descriptive category and note for Room
+  let categoryName = isDiscount ? 'ส่วนลดรายเดือน' : 'ค่าล็อครายเดือน';
+  if (isRoom) {
+    if (isDiscount) {
+      categoryName = 'ส่วนลดห้องเช่า';
+    } else if (rentVal > 0 && (elecVal > 0 || waterVal > 0)) {
+      categoryName = 'ค่าเช่าห้อง+สาธารณูปโภค';
+    } else if (rentVal > 0) {
+      categoryName = 'ค่าเช่าห้องพัก';
+    } else {
+      categoryName = 'ค่าน้ำค่าไฟห้องเช่า';
+    }
+  }
+
+  // Build itemized note
+  const autoNoteParts = [];
+  if (isRoom) {
+    if (rentVal > 0) autoNoteParts.push(`ค่าเช่า ${rentVal.toLocaleString()} บ.`);
+    if (elecVal > 0) autoNoteParts.push(`ค่าไฟ ${elecVal.toLocaleString()} บ.`);
+    if (waterVal > 0) autoNoteParts.push(`ค่าน้ำ ${waterVal.toLocaleString()} บ.`);
+  }
+  const breakdownDesc = autoNoteParts.join(' | ');
+  const userNote = (paymentForm.note || '').trim();
+  const finalNote = userNote
+    ? (breakdownDesc ? `${userNote} (${breakdownDesc})` : userNote)
+    : (breakdownDesc || (isDiscount ? (isRoom ? 'ส่วนลดห้องเช่า' : 'ส่วนลดรายเดือนเพิ่มเติม') : (isRoom ? 'ชำระเงินห้องเช่า' : 'ชำระเงินรายเดือนเพิ่มเติม')));
+
   const txnData = {
     id: txnId,
     booking_ref: activeMonthlyBooking.id,
     date: txnDate,
-    category: isDiscount ? 'ส่วนลดรายเดือน' : 'ค่าล็อครายเดือน',
+    category: categoryName,
     total_amount: amountVal,
     method: paymentForm.method,
-    note: (paymentForm.note || '').trim() || (isDiscount ? 'ส่วนลดรายเดือนเพิ่มเติม' : 'ชำระเงินรายเดือนเพิ่มเติม'),
+    note: finalNote,
     officer: adminUser?.name || 'System',
     timestamp: new Date().toISOString(),
-    stall_amt: amountVal,
-    elec_amt: 0,
+    stall_amt: isRoom ? rentVal : amountVal,
+    elec_amt: elecVal,
     storage_amt: 0,
     bill_type: 'General',
     slip_url: finalSlipUrl
   };
 
-  const { error: txnError } = await supabase.from('transactions').insert(txnData);
+  let txnPayload = { ...txnData };
+  if (isRoom && waterVal > 0) {
+    txnPayload.water_amt = waterVal;
+  }
+  let { error: txnError } = await supabase.from('transactions').insert(txnPayload);
+  if (txnError && txnError.message?.includes('water_amt')) {
+    // If water_amt column does not exist in schema yet, fallback gracefully
+    delete txnPayload.water_amt;
+    const retry = await supabase.from('transactions').insert(txnPayload);
+    txnError = retry.error;
+  }
   if (txnError) throw txnError;
 
   const newStatus = newPaid >= (totalPrice - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
@@ -207,11 +254,18 @@ export async function deleteMonthlyTransaction({
   // Recalculate remaining paid amount
   const { data: remainingTxns, error: txError } = await supabase
     .from('transactions')
-    .select('total_amount')
+    .select('total_amount, stall_amt')
     .eq('booking_ref', activeMonthlyBooking.id);
   if (txError) throw txError;
 
-  const newPaid = (remainingTxns || []).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0);
+  const isRoom = activeMonthlyBooking.customer_type === 'Room';
+  const newPaid = (remainingTxns || []).reduce((sum, t) => {
+    if (isRoom) {
+      const rentPortion = (t.stall_amt !== undefined && t.stall_amt !== null) ? parseFloat(t.stall_amt) : parseFloat(t.total_amount);
+      return sum + (isNaN(rentPortion) ? 0 : rentPortion);
+    }
+    return sum + (parseFloat(t.total_amount) || 0);
+  }, 0);
   const totalPrice = parseNumber(activeMonthlyBooking.total_price || 0);
   const newStatus = newPaid >= (totalPrice - 0.01) ? 'ชำระแล้ว' : 'ค้างชำระ';
 
