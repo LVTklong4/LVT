@@ -134,6 +134,7 @@ export const syncDailyBookingsFromLegacy = async () => {
     const { data: pageData, error: mbFetchErr } = await supabase
       .from('monthly_bookings')
       .select('id')
+      .order('id', { ascending: true })
       .range(fromIdx, fromIdx + pageSize - 1);
     if (mbFetchErr) throw mbFetchErr;
     if (pageData && pageData.length > 0) {
@@ -263,6 +264,7 @@ export const archiveMonthToGoogleDrive = async ({ targetMonth, webhookUrl, purge
       .gte('date', startDateIso)
       .lte('date', endDateIso)
       .order('date', { ascending: true })
+      .order('id', { ascending: true })
       .range(fromB, fromB + 999);
     if (error) throw error;
     if (data && data.length > 0) {

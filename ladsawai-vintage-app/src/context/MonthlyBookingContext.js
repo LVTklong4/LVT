@@ -205,7 +205,8 @@ export function MonthlyBookingProvider({ children }) {
             .from('monthly_bookings')
             .select('*')
             .range(from, to)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .order('id', { ascending: false });
 
           if (error) throw error;
           if (data && data.length > 0) {
