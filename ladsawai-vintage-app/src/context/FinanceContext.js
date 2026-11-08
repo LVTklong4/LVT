@@ -264,8 +264,16 @@ export function FinanceProvider({ children }) {
 
       // Apply category filter in-memory if needed
       if (filters.category && filters.category !== 'ทั้งหมด') {
-        filteredIncome = filteredIncome.filter(item => item.category === filters.category);
-        filteredExpense = filteredExpense.filter(item => item.category === filters.category);
+        const cat = filters.category;
+        const matchesCategory = (item) => {
+          if (item.category === cat) return true;
+          if (cat === 'ห้องเช่า' && (item.category?.includes('ห้องเช่า') || item.category?.includes('ห้องพัก'))) {
+            return true;
+          }
+          return false;
+        };
+        filteredIncome = filteredIncome.filter(matchesCategory);
+        filteredExpense = filteredExpense.filter(item => item.category === cat);
       }
 
       // Apply payment method filter in-memory if needed
@@ -420,6 +428,7 @@ export function FinanceProvider({ children }) {
               t.category?.includes('ประกัน') ||
               t.category?.includes('เบ็ดเตล็ด') ||
               t.category?.includes('บริการอื่นๆ') ||
+              t.category?.includes('ห้องเช่า') ||
               t.category?.includes('อื่นๆ') ||
               t.category?.includes('รายได้อื่นๆ') ||
               t.category?.includes('รายรับอื่นๆ')
@@ -477,7 +486,7 @@ export function FinanceProvider({ children }) {
             breakdown.storage.cash += payment.cash;
             breakdown.storage.transfer += payment.transfer;
             breakdown.storage.total += amt;
-          } else if (t.booking_ref && (t.category?.includes('รายเดือน') || t.category?.includes('สัญญา'))) {
+          } else if (t.booking_ref && (t.category?.includes('รายเดือน') || t.category?.includes('สัญญา') || t.category?.includes('ห้องเช่า') || t.category?.includes('ห้องพัก'))) {
             monthlyIncome += amt;
             breakdown.monthly.cash += payment.cash;
             breakdown.monthly.transfer += payment.transfer;

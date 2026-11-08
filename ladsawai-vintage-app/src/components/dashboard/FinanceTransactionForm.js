@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { Plus, Loader2, TrendingUp, TrendingDown, Lock } from 'lucide-react';
 
-export const incomeCategories = ['ค่าล็อครายวัน', 'ค่าล็อคประจำ', 'ค่าล็อครายเดือน', 'ค่าปรับ', 'เงินประกัน/มัดจำ', 'รายได้เบ็ดเตล็ด', 'ค่าบริการอื่นๆ', 'อื่นๆ'];
+export const incomeCategories = ['ค่าล็อครายวัน', 'ค่าล็อคประจำ', 'ค่าล็อครายเดือน', 'ห้องเช่า', 'ค่าปรับ', 'เงินประกัน/มัดจำ', 'รายได้เบ็ดเตล็ด', 'ค่าบริการอื่นๆ', 'อื่นๆ'];
 export const expenseCategories = [
   'ค่าจ้างพนักงาน', 'เงินเดือนพนักงาน', 'ค่าล่วงเวลา (OT)', 'สวัสดิการพนักงาน', 'โบนัส/เงินพิเศษ',
   'ค่าน้ำส่วนกลาง', 'ค่าไฟส่วนกลาง', 'ค่ากำจัดขยะ', 'ค่าซ่อมบำรุง', 'ค่าการตลาด', 
@@ -190,7 +190,7 @@ export default function FinanceTransactionForm({ activeTab, onSuccess, defaultDa
               type="text" 
               value={incomeForm.description} 
               onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
-              placeholder="เช่น ค่าปรับถังขยะแผง A12"
+              placeholder={incomeForm.category === 'ห้องเช่า' ? "เช่น ค่าเช่าห้องพัก / ค่าน้ำค่าไฟห้องพัก" : "เช่น ค่าปรับถังขยะแผง A12 / รายได้เบ็ดเตล็ด"}
               className="p-2 border border-emerald-300 rounded text-xs focus:ring-1 focus:ring-emerald-500 bg-white" 
             />
           </div>

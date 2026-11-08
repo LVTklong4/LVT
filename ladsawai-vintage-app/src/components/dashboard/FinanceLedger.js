@@ -385,7 +385,7 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                     ) : (
                       paginatedList.map((item) => {
                         const isInc = item.entryType === 'income';
-                        const isSystemOrigin = Boolean(
+                        const isSystemOrigin = !item.id?.startsWith('INC-') && Boolean(
                           item.booking_ref || 
                           item.bill_type === 'Bookings' || 
                           item.bill_type === 'Monthly' || 
@@ -401,7 +401,10 @@ export default function FinanceLedger({ onOpenDailyClosing, defaultDate }) {
                         
                         let originLabel = '✍️ คีย์ผ่านสมุดบัญชี';
                         let originBg = 'bg-gray-100 text-gray-700 border-gray-200';
-                        if (item.booking_ref?.startsWith('BK-') || item.category?.includes('รายเดือน') || item.bill_type === 'Monthly') {
+                        if (item.category?.includes('ห้องเช่า') || item.category?.includes('ห้องพัก')) {
+                          originLabel = item.booking_ref ? '🏠 สัญญาห้องเช่า' : '🏠 ห้องเช่า';
+                          originBg = 'bg-blue-100 text-blue-800 border-blue-200';
+                        } else if (item.booking_ref?.startsWith('BK-') || item.category?.includes('รายเดือน') || item.bill_type === 'Monthly') {
                           originLabel = '📋 สัญญารายเดือน';
                           originBg = 'bg-purple-100 text-purple-800 border-purple-200';
                         } else if (item.category?.includes('คลองถม') || item.bill_type === 'klongthom') {
