@@ -283,3 +283,46 @@ export const formatThaiDateRangeShort = (startDateStr, endDateStr) => {
 
   return `${day1} ${m1} - ${day2} ${m2} ${y2}`;
 };
+
+/**
+ * Configuration and badge styles for customer types:
+ * รายเดือน (Standard), ประจำ (Regular), วีไอพี (VIP), ห้องเช่า (Room)
+ */
+export const getCustomerTypeConfig = (customerType) => {
+  const cType = customerType || 'Standard';
+  switch (cType) {
+    case 'Regular':
+      return {
+        key: 'Regular',
+        label: 'ประจำ',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
+        dotClass: 'bg-amber-500',
+        monthBadge: 'bg-amber-50/80 text-amber-900 border-amber-200'
+      };
+    case 'VIP':
+      return {
+        key: 'VIP',
+        label: 'วีไอพี',
+        badgeClass: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-300',
+        dotClass: 'bg-fuchsia-500',
+        monthBadge: 'bg-fuchsia-50/80 text-fuchsia-900 border-fuchsia-200'
+      };
+    case 'Room':
+      return {
+        key: 'Room',
+        label: 'ห้องเช่า',
+        badgeClass: 'bg-blue-50 text-blue-800 border-blue-300',
+        dotClass: 'bg-blue-500',
+        monthBadge: 'bg-blue-50/80 text-blue-900 border-blue-200'
+      };
+    case 'Standard':
+    default:
+      return {
+        key: 'Standard',
+        label: 'รายเดือน',
+        badgeClass: 'bg-[#E1BEE7]/40 text-[#4A148C] border-[#BA68C8]/60',
+        dotClass: 'bg-purple-600',
+        monthBadge: 'bg-purple-50/70 text-purple-900 border-purple-200'
+      };
+  }
+};

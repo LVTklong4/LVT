@@ -23,7 +23,8 @@ import {
   monthNamesFull,
   formatBookingMonth,
   sortThaiMonthsDescending,
-  formatPhoneDisplay
+  formatPhoneDisplay,
+  getCustomerTypeConfig
 } from '@/utils/thaiDateHelper';
 
 export default function MonthlyManagerLayout() {
@@ -287,7 +288,6 @@ export default function MonthlyManagerLayout() {
                         <span className="text-[10px] text-amber-900/70">{renderSortArrow('booking_month')}</span>
                       </div>
                     </th>
-                    <th className="p-2 select-none whitespace-nowrap">ประเภท</th>
                     <th className="p-2 select-none whitespace-nowrap">ลูกค้า</th>
                     <th className="p-2 select-none whitespace-nowrap">ล็อค</th>
                     <th 
@@ -323,7 +323,7 @@ export default function MonthlyManagerLayout() {
                 <tbody className="divide-y bg-white">
                   {loadingMonthly ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-gray-500 font-bold">
+                      <td colSpan={7} className="p-8 text-center text-gray-500 font-bold">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Loader2 className="w-6 h-6 text-amber-800 animate-spin" />
                           <span className="text-xs">กำลังโหลดข้อมูลลูกค้ารายเดือน...</span>
@@ -332,7 +332,7 @@ export default function MonthlyManagerLayout() {
                     </tr>
                   ) : paginatedList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-gray-400 font-bold">
+                      <td colSpan={7} className="p-8 text-center text-gray-400 font-bold">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <AlertCircle className="w-6 h-6 text-amber-900/40" />
                           <span className="text-xs text-gray-600">ไม่พบข้อมูลลูกค้ารายเดือนในเงื่อนไขที่เลือก</span>
@@ -358,6 +358,8 @@ export default function MonthlyManagerLayout() {
                       return '-';
                     })();
 
+                    const typeConf = getCustomerTypeConfig(item.customer_type);
+
                     return (
                       <tr 
                         key={item.id} 
@@ -369,22 +371,16 @@ export default function MonthlyManagerLayout() {
                           activeMonthlyBooking?.id === item.id ? 'bg-[#F5E6D3]/60 hover:bg-[#F5E6D3]/80' : ''
                         }`}
                       >
-                        <td className="p-2 font-semibold text-gray-700 whitespace-nowrap">
-                          {formatBookingMonth(item.booking_month)}
-                        </td>
-                         <td className="p-2 whitespace-nowrap">
-                          {(() => {
-                            const cType = item.customer_type || 'Standard';
-                            if (cType === 'Regular') {
-                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">ประจำ</span>;
-                            } else if (cType === 'VIP') {
-                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">VIP</span>;
-                            } else if (cType === 'Room') {
-                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">ห้องเช่า</span>;
-                            } else {
-                              return <span className="inline-block w-[68px] text-center py-0.5 rounded bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] font-bold text-[10px]">รายเดือน</span>;
-                            }
-                          })()}
+                        <td className="p-2 whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[11px] font-extrabold border ${typeConf.monthBadge}`}>
+                              {formatBookingMonth(item.booking_month)}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-black border shadow-2xs ${typeConf.badgeClass}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${typeConf.dotClass}`} />
+                              {typeConf.label}
+                            </span>
+                          </div>
                         </td>
                         <td className="p-2">
                           <div className="font-bold text-gray-800">{item.booker_name || item.customer_name}</div>
@@ -508,13 +504,23 @@ export default function MonthlyManagerLayout() {
                       </div>
                     )}
                   </div>
-                  <div className="text-[11px] text-gray-600 mt-1 font-bold">
-                    ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span>
+                  <div className="text-[11px] text-gray-600 mt-1 font-bold flex items-center gap-1.5 flex-wrap">
+                    <span>ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span></span>
+                    <span>|</span>
                     {activeMonthlyBooking.customer_type === 'Room' ? (
-                      <span> | <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">ห้องเช่า</span></span>
+                      <span className="text-[#8B4513] font-bold">{cleanStallName(activeMonthlyBooking.stalls) || 'ห้องเช่า'}</span>
                     ) : (
-                      <span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls) || '-'}</span></span>
+                      <span>ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls) || '-'}</span></span>
                     )}
+                    {(() => {
+                      const typeConf = getCustomerTypeConfig(activeMonthlyBooking.customer_type);
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-black border ${typeConf.badgeClass}`}>
+                          <span className={`w-1 h-1 rounded-full ${typeConf.dotClass}`} />
+                          {typeConf.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="text-[10px] text-gray-500 mt-0.5">
                     {activeMonthlyBooking.customer_type === 'Regular' ? (
@@ -694,9 +700,9 @@ export default function MonthlyManagerLayout() {
             <div className="h-4 w-[1px] bg-amber-900/40 hidden sm:block" />
 
             <div className="flex items-center gap-1.5 text-[10px]">
-              <span className="bg-[#E1BEE7] text-[#4A148C] border border-[#BA68C8] px-1.5 py-0.5 rounded font-bold">รายเดือน: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
+              <span className="bg-[#E1BEE7]/60 text-[#4A148C] border border-[#BA68C8] px-1.5 py-0.5 rounded font-bold">รายเดือน: {filteredMonthlyList.filter(item => !item.customer_type || item.customer_type === 'Standard').length}</span>
               <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold">ประจำ: {filteredMonthlyList.filter(item => item.customer_type === 'Regular').length}</span>
-              <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-bold">VIP: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
+              <span className="bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200 px-1.5 py-0.5 rounded font-bold">วีไอพี: {filteredMonthlyList.filter(item => item.customer_type === 'VIP').length}</span>
               <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-bold">ห้องเช่า: {filteredMonthlyList.filter(item => item.customer_type === 'Room').length}</span>
             </div>
 

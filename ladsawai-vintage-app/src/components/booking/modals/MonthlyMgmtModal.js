@@ -3,7 +3,7 @@
 import React from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
-import { monthNamesFull } from '@/utils/thaiDateHelper';
+import { monthNamesFull, getCustomerTypeConfig } from '@/utils/thaiDateHelper';
 import NewMonthlyModal from './NewMonthlyModal';
 import EditMonthlyModal from './EditMonthlyModal';
 import MonthlyPaymentModal from './MonthlyPaymentModal';
@@ -240,8 +240,21 @@ export default function MonthlyMgmtModal() {
                               activeMonthlyBooking?.id === item.id ? 'bg-[#F5E6D3]/60 hover:bg-[#F5E6D3]/80' : ''
                             }`}
                           >
-                            <td className="p-2 font-semibold text-gray-700 whitespace-nowrap">
-                              {formatBookingMonth(item.booking_month)}
+                            <td className="p-2 whitespace-nowrap">
+                              {(() => {
+                                const typeConf = getCustomerTypeConfig(item.customer_type);
+                                return (
+                                  <div className="inline-flex items-center gap-1.5">
+                                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-extrabold border ${typeConf.monthBadge}`}>
+                                      {formatBookingMonth(item.booking_month)}
+                                    </span>
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-black border shadow-2xs ${typeConf.badgeClass}`}>
+                                      <span className={`w-1.5 h-1.5 rounded-full ${typeConf.dotClass}`} />
+                                      {typeConf.label}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="p-2">
                               <div className="font-bold text-gray-800">{item.booker_name || item.customer_name}</div>
@@ -363,8 +376,23 @@ export default function MonthlyMgmtModal() {
                           )}
                         </div>
                       </div>
-                      <div className="text-[11px] text-gray-600 mt-1 font-bold">
-                        ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span> | ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls)}</span>
+                      <div className="text-[11px] text-gray-600 mt-1 font-bold flex items-center gap-1.5 flex-wrap">
+                        <span>ผู้เช่า: <span className="text-[#8B4513]">{activeMonthlyBooking.booker_name}</span></span>
+                        <span>|</span>
+                        {activeMonthlyBooking.customer_type === 'Room' ? (
+                          <span className="text-[#8B4513] font-bold">{cleanStallName(activeMonthlyBooking.stalls) || 'ห้องเช่า'}</span>
+                        ) : (
+                          <span>ล็อค: <span className="text-[#8B4513]">{cleanStallName(activeMonthlyBooking.stalls) || '-'}</span></span>
+                        )}
+                        {(() => {
+                          const typeConf = getCustomerTypeConfig(activeMonthlyBooking.customer_type);
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-black border ${typeConf.badgeClass}`}>
+                              <span className={`w-1 h-1 rounded-full ${typeConf.dotClass}`} />
+                              {typeConf.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <div className="text-[10px] text-gray-500 mt-0.5">
                         ยอดเช่า: <span className="font-semibold text-gray-700">{parseNumber(activeMonthlyBooking?.total_price).toLocaleString()}.-</span> | ชำระแล้ว: <span className="font-semibold text-green-700">{parseNumber(activeMonthlyBooking?.paid_amount || 0).toLocaleString()}.-</span> | คงเหลือ: <span className="font-semibold text-red-600">{(parseNumber(activeMonthlyBooking?.total_price) - parseNumber(activeMonthlyBooking?.paid_amount || 0)).toLocaleString()}.-</span>

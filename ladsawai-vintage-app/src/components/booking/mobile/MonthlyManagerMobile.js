@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { cleanStallName, parseNumber, formatPrice } from '@/utils/numberHelper';
-import { monthNamesFull, formatBookingMonth, sortThaiMonthsDescending, formatPhoneDisplay } from '@/utils/thaiDateHelper';
+import { monthNamesFull, formatBookingMonth, sortThaiMonthsDescending, formatPhoneDisplay, getCustomerTypeConfig } from '@/utils/thaiDateHelper';
 import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsService';
 import MonthlyTableFooter from '../modals/MonthlyTableFooter';
 import {
@@ -281,7 +281,7 @@ export default function MonthlyManagerMobile({ onClose }) {
             })();
 
             const customerName = item.booker_name || item.customer_name || 'ไม่ระบุชื่อ';
-            const isRegular = item.customer_type === 'Regular';
+            const typeConf = getCustomerTypeConfig(item.customer_type);
 
             return (
               <div
@@ -297,13 +297,8 @@ export default function MonthlyManagerMobile({ onClose }) {
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="bg-gradient-to-r from-[#8B4513] to-[#5D4037] text-white text-xs font-black px-2.5 py-0.5 rounded-lg shadow-2xs tracking-wide">
-                      ล็อค {displayStalls}
+                      {item.customer_type === 'Room' ? (cleanStallName(displayStalls) || 'ห้องเช่า') : `ล็อค ${displayStalls}`}
                     </span>
-                    {isRegular && (
-                      <span className="bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-extrabold px-1.5 py-0.5 rounded">
-                        ประจำ
-                      </span>
-                    )}
                     {isNonRenew && (
                       <span className="bg-red-100 text-red-700 border border-red-200 text-[10px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5">
                         <CalendarX className="w-3 h-3" /> ไม่ต่อสัญญา
@@ -328,10 +323,16 @@ export default function MonthlyManagerMobile({ onClose }) {
                       <User className="w-3.5 h-3.5 text-amber-800 shrink-0" />
                       {customerName}
                     </h4>
-                    <div className="flex items-center gap-2 text-[11px] text-gray-500 font-bold mt-0.5">
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-bold mt-0.5 flex-wrap">
                       <span className="text-amber-900">{item.product || 'สินค้าทั่วไป'}</span>
                       <span>•</span>
-                      <span className="text-gray-400 font-mono">{formatBookingMonth(item.booking_month)}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-black border ${typeConf.monthBadge}`}>
+                        {formatBookingMonth(item.booking_month)}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-black border shadow-2xs ${typeConf.badgeClass}`}>
+                        <span className={`w-1 h-1 rounded-full ${typeConf.dotClass}`} />
+                        {typeConf.label}
+                      </span>
                     </div>
                   </div>
 
@@ -469,7 +470,15 @@ export default function MonthlyManagerMobile({ onClose }) {
               <div className="bg-[#FAF6EE] p-3 rounded-xl border border-amber-200/60 space-y-1.5">
                 <div className="flex justify-between items-center text-gray-700">
                   <span className="text-gray-500 font-bold">ประเภท:</span>
-                  <span className="font-extrabold text-gray-900">{selectedMobileItem.customer_type || 'Standard'}</span>
+                  {(() => {
+                    const drawerTypeConf = getCustomerTypeConfig(selectedMobileItem.customer_type);
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${drawerTypeConf.badgeClass}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${drawerTypeConf.dotClass}`} />
+                        {drawerTypeConf.label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex justify-between items-center text-gray-700">
                   <span className="text-gray-500 font-bold">สินค้า:</span>
