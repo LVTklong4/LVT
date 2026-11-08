@@ -24,7 +24,8 @@ import {
   formatBookingMonth,
   sortThaiMonthsDescending,
   formatPhoneDisplay,
-  getCustomerTypeConfig
+  getCustomerTypeConfig,
+  getCurrentBookingMonthThai
 } from '@/utils/thaiDateHelper';
 
 export default function MonthlyManagerLayout() {
@@ -246,8 +247,7 @@ export default function MonthlyManagerLayout() {
               >
                 <option value="ทั้งหมด">ทั้งหมด</option>
                 {(() => {
-                  const now = new Date();
-                  const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
+                  const currentMonthYear = getCurrentBookingMonthThai();
                   const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
                   monthSet.add(currentMonthYear);
                   return sortThaiMonthsDescending(Array.from(monthSet)).map(month => (

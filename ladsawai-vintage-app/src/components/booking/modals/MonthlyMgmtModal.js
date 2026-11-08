@@ -3,7 +3,7 @@
 import React from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { Search, CalendarDays, RotateCcw, Loader2, Plus, Trash2, X, FileText, Info, PlusCircle, Printer, Banknote, CalendarX, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
-import { monthNamesFull, getCustomerTypeConfig } from '@/utils/thaiDateHelper';
+import { monthNamesFull, getCustomerTypeConfig, getCurrentBookingMonthThai } from '@/utils/thaiDateHelper';
 import NewMonthlyModal from './NewMonthlyModal';
 import EditMonthlyModal from './EditMonthlyModal';
 import MonthlyPaymentModal from './MonthlyPaymentModal';
@@ -129,8 +129,7 @@ export default function MonthlyMgmtModal() {
                   >
                     <option value="ทั้งหมด">ทั้งหมด</option>
                     {(() => {
-                      const now = new Date();
-                      const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
+                      const currentMonthYear = getCurrentBookingMonthThai();
                       const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
                       monthSet.add(currentMonthYear);
                       return sortThaiMonthsDescending(Array.from(monthSet)).map(month => (

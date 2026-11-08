@@ -237,6 +237,16 @@ export const computeNextMonthThai = (monthYearStr) => {
   return `${monthNamesFull[nextDate.getMonth()]} ${nextDate.getFullYear() + 543}`;
 };
 
+/**
+ * Get current Thai Buddhist month and year string, e.g. "พฤศจิกายน 2569"
+ */
+export const getCurrentBookingMonthThai = () => {
+  const now = new Date();
+  const thaiMonth = monthNamesFull[now.getMonth()];
+  const thaiYear = now.getFullYear() + 543;
+  return `${thaiMonth} ${thaiYear}`;
+};
+
 export const formatPhoneDisplay = (phoneStr) => {
   if (!phoneStr) return '-';
   const str = String(phoneStr).trim();

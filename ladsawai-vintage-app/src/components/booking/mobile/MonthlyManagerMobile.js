@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { cleanStallName, parseNumber, formatPrice } from '@/utils/numberHelper';
-import { monthNamesFull, formatBookingMonth, sortThaiMonthsDescending, formatPhoneDisplay, getCustomerTypeConfig } from '@/utils/thaiDateHelper';
+import { monthNamesFull, formatBookingMonth, sortThaiMonthsDescending, formatPhoneDisplay, getCustomerTypeConfig, getCurrentBookingMonthThai } from '@/utils/thaiDateHelper';
 import { calculateMonthlySummaryStats } from '@/services/monthly/monthlyStatsService';
 import MonthlyTableFooter from '../modals/MonthlyTableFooter';
 import {
@@ -195,8 +195,7 @@ export default function MonthlyManagerMobile({ onClose }) {
             >
               <option value="ทั้งหมด">ทุกล็อต/เดือน</option>
               {(() => {
-                const now = new Date();
-                const currentMonthYear = `${monthNamesFull[now.getMonth()]} ${now.getFullYear() + 543}`;
+                const currentMonthYear = getCurrentBookingMonthThai();
                 const monthSet = new Set(monthlyList.map(item => formatBookingMonth(item.booking_month)).filter(m => m !== '-'));
                 monthSet.add(currentMonthYear);
                 return sortThaiMonthsDescending(Array.from(monthSet)).map(month => (

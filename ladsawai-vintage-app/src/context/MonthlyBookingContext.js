@@ -8,7 +8,8 @@ import {
   formatBookingMonth,
   sortThaiMonthsDescending,
   formatPhoneDisplay,
-  getBookingMonthStr
+  getBookingMonthStr,
+  getCurrentBookingMonthThai
 } from '@/utils/thaiDateHelper';
 import { cleanStallName, parseNumber } from '@/utils/numberHelper';
 import {
@@ -52,7 +53,7 @@ export function MonthlyBookingProvider({ children }) {
   const [stalls, setStalls] = useState([]);
 
   // Filters & Sorting
-  const [monthlyMonthFilter, setMonthlyMonthFilter] = useState('ทั้งหมด');
+  const [monthlyMonthFilter, setMonthlyMonthFilter] = useState(() => getCurrentBookingMonthThai());
   const [monthlySearchQuery, setMonthlySearchQuery] = useState('');
   const [monthlySortField, setMonthlySortField] = useState('stall_name');
   const [monthlySortOrder, setMonthlySortOrder] = useState('asc');
