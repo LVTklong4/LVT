@@ -30,7 +30,7 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const [countedCash, setCountedCash] = useState('');
   const [discrepancyNote, setDiscrepancyNote] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  // Default to false: เงินส่วนนี้เป็นเงินไว้บริหารโดยไม่อยากให้ระบุในใบปิดยอด ถ้าติ๊กถึงจะรวมไปในรายการปิดยอด
+  // Default to false: ไม่รวมเงินสดรับล่วงหน้าในยอดปิดกะ ถ้าติ๊กถึงจะรวมไปในรายการปิดยอด
   const [includeAdvanceCash, setIncludeAdvanceCash] = useState(false);
   const [showAdvanceDetails, setShowAdvanceDetails] = useState(false);
 
@@ -183,9 +183,6 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
     if (isAdmin && summary?.cashInAdvance > 0) {
       if (includeAdvanceCash && !finalNote.includes('รับล่วงหน้า')) {
         const noteAppend = `*รวมเงินสดรับล่วงหน้า ${summary.cashInAdvance.toLocaleString()} บ. ในการปิดยอดนี้`;
-        finalNote = finalNote ? `${finalNote} | ${noteAppend}` : noteAppend;
-      } else if (!includeAdvanceCash && !finalNote.includes('รับล่วงหน้า')) {
-        const noteAppend = `*นับเฉพาะเงินสดรับในกะวันนี้ ${effectiveCashIn.toLocaleString()} บ. (ไม่รวมเงินสดรับล่วงหน้า ${summary.cashInAdvance.toLocaleString()} บ. ที่แยกไว้บริหาร)`;
         finalNote = finalNote ? `${finalNote} | ${noteAppend}` : noteAppend;
       }
     }
@@ -529,7 +526,7 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                           {includeAdvanceCash ? (
                             <span className="text-emerald-800 font-bold">✓ ติ๊กเลือกแล้ว: รวมไปในรายการและใบปิดยอด</span>
                           ) : (
-                            <span className="text-amber-900 font-bold">✗ ไม่ติ๊ก: ไม่รวมในรายการและใบปิดยอด (แยกไว้บริหาร)</span>
+                            <span className="text-amber-900 font-bold">✗ ไม่ติ๊ก: ไม่รวมในรายการและใบปิดยอด</span>
                           )}
                         </span>
                         <span className="text-amber-700 font-extrabold text-[9px] bg-amber-200/60 px-1.5 py-0.5 rounded border border-amber-300">เฉพาะแอดมิน</span>

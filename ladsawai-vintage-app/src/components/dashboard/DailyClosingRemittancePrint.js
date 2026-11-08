@@ -24,6 +24,23 @@ export default function DailyClosingRemittancePrint({
     return isNaN(n) ? 0 : n;
   };
 
+  const cleanDiscrepancyNote = (discrepancyNote || '')
+    .replace(/\(?\*?ไม่รวมเงินสดรับล่วงหน้า.*?ที่แยกไว้บริหาร\)?/gi, '')
+    .replace(/\*?แยกไว้บริหาร/gi, '')
+    .replace(/\|\s*\|/g, '|')
+    .trim()
+    .replace(/^\|\s*/, '')
+    .replace(/\s*\|$/, '');
+
+  const advanceItems = summary?.advancePaymentItems || [];
+  const isAdvanceIncluded = summary?.includeAdvanceCash || 
+    (summary?.cashInAdvance > 0 && (
+      summary?.existingClosing?.summary?.includeAdvanceCash || 
+      (cleanDiscrepancyNote && cleanDiscrepancyNote.includes('รวมเงินสดรับล่วงหน้า')) || 
+      cashIn > (summary?.cashInToday || 0)
+    ));
+  const advanceTotalCash = advanceItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || summary?.cashInAdvance || 0;
+
   return (
     <div className="hidden print:block w-full max-w-[210mm] mx-auto bg-white text-black p-1 font-sans text-xs leading-tight">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -192,6 +209,38 @@ export default function DailyClosingRemittancePrint({
                 </tr>
               </tbody>
             </table>
+
+            {/* Advance Bookings Breakdown (if included) */}
+            {isAdvanceIncluded && advanceItems.length > 0 && (
+              <div className="mt-2 border border-amber-500 bg-amber-50/80 rounded p-1.5 text-xs">
+                <div className="font-extrabold text-amber-950 flex justify-between items-center mb-1 text-[11px]">
+                  <span>⏳ รายการเงินสดรับล่วงหน้าที่นำมารวมปิดยอด ({advanceItems.length} รายการ)</span>
+                  <span className="font-mono">รวม +{advanceTotalCash.toLocaleString()} ฿</span>
+                </div>
+                <table className="w-full text-left border-collapse border border-amber-300 text-[11px] bg-white">
+                  <thead>
+                    <tr className="bg-amber-100 text-amber-900 font-bold border-b border-amber-300">
+                      <th className="py-0.5 px-1.5 text-center w-8">#</th>
+                      <th className="py-0.5 px-1.5 w-24">ล็อค</th>
+                      <th className="py-0.5 px-1.5">ชื่อผู้ค้า / ผู้จอง</th>
+                      <th className="py-0.5 px-1.5 text-center w-28">วันที่รับเงินเดิม</th>
+                      <th className="py-0.5 px-1.5 text-right w-28">จำนวนเงินสด</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {advanceItems.map((it, idx) => (
+                      <tr key={it.id || idx} className="border-b border-amber-100">
+                        <td className="py-0.5 px-1.5 text-center text-gray-500">{idx + 1}</td>
+                        <td className="py-0.5 px-1.5 font-bold text-blue-900">{it.stall || '-'}</td>
+                        <td className="py-0.5 px-1.5">{it.booker || '-'}</td>
+                        <td className="py-0.5 px-1.5 text-center text-gray-500">{it.payDate || '-'}</td>
+                        <td className="py-0.5 px-1.5 text-right font-mono font-bold text-emerald-800">+{parseNum(it.cash).toLocaleString()} ฿</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* 2. Cash Reconciliation & Denominations (2 Columns) */}
@@ -348,10 +397,10 @@ export default function DailyClosingRemittancePrint({
           </div>
 
           {/* Discrepancy Note */}
-          {discrepancyNote && (
+          {cleanDiscrepancyNote && (
             <div className="border border-amber-300 p-2 rounded bg-amber-50/70 text-xs">
               <strong className="font-bold text-amber-950">หมายเหตุ / เหตุผลเงินขาด-เกิน: </strong>
-              <span className="text-amber-900">{discrepancyNote}</span>
+              <span className="text-amber-900">{cleanDiscrepancyNote}</span>
             </div>
           )}
 

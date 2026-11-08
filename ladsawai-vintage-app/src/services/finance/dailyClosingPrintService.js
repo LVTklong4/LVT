@@ -26,6 +26,15 @@ export function generateDailyClosingRemittanceHTML({
 
   const fmt = (n) => (n ?? 0).toLocaleString();
 
+  // Strip out any administrative note mentioning "แยกไว้บริหาร"
+  const cleanDiscrepancyNote = (discrepancyNote || '')
+    .replace(/\(?\*?ไม่รวมเงินสดรับล่วงหน้า.*?ที่แยกไว้บริหาร\)?/gi, '')
+    .replace(/\*?แยกไว้บริหาร/gi, '')
+    .replace(/\|\s*\|/g, '|')
+    .trim()
+    .replace(/^\|\s*/, '')
+    .replace(/\s*\|$/, '');
+
   // Denominations list
   const denomRows = [
     { label: 'ธนบัตร 1,000 บาท', count: denominations.b1000, mult: 1000 },
@@ -102,6 +111,29 @@ export function generateDailyClosingRemittanceHTML({
       <td style="text-align:right; font-family:monospace; font-weight:bold;">${fmt(summary.carryForward.total)} ฿</td>
     </tr>
   ` : '';
+
+  // Advance Bookings Itemization (if included in this closing)
+  const advanceItems = summary.advancePaymentItems || [];
+  const isAdvanceIncluded = summary.includeAdvanceCash || 
+    (summary.cashInAdvance > 0 && (
+      summary.existingClosing?.summary?.includeAdvanceCash || 
+      (cleanDiscrepancyNote && cleanDiscrepancyNote.includes('รวมเงินสดรับล่วงหน้า')) || 
+      cashIn > (summary.cashInToday || 0)
+    ));
+  const advanceTotalCash = advanceItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || summary.cashInAdvance || 0;
+
+  let advanceRowsHtml = '';
+  if (isAdvanceIncluded && advanceItems.length > 0) {
+    advanceRowsHtml = advanceItems.map((it, idx) => `
+      <tr>
+        <td style="text-align:center; color:#555;">${idx + 1}</td>
+        <td style="font-weight:bold; color:#1e3a8a;">${it.stall || '-'}</td>
+        <td>${it.booker || '-'}</td>
+        <td style="text-align:center; color:#555;">${it.payDate || '-'}</td>
+        <td style="text-align:right; font-family:monospace; font-weight:bold; color:#15803d;">+${fmt(it.cash)} ฿</td>
+      </tr>
+    `).join('');
+  }
 
   // Denominations rows HTML
   const denomRowsHtml = denomRows.map((row) => {
@@ -443,6 +475,30 @@ export function generateDailyClosingRemittanceHTML({
       </tbody>
     </table>
 
+    <!-- Advance Bookings Breakdown (if included) -->
+    ${advanceRowsHtml ? `
+      <div style="margin-top: 3px; margin-bottom: 5px; border: 1px solid #d97706; background: #fffbeb; border-radius: 4px; padding: 3px 6px;">
+        <div style="font-size: 7.5pt; font-weight: 800; color: #92400e; margin-bottom: 2px; display: flex; justify-content: space-between;">
+          <span>⏳ รายการเงินสดรับล่วงหน้าที่นำมารวมปิดยอด (${advanceItems.length} รายการ)</span>
+          <span style="font-family: monospace;">รวม +${fmt(advanceTotalCash)} ฿</span>
+        </div>
+        <table style="margin-bottom: 0; background: #fff; font-size: 7pt;">
+          <thead>
+            <tr style="background: #fef3c7; color: #78350f;">
+              <th style="width: 6%; text-align: center;">#</th>
+              <th style="width: 20%;">ล็อค</th>
+              <th>ชื่อผู้ค้า / ผู้จอง</th>
+              <th style="width: 22%; text-align: center;">วันที่รับเงินเดิม</th>
+              <th style="width: 22%; text-align: right;">จำนวนเงินสด</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${advanceRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+
     <!-- 2. Cash Reconciliation & Denominations (2 Columns) -->
     <div class="section-title">
       <span>2. การกระทบยอดเงินสดและการตรวจนับ (Cash Reconciliation & Denomination Count)</span>
@@ -530,10 +586,10 @@ export function generateDailyClosingRemittanceHTML({
     `}
 
     <!-- Discrepancy Note (if any) -->
-    ${discrepancyNote ? `
+    ${cleanDiscrepancyNote ? `
       <div class="note-box">
         <strong>หมายเหตุ / เหตุผลเงินขาด-เกิน: </strong>
-        <span>${discrepancyNote}</span>
+        <span>${cleanDiscrepancyNote}</span>
       </div>
     ` : ''}
 
