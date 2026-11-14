@@ -90,12 +90,16 @@ export default function StandardBookingLayout() {
   // State & Handler for copying text from confirm modal (e.g. transfer amount)
   const [copiedConfirmText, setCopiedConfirmText] = React.useState(false);
 
-  const handleCopyConfirmText = () => {
+  const handleCopyConfirmText = async () => {
     if (!confirmInfo?.copyText) return;
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(confirmInfo.copyText);
+        await navigator.clipboard.writeText(confirmInfo.copyText);
       } else {
+        throw new Error("Clipboard API unavailable");
+      }
+    } catch (err) {
+      try {
         const textArea = document.createElement("textarea");
         textArea.value = confirmInfo.copyText;
         textArea.style.position = "fixed";
@@ -105,11 +109,14 @@ export default function StandardBookingLayout() {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
+      } catch (fallbackErr) {
+        console.error("Failed to copy text:", fallbackErr);
       }
-      setCopiedConfirmText(true);
-      setTimeout(() => setCopiedConfirmText(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy text:", err);
+    }
+    setCopiedConfirmText(true);
+    // Proceed with saving and closing the modal (acting as confirm/save)
+    if (confirmInfo.onConfirm) {
+      confirmInfo.onConfirm({ copied: true });
     }
   };
 
@@ -180,7 +187,7 @@ export default function StandardBookingLayout() {
                   type="button"
                   onClick={handleCopyConfirmText}
                   className="px-2.5 py-1 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 active:scale-95 text-amber-200 hover:text-white border border-amber-400/40 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs"
-                  title={`คัดลอก: "${confirmInfo.copyText}"`}
+                  title={`คัดลอก: "${confirmInfo.copyText}" และบันทึกทันที`}
                 >
                   {copiedConfirmText ? (
                     <>

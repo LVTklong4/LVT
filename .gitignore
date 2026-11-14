@@ -16,3 +16,4 @@ ladsawai-vintage-app/out/
 ladsawai-vintage-app/build/
 ladsawai-vintage-app/.env*.local
 ladsawai-vintage-app/.vercel/
+._*

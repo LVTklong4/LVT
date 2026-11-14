@@ -386,9 +386,9 @@ export function BookingProvider({ children }) {
         cancelText,
         isDanger,
         copyText,
-        onConfirm: () => {
+        onConfirm: (payload) => {
           setConfirmInfo(null);
-          resolve(true);
+          resolve(payload && typeof payload === 'object' && payload.copied ? payload : true);
         },
         onCancel: () => {
           setConfirmInfo(null);
@@ -870,18 +870,22 @@ export function BookingProvider({ children }) {
       return;
     }
 
+    let isCopiedTransfer = false;
     if (status === 'ค้างชำระ' && totalPaid < totalVal) {
       const remaining = totalVal - totalPaid;
       const transferAmount = totalPaid > 0 ? remaining : totalVal;
       const copyText = `ยอดโอน ${transferAmount} ครับ/ค่ะ`;
-      const isConfirmed = await showConfirm({
+      const confirmRes = await showConfirm({
         title: 'แจ้งเตือนชำระเงินไม่ครบ',
         message: `ยอดเงินที่รับชำระ (${totalPaid} บ.) ยังไม่ครบตามยอดรวมทั้งสิ้น (${totalVal} บ.)\nจะมีส่วนต่างค้างจ่าย ${remaining} บ. ต้องการบันทึกรายการนี้เป็นยอดค้างชำระหรือไม่?`,
         confirmText: 'บันทึกค้างจ่าย',
         cancelText: 'ยกเลิก',
         copyText
       });
-      if (!isConfirmed) return;
+      if (!confirmRes) return;
+      if (confirmRes && typeof confirmRes === 'object' && confirmRes.copied) {
+        isCopiedTransfer = true;
+      }
     }
 
     setLoading(true);
@@ -1015,7 +1019,7 @@ export function BookingProvider({ children }) {
         );
       }
 
-      showAlert("บันทึกการจองสำเร็จ", "สำเร็จ");
+      showAlert(isCopiedTransfer ? "คัดลอกยอดโอนและบันทึกการจองสำเร็จ" : "บันทึกการจองสำเร็จ", "สำเร็จ");
       setShowBookingModal(false);
       fetchBookingsAndStorage();
       broadcastBookingSync({ type: SYNC_EVENT_TYPES.BOOKING_MUTATION, date: selectedDate });
