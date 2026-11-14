@@ -804,10 +804,35 @@ export function MonthlyBookingProvider({ children }) {
   // Renewal Handlers
   const handleRenewMonthlyBooking = useCallback(async () => {
     if (!activeMonthlyBooking) return;
+
+    const targetMonth = computeNextMonthThai(formatBookingMonth(activeMonthlyBooking.booking_month));
+    const activeKey = getCustomerIdentityKey(activeMonthlyBooking);
+    const cleanActiveStalls = cleanStallName(activeMonthlyBooking.stalls);
+
+    // Check if customer already has a contract in target month with DIFFERENT stalls (Moved)
+    let movedContract = null;
+    if (activeKey && !activeKey.startsWith('UNIQUE_')) {
+      movedContract = monthlyList.find(mb =>
+        formatBookingMonth(mb.booking_month) === targetMonth &&
+        getCustomerIdentityKey(mb) === activeKey &&
+        cleanStallName(mb.stalls) !== cleanActiveStalls
+      );
+    }
+
+    let confirmMsg = `ยืนยันการต่อสัญญาสำหรับ "${activeMonthlyBooking.booker_name}" (ล็อค ${activeMonthlyBooking.stalls}) ไปยังรอบเดือนถัดไป หรือไม่?`;
+    let confirmTitle = 'ยืนยันการต่อสัญญารายเดือน';
+    let confirmBtn = 'ต่อสัญญา';
+
+    if (movedContract) {
+      confirmTitle = 'แจ้งเตือน: พบสัญญาย้ายล็อคในเดือนถัดไป';
+      confirmMsg = `⚠️ แจ้งเตือน: พบว่าคุณ "${activeMonthlyBooking.booker_name}" มีสัญญาในรอบเดือน ${targetMonth} ที่ล็อค ${cleanStallName(movedContract.stalls)} อยู่แล้ว\n\nต้องการต่อสัญญาสำหรับล็อคเดิม (${cleanActiveStalls}) เพิ่มอีก 1 สัญญาใช่หรือไม่?`;
+      confirmBtn = 'ยืนยันต่อเพิ่มอีกสัญญา';
+    }
+
     const isConfirmed = await showConfirm({
-      title: 'ยืนยันการต่อสัญญารายเดือน',
-      message: `ยืนยันการต่อสัญญาสำหรับ "${activeMonthlyBooking.booker_name}" (ล็อค ${activeMonthlyBooking.stalls}) ไปยังรอบเดือนถัดไป หรือไม่?`,
-      confirmText: 'ต่อสัญญา',
+      title: confirmTitle,
+      message: confirmMsg,
+      confirmText: confirmBtn,
       cancelText: 'ยกเลิก'
     });
     if (!isConfirmed) return;
@@ -827,7 +852,7 @@ export function MonthlyBookingProvider({ children }) {
     } finally {
       setLoadingMonthly(false);
     }
-  }, [activeMonthlyBooking, showConfirm, stalls, showAlert, fetchMonthlyBookings]);
+  }, [activeMonthlyBooking, showConfirm, stalls, showAlert, fetchMonthlyBookings, monthlyList, cleanStallName, formatBookingMonth]);
 
   const handleBulkRenewSubmit = useCallback(async () => {
     setLoadingMonthly(true);

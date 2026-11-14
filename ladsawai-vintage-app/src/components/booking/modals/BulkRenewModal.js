@@ -53,6 +53,26 @@ export default function BulkRenewModal() {
     });
   }, [monthlyList, targetMonth, getCustomerIdentityKey, cleanStallName, formatBookingMonth]);
 
+  // Smart Detection: Check if customer already has a contract in targetMonth with DIFFERENT stalls (Moved/Changed stall)
+  const getMovedContractInTargetMonth = useCallback((item) => {
+    const itemKey = getCustomerIdentityKey(item);
+    if (!itemKey || itemKey.startsWith('UNIQUE_')) return null;
+    const cleanItemStalls = cleanStallName(item.stalls);
+
+    const targetContracts = monthlyList.filter(mb => 
+      formatBookingMonth(mb.booking_month) === targetMonth &&
+      getCustomerIdentityKey(mb) === itemKey
+    );
+    if (targetContracts.length === 0) return null;
+
+    // If customer already has the exact same stall contract in target month, it's already renewed, not moved
+    if (targetContracts.some(mb => cleanStallName(mb.stalls) === cleanItemStalls)) {
+      return null;
+    }
+
+    return targetContracts[0] || null;
+  }, [monthlyList, targetMonth, getCustomerIdentityKey, cleanStallName, formatBookingMonth]);
+
   const baseSourceBookings = useMemo(() => {
     return monthlyList.filter(item =>
       formatBookingMonth(item.booking_month) === bulkRenewFromMonth &&
@@ -62,15 +82,21 @@ export default function BulkRenewModal() {
 
   const counts = useMemo(() => {
     let renewed = 0;
+    let moved = 0;
     baseSourceBookings.forEach(item => {
-      if (isAlreadyRenewed(item)) renewed++;
+      if (isAlreadyRenewed(item)) {
+        renewed++;
+      } else if (getMovedContractInTargetMonth(item)) {
+        moved++;
+      }
     });
     return {
       total: baseSourceBookings.length,
       renewed,
-      unrenewed: baseSourceBookings.length - renewed
+      moved,
+      unrenewed: baseSourceBookings.length - renewed - moved
     };
-  }, [baseSourceBookings, isAlreadyRenewed]);
+  }, [baseSourceBookings, isAlreadyRenewed, getMovedContractInTargetMonth]);
 
   if (!showBulkRenewModal) return null;
 
@@ -154,6 +180,25 @@ export default function BulkRenewModal() {
                         {counts.unrenewed}
                       </span>
                     </button>
+                    {counts.moved > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setRenewalFilter('moved')}
+                        className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                          renewalFilter === 'moved'
+                            ? 'bg-orange-600 text-white shadow-xs ring-1 ring-orange-500 font-extrabold'
+                            : 'text-orange-800 hover:bg-orange-50'
+                        }`}
+                        title="กรองดูเฉพาะลูกค้าที่ย้ายล็อคในเดือนถัดไปแล้ว"
+                      >
+                        <span>🔄 ย้ายล็อค</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                          renewalFilter === 'moved' ? 'bg-orange-700 text-white' : 'bg-orange-100 text-orange-900'
+                        }`}>
+                          {counts.moved}
+                        </span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setRenewalFilter('renewed')}
@@ -240,9 +285,11 @@ export default function BulkRenewModal() {
                     });
                   }
 
-                  // 2. Filter by renewal status (all | unrenewed | renewed)
+                  // 2. Filter by renewal status (all | unrenewed | moved | renewed)
                   if (renewalFilter === 'unrenewed') {
-                    sourceBookings = sourceBookings.filter(item => !isAlreadyRenewed(item));
+                    sourceBookings = sourceBookings.filter(item => !isAlreadyRenewed(item) && !getMovedContractInTargetMonth(item));
+                  } else if (renewalFilter === 'moved') {
+                    sourceBookings = sourceBookings.filter(item => !isAlreadyRenewed(item) && Boolean(getMovedContractInTargetMonth(item)));
                   } else if (renewalFilter === 'renewed') {
                     sourceBookings = sourceBookings.filter(item => isAlreadyRenewed(item));
                   }
@@ -263,8 +310,9 @@ export default function BulkRenewModal() {
                     return sortOrder === 'asc' ? cmp : -cmp;
                   });
 
-                  const nonRenewedBookings = sourceBookings.filter(item => !isAlreadyRenewed(item));
-                  const allChecked = nonRenewedBookings.length > 0 && nonRenewedBookings.every(b => bulkRenewCheckedIds.includes(b.id));
+                  // Selectable bookings for Select All (exclude already renewed and moved customers)
+                  const selectableBookings = sourceBookings.filter(item => !isAlreadyRenewed(item) && !getMovedContractInTargetMonth(item));
+                  const allChecked = selectableBookings.length > 0 && selectableBookings.every(b => bulkRenewCheckedIds.includes(b.id));
 
                   return (
                     <div>
@@ -276,6 +324,11 @@ export default function BulkRenewModal() {
                             {renewalFilter === 'unrenewed' && (
                               <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded text-[10px]">
                                 เฉพาะที่ยังไม่ต่อ ({sourceBookings.length} รายการ)
+                              </span>
+                            )}
+                            {renewalFilter === 'moved' && (
+                              <span className="bg-orange-200 text-orange-950 px-2 py-0.5 rounded text-[10px]">
+                                เฉพาะที่ย้ายล็อคแล้ว ({sourceBookings.length} รายการ)
                               </span>
                             )}
                             {renewalFilter === 'renewed' && (
@@ -315,17 +368,18 @@ export default function BulkRenewModal() {
                               <input
                                 type="checkbox"
                                 checked={allChecked}
-                                disabled={nonRenewedBookings.length === 0}
+                                disabled={selectableBookings.length === 0}
                                 onChange={() => {
                                   if (allChecked) {
-                                    const nonRenewedIds = new Set(nonRenewedBookings.map(b => b.id));
-                                    setBulkRenewCheckedIds(bulkRenewCheckedIds.filter(id => !nonRenewedIds.has(id)));
+                                    const selectableIds = new Set(selectableBookings.map(b => b.id));
+                                    setBulkRenewCheckedIds(bulkRenewCheckedIds.filter(id => !selectableIds.has(id)));
                                   } else {
-                                    const newIds = new Set([...bulkRenewCheckedIds, ...nonRenewedBookings.map(b => b.id)]);
+                                    const newIds = new Set([...bulkRenewCheckedIds, ...selectableBookings.map(b => b.id)]);
                                     setBulkRenewCheckedIds(Array.from(newIds));
                                   }
                                 }}
                                 className="w-4 h-4 cursor-pointer rounded"
+                                title="เลือกทั้งหมด (ไม่รวมรายการที่ต่อแล้ว หรือย้ายล็อคแล้ว)"
                               />
                             </th>
                             <th className="p-2 w-20">ประเภท</th>
@@ -386,6 +440,8 @@ export default function BulkRenewModal() {
                           ) : (
                             sourceBookings.map(item => {
                               const renewed = isAlreadyRenewed(item);
+                              const movedContract = !renewed ? getMovedContractInTargetMonth(item) : null;
+                              const isMoved = Boolean(movedContract);
                               const isChecked = bulkRenewCheckedIds.includes(item.id);
                               const customEdit = bulkRenewEditData[item.id] || {};
                               const itemKey = getCustomerIdentityKey(item);
@@ -463,6 +519,9 @@ export default function BulkRenewModal() {
                               if (renewed) {
                                 statusText = "ต่อแล้ว";
                                 statusColor = "bg-green-100 text-green-800";
+                              } else if (isMoved) {
+                                statusText = `ย้ายไป ${cleanStallName(movedContract.stalls)}`;
+                                statusColor = "bg-orange-100 text-orange-900 border border-orange-300 font-extrabold";
                               } else if (bulkRenewEditData[item.id]) {
                                 statusText = "พร้อม (แก้ไขแล้ว)";
                                 statusColor = "bg-blue-100 text-blue-800";
@@ -472,7 +531,9 @@ export default function BulkRenewModal() {
                                 <tr 
                                   key={item.id} 
                                   className={`font-medium border-b border-gray-100 transition-colors ${
-                                    isDuplicate 
+                                    isMoved
+                                      ? 'bg-orange-50/40 hover:bg-orange-100/50'
+                                      : isDuplicate 
                                       ? 'bg-amber-50/50 hover:bg-amber-100/50' 
                                       : 'hover:bg-purple-50/20 bg-white'
                                   }`}
@@ -490,6 +551,7 @@ export default function BulkRenewModal() {
                                         }
                                       }}
                                       className="w-4 h-4 cursor-pointer rounded"
+                                      title={isMoved ? `ลูกค้ารายนี้มีสัญญาที่ล็อค ${cleanStallName(movedContract.stalls)} ในรอบเดือน ${targetMonth} แล้ว (ระบบไม่เลือกให้อัตโนมัติ เพื่อป้องกันการต่อสัญญาซ้ำ)` : undefined}
                                     />
                                   </td>
                                   <td className="p-2">
@@ -519,7 +581,17 @@ export default function BulkRenewModal() {
                                     </div>
                                     <div className="text-[10px] text-gray-500 font-normal mt-0.5">{dispPhone || '-'} | สินค้า: {dispProduct || '-'}</div>
                                   </td>
-                                  <td className="p-2 font-bold text-purple-950 font-mono">{cleanStallName(dispStalls)}</td>
+                                  <td className="p-2">
+                                    <div className="font-bold text-purple-950 font-mono">{cleanStallName(dispStalls)}</div>
+                                    {isMoved && (
+                                      <div 
+                                        className="inline-flex items-center gap-1 text-[9.5px] text-orange-800 font-bold bg-orange-100/90 px-1.5 py-0.5 rounded border border-orange-300 mt-0.5 shadow-2xs"
+                                        title={`พบสัญญาในรอบเดือน ${targetMonth} ที่ล็อค ${cleanStallName(movedContract.stalls)} แล้ว`}
+                                      >
+                                        <span>➡️ ย้ายไป {cleanStallName(movedContract.stalls)}</span>
+                                      </div>
+                                    )}
+                                  </td>
                                   <td className="p-2 text-[10px]">{dispDays}</td>
                                   <td className="p-2 text-center font-mono font-bold">{dispElec} หน่วย</td>
                                   <td className="p-2 text-center font-mono font-semibold">{(parseNumber(dispStorage) || 0).toLocaleString()}.-</td>
