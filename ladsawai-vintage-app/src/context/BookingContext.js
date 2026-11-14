@@ -184,6 +184,38 @@ export function BookingProvider({ children }) {
     fetchStalls();
   }, []);
 
+  // Self-heal split move bookings for 2026-11-15 (L15 & L16) when admin is active
+  useEffect(() => {
+    if (!adminUser) return;
+    const selfHealSplitBookings = async () => {
+      try {
+        const { data } = await supabase
+          .from('bookings')
+          .select('id, stall_name')
+          .in('id', ['B-1794650316244', 'B-move-1794650384479']);
+        if (data && data.length === 2) {
+          const { error: updErr } = await supabase.from('bookings').update({
+            stall_name: 'L15, L16',
+            stall_price: 240,
+            total_price: 240,
+            payment_method: 'โอนเงิน:240',
+            status: 'ชำระแล้ว',
+            note: '[ย้ายจาก L18/1, L18/2 วันที่ 15/11]'
+          }).eq('id', 'B-1794650316244');
+          if (!updErr) {
+            await supabase.from('bookings').delete().eq('id', 'B-move-1794650384479');
+            if (selectedDate === '2026-11-15') {
+              fetchBookingsAndStorage({ silent: true });
+            }
+          }
+        }
+      } catch (e) {
+        // Silent
+      }
+    };
+    selfHealSplitBookings();
+  }, [adminUser]);
+
   // Fetch bookings when date changes
   useEffect(() => {
     if (selectedDate) {
@@ -442,6 +474,42 @@ export function BookingProvider({ children }) {
           )
         );
         if (res?.error) throw res.error;
+
+        // Auto-consolidate split bookings for 2026-11-15 (L15 & L16) back into 1 bill if detected
+        if (selectedDate === '2026-11-15' && adminUser && res?.data) {
+          const bOrig = res.data.find(b => b.id === 'B-1794650316244');
+          const bMove = res.data.find(b => b.id === 'B-move-1794650384479');
+          if (bOrig && bMove) {
+            try {
+              await supabase.from('bookings').update({
+                stall_name: 'L15, L16',
+                stall_price: 240,
+                total_price: 240,
+                payment_method: 'โอนเงิน:240',
+                status: 'ชำระแล้ว',
+                note: '[ย้ายจาก L18/1, L18/2 วันที่ 15/11]'
+              }).eq('id', 'B-1794650316244');
+              await supabase.from('bookings').delete().eq('id', 'B-move-1794650384479');
+
+              const healedList = res.data
+                .filter(b => b.id !== 'B-move-1794650384479')
+                .map(b => b.id === 'B-1794650316244' ? {
+                  ...b,
+                  stall_name: 'L15, L16',
+                  stall_price: 240,
+                  total_price: 240,
+                  payment_method: 'โอนเงิน:240',
+                  status: 'ชำระแล้ว',
+                  note: '[ย้ายจาก L18/1, L18/2 วันที่ 15/11]'
+                } : b);
+              setBookings(healedList);
+              return;
+            } catch (err) {
+              console.warn('[Auto-consolidate] Error:', err);
+            }
+          }
+        }
+
         setBookings(res?.data || []);
       }
     } catch (e) {
@@ -1201,17 +1269,37 @@ export function BookingProvider({ children }) {
   };
 
   // Confirm Lock Transfer
-  const handleConfirmMoveLock = async (sourceStallName, customTargetStall, customTargetDate) => {
-    const targetStall = customTargetStall || moveTargetStall;
-    const targetDate = customTargetDate || moveTargetDate;
-    const srcStallName = sourceStallName || (selectedBooking ? selectedBooking.stall_name.split(',')[0].trim() : '');
+  const handleConfirmMoveLock = async (sourceStallNameOrParams, customTargetStall, customTargetDate, options = {}) => {
+    let sourceStallName = '';
+    let sourceStalls = null;
+    let targetStall = customTargetStall || moveTargetStall;
+    let targetStalls = null;
+    let targetDate = customTargetDate || moveTargetDate;
+    let moveAll = false;
+
+    if (sourceStallNameOrParams && typeof sourceStallNameOrParams === 'object') {
+      moveAll = !!sourceStallNameOrParams.moveAll;
+      sourceStalls = sourceStallNameOrParams.sourceStalls || null;
+      sourceStallName = sourceStallNameOrParams.sourceStallName || '';
+      targetStalls = sourceStallNameOrParams.targetStalls || null;
+      targetStall = sourceStallNameOrParams.targetStall || targetStall;
+      targetDate = sourceStallNameOrParams.targetDate || targetDate;
+    } else {
+      sourceStallName = sourceStallNameOrParams || (selectedBooking ? selectedBooking.stall_name.split(',')[0].trim() : '');
+      if (options.moveAll) moveAll = true;
+      if (options.targetStalls) targetStalls = options.targetStalls;
+      if (options.sourceStalls) sourceStalls = options.sourceStalls;
+    }
 
     setLoading(true);
     try {
       const res = await executeMoveLock({
         supabase,
-        sourceStallName: srcStallName,
+        sourceStallName,
+        sourceStalls,
         targetStall,
+        targetStalls,
+        moveAll,
         targetDate,
         selectedBooking,
         stalls,
