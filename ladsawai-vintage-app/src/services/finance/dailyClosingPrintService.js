@@ -128,27 +128,44 @@ export function generateDailyClosingRemittanceHTML({
     </tr>
   ` : '';
 
-  // Advance Bookings Itemization (if included in this closing)
-  const advanceItems = summary.advancePaymentItems || [];
-  const isAdvanceIncluded = summary.includeAdvanceCash || 
-    (summary.cashInAdvance > 0 && (
-      summary.existingClosing?.summary?.includeAdvanceCash || 
-      (cleanDiscrepancyNote && cleanDiscrepancyNote.includes('รวมเงินสดรับล่วงหน้า')) || 
-      cashIn > (summary.cashInToday || 0)
-    ));
-  const advanceTotalCash = advanceItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || summary.cashInAdvance || 0;
+  // Post-Closing Payments Itemization (if included in this closing)
+  const postClosingData = summary.postClosing || {
+    cash: summary.cashInAdvance || 0,
+    transfer: 0,
+    total: summary.cashInAdvance || 0,
+    items: summary.advancePaymentItems || []
+  };
+  const postClosingItems = postClosingData.items || [];
+  const isPostClosingIncluded = Boolean(
+    summary.includePostClosing ||
+    summary.includeAdvanceCash ||
+    summary.existingClosing?.summary?.includePostClosing ||
+    summary.existingClosing?.summary?.includeAdvanceCash ||
+    summary.existingClosing?.post_closing_included ||
+    (cleanDiscrepancyNote && (cleanDiscrepancyNote.includes('รวมยอดชำระหลังปิดยอด') || cleanDiscrepancyNote.includes('รวมเงินสดรับล่วงหน้า'))) ||
+    cashIn > (summary.cashInToday || 0)
+  );
+  const postClosingTotalCash = postClosingItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || postClosingData.cash || 0;
+  const postClosingTotalTransfer = postClosingItems.reduce((sum, it) => sum + parseNum(it.transfer), 0) || postClosingData.transfer || 0;
+  const postClosingGrandTotal = postClosingTotalCash + postClosingTotalTransfer;
 
-  let advanceRowsHtml = '';
-  if (isAdvanceIncluded && advanceItems.length > 0) {
-    advanceRowsHtml = advanceItems.map((it, idx) => `
-      <tr>
-        <td style="text-align:center; color:#555;">${idx + 1}</td>
-        <td style="font-weight:bold; color:#1e3a8a;">${it.stall || '-'}</td>
-        <td>${it.booker || '-'}</td>
-        <td style="text-align:center; color:#555;">${it.payDate || '-'}</td>
-        <td style="text-align:right; font-family:monospace; font-weight:bold; color:#15803d;">+${fmt(it.cash)} ฿</td>
-      </tr>
-    `).join('');
+  let postClosingRowsHtml = '';
+  if (isPostClosingIncluded && postClosingItems.length > 0) {
+    postClosingRowsHtml = postClosingItems.map((it, idx) => {
+      const methodLabel = it.cash > 0 && it.transfer > 0 ? 'สด+โอน' : it.cash > 0 ? 'เงินสด' : 'โอนเงิน';
+      const timeStr = it.payTimestamp ? new Date(it.payTimestamp).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : (it.payDate || '-');
+      const amtVal = parseNum(it.amount || it.cash || it.transfer);
+      return `
+        <tr>
+          <td style="text-align:center; color:#555;">${idx + 1}</td>
+          <td style="font-weight:bold; color:#1e3a8a;">${it.stall || '-'}</td>
+          <td>${it.booker || '-'}</td>
+          <td style="text-align:center; font-weight:bold; color:#4338ca;">${methodLabel}</td>
+          <td style="text-align:center; color:#555;">${timeStr}</td>
+          <td style="text-align:right; font-family:monospace; font-weight:bold; color:#15803d;">+${fmt(amtVal)} ฿</td>
+        </tr>
+      `;
+    }).join('');
   }
 
   // Denominations rows HTML
@@ -491,25 +508,26 @@ export function generateDailyClosingRemittanceHTML({
       </tbody>
     </table>
 
-    <!-- Advance Bookings Breakdown (if included) -->
-    ${advanceRowsHtml ? `
+    <!-- Post-Closing Payments Breakdown (if included) -->
+    ${postClosingRowsHtml ? `
       <div style="margin-top: 3px; margin-bottom: 5px; border: 1px solid #d97706; background: #fffbeb; border-radius: 4px; padding: 3px 6px;">
         <div style="font-size: 7.5pt; font-weight: 800; color: #92400e; margin-bottom: 2px; display: flex; justify-content: space-between;">
-          <span>⏳ รายการเงินสดรับล่วงหน้าที่นำมารวมปิดยอด (${advanceItems.length} รายการ)</span>
-          <span style="font-family: monospace;">รวม +${fmt(advanceTotalCash)} ฿</span>
+          <span>⏳ รายการชำระหลังปิดยอดรอบก่อนที่นำมารวมปิดยอด (${postClosingItems.length} รายการ)</span>
+          <span style="font-family: monospace;">รวม +${fmt(postClosingGrandTotal)} ฿ (สด ${fmt(postClosingTotalCash)} | โอน ${fmt(postClosingTotalTransfer)})</span>
         </div>
         <table style="margin-bottom: 0; background: #fff; font-size: 7pt;">
           <thead>
             <tr style="background: #fef3c7; color: #78350f;">
-              <th style="width: 6%; text-align: center;">#</th>
-              <th style="width: 20%;">ล็อค</th>
+              <th style="width: 5%; text-align: center;">#</th>
+              <th style="width: 18%;">ล็อค</th>
               <th>ชื่อผู้ค้า / ผู้จอง</th>
-              <th style="width: 22%; text-align: center;">วันที่รับเงินเดิม</th>
-              <th style="width: 22%; text-align: right;">จำนวนเงินสด</th>
+              <th style="width: 15%; text-align: center;">ช่องทาง</th>
+              <th style="width: 22%; text-align: center;">วัน-เวลาชำระ</th>
+              <th style="width: 18%; text-align: right;">จำนวนเงิน</th>
             </tr>
           </thead>
           <tbody>
-            ${advanceRowsHtml}
+            ${postClosingRowsHtml}
           </tbody>
         </table>
       </div>

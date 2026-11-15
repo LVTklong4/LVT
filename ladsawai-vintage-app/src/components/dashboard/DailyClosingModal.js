@@ -30,9 +30,14 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const [countedCash, setCountedCash] = useState('');
   const [discrepancyNote, setDiscrepancyNote] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  // Default to false: ไม่รวมเงินสดรับล่วงหน้าในยอดปิดกะ ถ้าติ๊กถึงจะรวมไปในรายการปิดยอด
-  const [includeAdvanceCash, setIncludeAdvanceCash] = useState(false);
-  const [showAdvanceDetails, setShowAdvanceDetails] = useState(false);
+  // Default to false: ไม่รวมยอดชำระหลังปิดยอดรอบก่อนในใบปิดยอดวันนี้ ถ้าติ๊กถึงจะรวมไปในรายการปิดยอด
+  const [includePostClosing, setIncludePostClosing] = useState(false);
+  const [showPostClosingDetails, setShowPostClosingDetails] = useState(false);
+  // Alias for backward compatibility
+  const includeAdvanceCash = includePostClosing;
+  const setIncludeAdvanceCash = setIncludePostClosing;
+  const showAdvanceDetails = showPostClosingDetails;
+  const setShowAdvanceDetails = setShowPostClosingDetails;
 
   // Denominations state
   const [denominations, setDenominations] = useState({
@@ -70,20 +75,20 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
         setFloatAmount(String(res.existingClosing.float_amount || '0'));
         setCountedCash(String(res.existingClosing.counted_cash || ''));
         setDiscrepancyNote(res.existingClosing.discrepancy_note || '');
-        const savedInclude = res.existingClosing?.summary?.includeAdvanceCash;
+        const savedInclude = res.existingClosing?.summary?.includePostClosing ?? res.existingClosing?.summary?.includeAdvanceCash ?? res.existingClosing?.post_closing_included;
         if (typeof savedInclude === 'boolean') {
-          setIncludeAdvanceCash(savedInclude);
-        } else if (res.existingClosing.discrepancy_note?.includes('รวมเงินสดรับล่วงหน้า')) {
-          setIncludeAdvanceCash(true);
+          setIncludePostClosing(savedInclude);
+        } else if (res.existingClosing.discrepancy_note?.includes('รวมยอดชำระหลังปิดยอด') || res.existingClosing.discrepancy_note?.includes('รวมเงินสดรับล่วงหน้า')) {
+          setIncludePostClosing(true);
         } else {
-          setIncludeAdvanceCash(false);
+          setIncludePostClosing(false);
         }
         setIsSaved(true);
       } else {
         setFloatAmount(String(res.suggestedFloat || '0'));
         setCountedCash('');
         setDiscrepancyNote('');
-        setIncludeAdvanceCash(false);
+        setIncludePostClosing(false);
         setIsSaved(false);
       }
     }
@@ -99,20 +104,20 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
             setFloatAmount(String(res.existingClosing.float_amount || '0'));
             setCountedCash(String(res.existingClosing.counted_cash || ''));
             setDiscrepancyNote(res.existingClosing.discrepancy_note || '');
-            const savedInclude = res.existingClosing?.summary?.includeAdvanceCash;
+            const savedInclude = res.existingClosing?.summary?.includePostClosing ?? res.existingClosing?.summary?.includeAdvanceCash ?? res.existingClosing?.post_closing_included;
             if (typeof savedInclude === 'boolean') {
-              setIncludeAdvanceCash(savedInclude);
-            } else if (res.existingClosing.discrepancy_note?.includes('รวมเงินสดรับล่วงหน้า')) {
-              setIncludeAdvanceCash(true);
+              setIncludePostClosing(savedInclude);
+            } else if (res.existingClosing.discrepancy_note?.includes('รวมยอดชำระหลังปิดยอด') || res.existingClosing.discrepancy_note?.includes('รวมเงินสดรับล่วงหน้า')) {
+              setIncludePostClosing(true);
             } else {
-              setIncludeAdvanceCash(false);
+              setIncludePostClosing(false);
             }
             setIsSaved(true);
           } else {
             setFloatAmount(String(res.suggestedFloat || '0'));
             setCountedCash('');
             setDiscrepancyNote('');
-            setIncludeAdvanceCash(false);
+            setIncludePostClosing(false);
             setIsSaved(false);
           }
         }
@@ -126,12 +131,27 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   const floatVal = parseNum(floatAmount);
   const cashIn = summary?.cashIn || 0;
   const cashOut = summary?.cashOut || 0;
-  
-  // If includeAdvanceCash is true (and user is Admin), include full cashIn.
-  // Otherwise, strictly exclude advance cash and use today's cash only.
-  const effectiveCashIn = (isAdmin && includeAdvanceCash && summary?.cashInAdvance > 0)
-    ? cashIn
-    : (summary?.cashInToday !== undefined ? summary.cashInToday : Math.max(0, cashIn - (summary?.cashInAdvance || 0)));
+  const transferIn = summary?.transferIn || 0;
+  const transferOut = summary?.transferOut || 0;
+
+  // Post-closing data (ทั้งเงินสด และ เงินโอน)
+  const postClosing = summary?.postClosing || {
+    cash: summary?.cashInAdvance || 0,
+    transfer: 0,
+    total: summary?.cashInAdvance || 0,
+    items: summary?.advancePaymentItems || []
+  };
+  const hasPostClosing = postClosing.total > 0 || (postClosing.items && postClosing.items.length > 0);
+
+  // Cash In calculation
+  const effectiveCashIn = (isAdmin && includePostClosing && postClosing.cash > 0)
+    ? (summary?.cashInToday !== undefined ? summary.cashInToday + postClosing.cash : cashIn)
+    : (summary?.cashInToday !== undefined ? summary.cashInToday : Math.max(0, cashIn - postClosing.cash));
+
+  // Transfer In calculation
+  const effectiveTransferIn = (isAdmin && includePostClosing && postClosing.transfer > 0)
+    ? (summary?.transferInToday !== undefined ? summary.transferInToday + postClosing.transfer : transferIn)
+    : (summary?.transferInToday !== undefined ? summary.transferInToday : Math.max(0, transferIn - postClosing.transfer));
 
   // Expected Cash = Opening Float + Effective Cash In - Cash Out
   const expectedCashInDrawer = floatVal + effectiveCashIn - cashOut;
@@ -142,29 +162,43 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
   // Shortage / Surplus = Counted Cash - Expected Cash
   const shortageSurplus = countedCashVal !== null ? countedCashVal - expectedCashInDrawer : 0;
 
-  // Effective summary for reports & saving (excluding advance cash if not checked)
-  const advanceCash = summary?.cashInAdvance || 0;
+  // Effective summary for reports & saving (excluding post-closing if not checked)
   const baseDailyCash = summary?.breakdown?.dailyStall?.cash || 0;
-  const adjustedDailyCash = Math.max(0, baseDailyCash - advanceCash);
-  const dailyTransfer = summary?.breakdown?.dailyStall?.transfer || 0;
-  const grossTransfer = summary?.breakdown?.totalIncome?.transfer ?? summary?.transferIn ?? 0;
+  const baseDailyTransfer = summary?.breakdown?.dailyStall?.transfer || 0;
+  const adjustedDailyCash = (isAdmin && includePostClosing)
+    ? baseDailyCash
+    : Math.max(0, baseDailyCash - postClosing.cash);
+  const adjustedDailyTransfer = (isAdmin && includePostClosing)
+    ? baseDailyTransfer
+    : Math.max(0, baseDailyTransfer - postClosing.transfer);
 
-  const effectiveSummary = (!summary || (isAdmin && includeAdvanceCash) || advanceCash === 0)
-    ? summary
+  const effectiveSummary = (!summary || (isAdmin && includePostClosing) || !hasPostClosing)
+    ? {
+        ...summary,
+        cashIn: effectiveCashIn,
+        transferIn: effectiveTransferIn,
+        includePostClosing: isAdmin ? includePostClosing : false,
+        includeAdvanceCash: isAdmin ? includePostClosing : false
+      }
     : {
         ...summary,
         cashIn: effectiveCashIn,
+        transferIn: effectiveTransferIn,
+        includePostClosing: false,
+        includeAdvanceCash: false,
         breakdown: {
           ...summary.breakdown,
           dailyStall: {
             ...summary.breakdown?.dailyStall,
             cash: adjustedDailyCash,
-            total: adjustedDailyCash + dailyTransfer
+            transfer: adjustedDailyTransfer,
+            total: adjustedDailyCash + adjustedDailyTransfer
           },
           totalIncome: {
             ...summary.breakdown?.totalIncome,
             cash: effectiveCashIn,
-            total: effectiveCashIn + grossTransfer
+            transfer: effectiveTransferIn,
+            total: effectiveCashIn + effectiveTransferIn
           }
         }
       };
@@ -180,9 +214,12 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
     }
 
     let finalNote = discrepancyNote || '';
-    if (isAdmin && summary?.cashInAdvance > 0) {
-      if (includeAdvanceCash && !finalNote.includes('รับล่วงหน้า')) {
-        const noteAppend = `*รวมเงินสดรับล่วงหน้า ${summary.cashInAdvance.toLocaleString()} บ. ในการปิดยอดนี้`;
+    if (isAdmin && hasPostClosing) {
+      if (includePostClosing && !finalNote.includes('รวมยอดชำระหลังปิดยอด')) {
+        const noteAppend = `*รวมยอดชำระหลังปิดยอดรอบก่อน ${postClosing.total.toLocaleString()} บ. (สด ${postClosing.cash.toLocaleString()} | โอน ${postClosing.transfer.toLocaleString()}) ในการปิดยอดนี้`;
+        finalNote = finalNote ? `${finalNote} | ${noteAppend}` : noteAppend;
+      } else if (!includePostClosing && !finalNote.includes('รับทราบยอดชำระหลังปิดยอด')) {
+        const noteAppend = `*รับทราบยอดชำระหลังปิดยอดรอบก่อน ${postClosing.total.toLocaleString()} บ. (ไม่รวมในยอดปิดวันนี้และไม่ทบต่อ)`;
         finalNote = finalNote ? `${finalNote} | ${noteAppend}` : noteAppend;
       }
     }
@@ -196,7 +233,8 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
       discrepancyNote: finalNote,
       summary: {
         ...(effectiveSummary || summary),
-        includeAdvanceCash: isAdmin ? includeAdvanceCash : false
+        includePostClosing: isAdmin ? includePostClosing : false,
+        includeAdvanceCash: isAdmin ? includePostClosing : false
       },
       officer: adminUser?.name || 'Admin'
     };
@@ -538,64 +576,82 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                     <span className="text-emerald-700 font-extrabold">+{effectiveCashIn.toLocaleString()} ฿</span>
                   </div>
 
-                  {isAdmin && summary?.cashInAdvance > 0 && (
+                  {isAdmin && hasPostClosing && (
                     <div className="bg-amber-100/70 border border-amber-300 rounded-lg p-2.5 flex flex-col gap-1.5 text-[11px] my-1">
                       <div className="flex justify-between items-center font-bold text-emerald-900">
                         <span>🟢 เงินสดรับจริงในกะวันนี้:</span>
-                        <span className="font-black text-emerald-800">+{summary.cashInToday.toLocaleString()} ฿</span>
+                        <span className="font-black text-emerald-800">+{(summary?.cashInToday || 0).toLocaleString()} ฿</span>
                       </div>
 
                       <div className="flex justify-between items-center font-bold text-amber-950 pt-1 border-t border-amber-200/80">
                         <label className="flex items-center gap-2 cursor-pointer select-none">
                           <input
                             type="checkbox"
-                            checked={includeAdvanceCash}
-                            onChange={(e) => setIncludeAdvanceCash(e.target.checked)}
+                            checked={includePostClosing}
+                            onChange={(e) => setIncludePostClosing(e.target.checked)}
                             className="w-4 h-4 accent-amber-800 rounded cursor-pointer shrink-0"
                           />
-                          <span>⏳ เงินสดรับล่วงหน้าในวันก่อน:</span>
+                          <span>⏳ ยอดชำระหลังปิดยอดรอบก่อน:</span>
                         </label>
                         <div className="flex items-center gap-2">
-                          <span className="font-black text-amber-900">+{summary.cashInAdvance.toLocaleString()} ฿</span>
+                          <span className="font-black text-amber-900">+{postClosing.total.toLocaleString()} ฿</span>
                           <button
                             type="button"
-                            onClick={() => setShowAdvanceDetails(!showAdvanceDetails)}
+                            onClick={() => setShowPostClosingDetails(!showPostClosingDetails)}
                             className="text-[10px] text-amber-800 underline hover:text-amber-950 font-bold cursor-pointer"
                           >
-                            {showAdvanceDetails ? 'ซ่อน' : `ดู ${summary.advancePaymentItems?.length || 0} ล็อค`}
+                            {showPostClosingDetails ? 'ซ่อน' : `ดู ${postClosing.items?.length || 0} รายการ`}
                           </button>
                         </div>
                       </div>
 
+                      <div className="flex justify-between items-center text-[10px] text-amber-900 font-semibold pl-6">
+                        <span>💵 เงินสด: {postClosing.cash.toLocaleString()} ฿ | 📱 โอน: {postClosing.transfer.toLocaleString()} ฿</span>
+                      </div>
+
                       <div className="flex justify-between items-center text-[10px] pl-6 pt-0.5">
                         <span>
-                          {includeAdvanceCash ? (
-                            <span className="text-emerald-800 font-bold">✓ ติ๊กเลือกแล้ว: รวมไปในรายการและใบปิดยอด</span>
+                          {includePostClosing ? (
+                            <span className="text-emerald-800 font-bold">✓ ติ๊กเลือกแล้ว: นำยอดชำระหลังปิดยอดรอบก่อนมารวมในใบปิดยอดวันนี้</span>
                           ) : (
-                            <span className="text-amber-900 font-bold">✗ ไม่ติ๊ก: ไม่รวมในรายการและใบปิดยอด</span>
+                            <span className="text-amber-900 font-bold">✗ ไม่ติ๊ก: ไม่รวมในใบปิดยอด (ถือว่ารับทราบแล้ว เมื่อปิดยอดจะไม่นำไปทบต่อ)</span>
                           )}
                         </span>
                         <span className="text-amber-700 font-extrabold text-[9px] bg-amber-200/60 px-1.5 py-0.5 rounded border border-amber-300">เฉพาะแอดมิน</span>
                       </div>
 
-                      {showAdvanceDetails && summary.advancePaymentItems?.length > 0 && (
-                        <div className="mt-1 max-h-28 overflow-y-auto bg-white/90 rounded border border-amber-200 p-1.5 text-[10px]">
+                      {showPostClosingDetails && postClosing.items?.length > 0 && (
+                        <div className="mt-1 max-h-36 overflow-y-auto bg-white/95 rounded border border-amber-200 p-1.5 text-[10px]">
                           <table className="w-full text-left">
                             <thead>
                               <tr className="border-b text-gray-500 font-bold">
-                                <th>ล็อค</th>
-                                <th>ผู้ค้า</th>
-                                <th>วันที่รับเงิน</th>
-                                <th className="text-right">เงินสด</th>
+                                <th className="p-1">ล็อค</th>
+                                <th className="p-1">ผู้ค้า</th>
+                                <th className="p-1">ช่องทาง</th>
+                                <th className="p-1">วัน-เวลาชำระ</th>
+                                <th className="p-1 text-right">ยอดเงิน</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {summary.advancePaymentItems.map((it, idx) => (
-                                <tr key={it.id || idx} className="border-b border-gray-100">
-                                  <td className="font-bold text-gray-800">{it.stall}</td>
-                                  <td>{it.booker}</td>
-                                  <td className="text-gray-500">{it.payDate}</td>
-                                  <td className="text-right font-bold text-emerald-800">+{it.cash.toLocaleString()} ฿</td>
+                              {postClosing.items.map((it, idx) => (
+                                <tr key={it.id || idx} className="border-b border-gray-100 hover:bg-amber-50/50">
+                                  <td className="p-1 font-bold text-gray-800">{it.stall}</td>
+                                  <td className="p-1 text-gray-700">{it.booker}</td>
+                                  <td className="p-1">
+                                    {it.cash > 0 && it.transfer > 0 ? (
+                                      <span className="px-1 py-0.5 rounded text-[9px] bg-purple-100 text-purple-800 font-bold">สด+โอน</span>
+                                    ) : it.cash > 0 ? (
+                                      <span className="px-1 py-0.5 rounded text-[9px] bg-emerald-100 text-emerald-800 font-bold">เงินสด</span>
+                                    ) : (
+                                      <span className="px-1 py-0.5 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">โอนเงิน</span>
+                                    )}
+                                  </td>
+                                  <td className="p-1 text-gray-500">
+                                    {it.payTimestamp ? new Date(it.payTimestamp).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : it.payDate}
+                                  </td>
+                                  <td className="p-1 text-right font-bold text-emerald-800">
+                                    +{it.amount.toLocaleString()} ฿
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
@@ -612,7 +668,7 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                   <div className="flex justify-between items-center text-xs font-black text-emerald-950 pt-1">
                     <span>เงินสดสุทธิรับเข้า (Net Cash):</span>
                     <span className="text-sm font-black text-emerald-800">
-                      {(summary.cashIn - summary.cashOut).toLocaleString()} ฿
+                      {(effectiveCashIn - summary.cashOut).toLocaleString()} ฿
                     </span>
                   </div>
                 </div>
@@ -623,8 +679,18 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                     <DollarSign className="w-4 h-4 text-blue-700" /> สรุปเงินโอนธนาคาร (Bank Transfer)
                   </span>
                   <div className="flex justify-between items-center text-xs font-bold text-gray-600 border-b pb-1.5">
-                    <span>เงินโอนรับรวม (Transfer In):</span>
-                    <span className="text-blue-700">+{summary.transferIn.toLocaleString()} ฿</span>
+                    <span>เงินโอนรับจริงในกะวันนี้:</span>
+                    <span className="text-blue-700">+{(summary?.transferInToday !== undefined ? summary.transferInToday : summary?.transferIn || 0).toLocaleString()} ฿</span>
+                  </div>
+                  {isAdmin && includePostClosing && postClosing.transfer > 0 && (
+                    <div className="flex justify-between items-center text-xs font-bold text-blue-900 bg-blue-100/60 p-1.5 rounded border border-blue-200">
+                      <span>+ รวมเงินโอนหลังปิดยอดรอบก่อน:</span>
+                      <span className="text-blue-800 font-extrabold">+{postClosing.transfer.toLocaleString()} ฿</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-600 border-b pb-1.5">
+                    <span>เงินโอนรับรวมที่นำมาปิดยอด:</span>
+                    <span className="text-blue-800 font-black">+{effectiveTransferIn.toLocaleString()} ฿</span>
                   </div>
                   <div className="flex justify-between items-center text-xs font-bold text-gray-600 border-b pb-1.5">
                     <span>เงินโอนจ่ายรวม (Transfer Out):</span>
@@ -633,7 +699,7 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                   <div className="flex justify-between items-center text-xs font-black text-blue-950 pt-1">
                     <span>เงินโอนสุทธิ (Net Transfer):</span>
                     <span className="text-sm font-black text-blue-800">
-                      {(summary.transferIn - summary.transferOut).toLocaleString()} ฿
+                      {(effectiveTransferIn - summary.transferOut).toLocaleString()} ฿
                     </span>
                   </div>
                 </div>
@@ -714,11 +780,11 @@ export default function DailyClosingModal({ isOpen, onClose, defaultDate }) {
                     </strong>
                     <span className="text-[9px] text-amber-700 text-center font-semibold">
                       (เงินทอน {floatVal.toLocaleString()} + สดรับ {effectiveCashIn.toLocaleString()} - สดจ่าย {cashOut.toLocaleString()})
-                      {isAdmin && summary?.cashInAdvance > 0 && !includeAdvanceCash && (
-                        <span className="block text-emerald-800 font-bold">*นับเฉพาะสดรับกะวันนี้ {summary.cashInToday.toLocaleString()} ฿ (ไม่รวมเงินรับล่วงหน้า)</span>
+                      {isAdmin && hasPostClosing && !includePostClosing && (
+                        <span className="block text-emerald-800 font-bold">*นับเฉพาะสดรับกะวันนี้ {(summary?.cashInToday || 0).toLocaleString()} ฿ (ไม่รวมยอดหลังปิดรอบก่อน)</span>
                       )}
-                      {isAdmin && summary?.cashInAdvance > 0 && includeAdvanceCash && (
-                        <span className="block text-amber-900 font-bold">*รวมเงินสดรับล่วงหน้า {summary.cashInAdvance.toLocaleString()} ฿ ในการปิดยอดนี้</span>
+                      {isAdmin && hasPostClosing && includePostClosing && (
+                        <span className="block text-amber-900 font-bold">*รวมเงินสดหลังปิดยอดรอบก่อน {postClosing.cash.toLocaleString()} ฿ ในการปิดยอดนี้</span>
                       )}
                     </span>
                   </div>

@@ -32,14 +32,25 @@ export default function DailyClosingRemittancePrint({
     .replace(/^\|\s*/, '')
     .replace(/\s*\|$/, '');
 
-  const advanceItems = summary?.advancePaymentItems || [];
-  const isAdvanceIncluded = summary?.includeAdvanceCash || 
-    (summary?.cashInAdvance > 0 && (
-      summary?.existingClosing?.summary?.includeAdvanceCash || 
-      (cleanDiscrepancyNote && cleanDiscrepancyNote.includes('รวมเงินสดรับล่วงหน้า')) || 
-      cashIn > (summary?.cashInToday || 0)
-    ));
-  const advanceTotalCash = advanceItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || summary?.cashInAdvance || 0;
+  const postClosingData = summary?.postClosing || {
+    cash: summary?.cashInAdvance || 0,
+    transfer: 0,
+    total: summary?.cashInAdvance || 0,
+    items: summary?.advancePaymentItems || []
+  };
+  const postClosingItems = postClosingData.items || [];
+  const isPostClosingIncluded = Boolean(
+    summary?.includePostClosing ||
+    summary?.includeAdvanceCash ||
+    summary?.existingClosing?.summary?.includePostClosing ||
+    summary?.existingClosing?.summary?.includeAdvanceCash ||
+    summary?.existingClosing?.post_closing_included ||
+    (cleanDiscrepancyNote && (cleanDiscrepancyNote.includes('รวมยอดชำระหลังปิดยอด') || cleanDiscrepancyNote.includes('รวมเงินสดรับล่วงหน้า'))) ||
+    cashIn > (summary?.cashInToday || 0)
+  );
+  const postClosingTotalCash = postClosingItems.reduce((sum, it) => sum + parseNum(it.cash), 0) || postClosingData.cash || 0;
+  const postClosingTotalTransfer = postClosingItems.reduce((sum, it) => sum + parseNum(it.transfer), 0) || postClosingData.transfer || 0;
+  const postClosingGrandTotal = postClosingTotalCash + postClosingTotalTransfer;
 
   const adHocIncomeItems = summary?.adHocIncomeItems || [];
   const adHocIncomeTotal = adHocIncomeItems.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
@@ -213,12 +224,14 @@ export default function DailyClosingRemittancePrint({
               </tbody>
             </table>
 
-            {/* Advance Bookings Breakdown (if included) */}
-            {isAdvanceIncluded && advanceItems.length > 0 && (
+            {/* Post-Closing Payments Breakdown (if included) */}
+            {isPostClosingIncluded && postClosingItems.length > 0 && (
               <div className="mt-2 border border-amber-500 bg-amber-50/80 rounded p-1.5 text-xs">
                 <div className="font-extrabold text-amber-950 flex justify-between items-center mb-1 text-[11px]">
-                  <span>⏳ รายการเงินสดรับล่วงหน้าที่นำมารวมปิดยอด ({advanceItems.length} รายการ)</span>
-                  <span className="font-mono">รวม +{advanceTotalCash.toLocaleString()} ฿</span>
+                  <span>⏳ รายการชำระหลังปิดยอดรอบก่อนที่นำมารวมปิดยอด ({postClosingItems.length} รายการ)</span>
+                  <span className="font-mono">
+                    รวม +{postClosingGrandTotal.toLocaleString()} ฿ (สด {postClosingTotalCash.toLocaleString()} | โอน {postClosingTotalTransfer.toLocaleString()})
+                  </span>
                 </div>
                 <table className="w-full text-left border-collapse border border-amber-300 text-[11px] bg-white">
                   <thead>
@@ -226,18 +239,32 @@ export default function DailyClosingRemittancePrint({
                       <th className="py-0.5 px-1.5 text-center w-8">#</th>
                       <th className="py-0.5 px-1.5 w-24">ล็อค</th>
                       <th className="py-0.5 px-1.5">ชื่อผู้ค้า / ผู้จอง</th>
-                      <th className="py-0.5 px-1.5 text-center w-28">วันที่รับเงินเดิม</th>
-                      <th className="py-0.5 px-1.5 text-right w-28">จำนวนเงินสด</th>
+                      <th className="py-0.5 px-1.5 text-center w-20">ช่องทาง</th>
+                      <th className="py-0.5 px-1.5 text-center w-28">วัน-เวลาชำระ</th>
+                      <th className="py-0.5 px-1.5 text-right w-24">จำนวนเงิน</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {advanceItems.map((it, idx) => (
+                    {postClosingItems.map((it, idx) => (
                       <tr key={it.id || idx} className="border-b border-amber-100">
                         <td className="py-0.5 px-1.5 text-center text-gray-500">{idx + 1}</td>
                         <td className="py-0.5 px-1.5 font-bold text-blue-900">{it.stall || '-'}</td>
                         <td className="py-0.5 px-1.5">{it.booker || '-'}</td>
-                        <td className="py-0.5 px-1.5 text-center text-gray-500">{it.payDate || '-'}</td>
-                        <td className="py-0.5 px-1.5 text-right font-mono font-bold text-emerald-800">+{parseNum(it.cash).toLocaleString()} ฿</td>
+                        <td className="py-0.5 px-1.5 text-center">
+                          {it.cash > 0 && it.transfer > 0 ? (
+                            <span className="text-purple-800 font-bold">สด+โอน</span>
+                          ) : it.cash > 0 ? (
+                            <span className="text-emerald-800 font-bold">เงินสด</span>
+                          ) : (
+                            <span className="text-blue-800 font-bold">โอนเงิน</span>
+                          )}
+                        </td>
+                        <td className="py-0.5 px-1.5 text-center text-gray-500">
+                          {it.payTimestamp ? new Date(it.payTimestamp).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : it.payDate || '-'}
+                        </td>
+                        <td className="py-0.5 px-1.5 text-right font-mono font-bold text-emerald-800">
+                          +{parseNum(it.amount || it.cash || it.transfer).toLocaleString()} ฿
+                        </td>
                       </tr>
                     ))}
                   </tbody>

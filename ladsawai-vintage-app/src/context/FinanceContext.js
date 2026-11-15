@@ -328,21 +328,73 @@ export function FinanceProvider({ children }) {
     const selectedDate = targetDate || new Date().toISOString().split('T')[0];
     setLoading(true);
     try {
-      // 0. Fetch previous closing for Float Handover (เงินทอนยกมาจากวันก่อนหน้า)
+      // 0. Fetch previous closing for Float Handover & Post-Closing Cutoff (เงินทอนยกมา และจุดตัดยอดหลังปิดรอบก่อน)
       let suggestedFloat = 0;
+      let prevClosing = null;
       try {
-        const { data: prevClosingRes } = await supabase
-          .from('daily_closings')
-          .select('*')
-          .lt('date', selectedDate)
-          .order('date', { ascending: false })
-          .limit(1);
+        // Try server API first (bypasses RLS)
+        try {
+          const apiRes = await fetch(`/api/finance/daily-closing?prevToDate=${selectedDate}`);
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.success && json.data) {
+              prevClosing = json.data;
+            }
+          }
+        } catch (apiErr) {
+          // fallback below
+        }
 
-        if (prevClosingRes && prevClosingRes.length > 0) {
-          suggestedFloat = parseFloat(prevClosingRes[0].float_amount) || 0;
+        if (!prevClosing) {
+          const { data: prevClosingRes } = await supabase
+            .from('daily_closings')
+            .select('*')
+            .lt('date', selectedDate)
+            .order('date', { ascending: false })
+            .limit(1);
+
+          if (prevClosingRes && prevClosingRes.length > 0) {
+            prevClosing = prevClosingRes[0];
+          }
+        }
+
+        // Check localStorage fallback if still not found
+        if (!prevClosing && typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage).filter(k => k.startsWith('daily_closing_'));
+          const validClosings = keys
+            .map(k => {
+              try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; }
+            })
+            .filter(c => c && c.date && c.date < selectedDate)
+            .sort((a, b) => b.date.localeCompare(a.date));
+          if (validClosings.length > 0) {
+            prevClosing = validClosings[0];
+          }
+        }
+
+        if (prevClosing) {
+          suggestedFloat = parseFloat(prevClosing.float_amount) || 0;
         }
       } catch (err) {
-        console.warn('Notice: Error checking previous closing float:', err);
+        console.warn('Notice: Error checking previous closing:', err);
+      }
+
+      // Cut-off timestamp calculation:
+      let prevCutoffTime = null;
+      if (prevClosing?.closed_at) {
+        const d = new Date(prevClosing.closed_at);
+        if (!isNaN(d.getTime())) prevCutoffTime = d.getTime();
+      } else if (prevClosing?.date) {
+        // Closing of that day: standard market closing cutoff ~20:30
+        const d = new Date(`${prevClosing.date}T20:30:00+07:00`);
+        if (!isNaN(d.getTime())) prevCutoffTime = d.getTime();
+      } else {
+        // If no prior closing record exists in DB/local, use previous day 20:30 Bangkok as sensible cutoff
+        const curDateObj = new Date(selectedDate);
+        curDateObj.setDate(curDateObj.getDate() - 1);
+        const prevDateStr = curDateObj.toISOString().split('T')[0];
+        const d = new Date(`${prevDateStr}T20:30:00+07:00`);
+        if (!isNaN(d.getTime())) prevCutoffTime = d.getTime();
       }
 
       const [bookingsRes, txnsRes, closingRes] = await Promise.all([
@@ -353,7 +405,14 @@ export function FinanceProvider({ children }) {
 
       const bookings = bookingsRes.data || [];
       const txns = txnsRes.data || [];
-      const existingClosing = closingRes.data || null;
+      let existingClosing = closingRes.data || null;
+
+      if (!existingClosing && typeof window !== 'undefined') {
+        try {
+          const local = localStorage.getItem(`daily_closing_${selectedDate}`);
+          if (local) existingClosing = JSON.parse(local);
+        } catch (e) {}
+      }
 
       // Summary Breakdown for selectedDate only (no carry-forward from past unclosed transactions)
       let dailyStallIncome = 0;
@@ -385,7 +444,11 @@ export function FinanceProvider({ children }) {
       let transferTxnCount = 0;
       const advancePaymentItems = [];
       const todayPaymentItems = [];
+      const postClosingItems = [];
       let cashInToday = 0;
+      let transferInToday = 0;
+      let postClosingCash = 0;
+      let postClosingTransfer = 0;
       let cashInAdvance = 0;
 
       txns.forEach(t => {
@@ -456,23 +519,34 @@ export function FinanceProvider({ children }) {
 
           const ts = t.timestamp || t.created_at;
           const payDate = getPaymentDateStr(ts);
-          if (payment.cash > 0) {
-            const itemData = {
-              id: t.id,
-              stall: t.note || t.booking_ref || t.category || 'รายรับ',
-              booker: t.officer || 'Admin',
-              amount: amt,
-              cash: payment.cash,
-              transfer: payment.transfer,
-              payDate,
-              payTimestamp: ts
-            };
-            if (payDate && payDate < selectedDate && !isAdHocIncome) {
-              cashInAdvance += payment.cash;
-              advancePaymentItems.push(itemData);
-            } else {
-              cashInToday += payment.cash;
-              todayPaymentItems.push(itemData);
+          const payTime = ts ? new Date(ts).getTime() : null;
+
+          const itemData = {
+            id: t.id,
+            stall: t.note || t.booking_ref || t.category || 'รายรับ',
+            booker: t.officer || 'Admin',
+            amount: amt,
+            cash: payment.cash,
+            transfer: payment.transfer,
+            method: payment.cash > 0 ? (payment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
+            payDate,
+            payTimestamp: ts
+          };
+
+          if (payDate === selectedDate) {
+            if (payment.cash > 0) cashInToday += payment.cash;
+            if (payment.transfer > 0) transferInToday += payment.transfer;
+            todayPaymentItems.push(itemData);
+          } else if (payDate && payDate < selectedDate && !isAdHocIncome) {
+            const isAfterCutoff = prevCutoffTime ? (payTime && payTime > prevCutoffTime) : true;
+            if (isAfterCutoff) {
+              postClosingCash += payment.cash;
+              postClosingTransfer += payment.transfer;
+              postClosingItems.push(itemData);
+              if (payment.cash > 0) {
+                cashInAdvance += payment.cash;
+                advancePaymentItems.push(itemData);
+              }
             }
           }
 
@@ -524,25 +598,35 @@ export function FinanceProvider({ children }) {
             breakdown.dailyStall.transfer += bPayment.transfer;
             breakdown.dailyStall.total += amt;
 
-            if (bPayment.cash > 0) {
-              const ts = b.updated_at || b.created_at;
-              const payDate = getPaymentDateStr(ts);
-              const itemData = {
-                id: b.id,
-                stall: b.stall_name,
-                booker: b.booker_name || b.customer_name || 'ลูกค้า',
-                amount: amt,
-                cash: bPayment.cash,
-                transfer: bPayment.transfer,
-                payDate,
-                payTimestamp: ts
-              };
-              if (payDate && payDate < selectedDate) {
-                cashInAdvance += bPayment.cash;
-                advancePaymentItems.push(itemData);
-              } else {
-                cashInToday += bPayment.cash;
-                todayPaymentItems.push(itemData);
+            const ts = b.updated_at || b.created_at;
+            const payDate = getPaymentDateStr(ts);
+            const payTime = ts ? new Date(ts).getTime() : null;
+            const itemData = {
+              id: b.id,
+              stall: b.stall_name,
+              booker: b.booker_name || b.customer_name || 'ลูกค้า',
+              amount: amt,
+              cash: bPayment.cash,
+              transfer: bPayment.transfer,
+              method: bPayment.cash > 0 ? (bPayment.transfer > 0 ? 'เงินสด+โอน' : 'เงินสด') : 'โอนเงิน',
+              payDate,
+              payTimestamp: ts
+            };
+
+            if (payDate === selectedDate) {
+              if (bPayment.cash > 0) cashInToday += bPayment.cash;
+              if (bPayment.transfer > 0) transferInToday += bPayment.transfer;
+              todayPaymentItems.push(itemData);
+            } else if (payDate && payDate < selectedDate) {
+              const isAfterCutoff = prevCutoffTime ? (payTime && payTime > prevCutoffTime) : true;
+              if (isAfterCutoff) {
+                postClosingCash += bPayment.cash;
+                postClosingTransfer += bPayment.transfer;
+                postClosingItems.push(itemData);
+                if (bPayment.cash > 0) {
+                  cashInAdvance += bPayment.cash;
+                  advancePaymentItems.push(itemData);
+                }
               }
             }
           }
@@ -562,13 +646,23 @@ export function FinanceProvider({ children }) {
 
       const allExpenseItems = expenseItems;
 
+      const postClosingTotal = postClosingCash + postClosingTransfer;
+
       const summary = {
         date: selectedDate,
         suggestedFloat,
         cashInToday,
+        transferInToday,
         cashInAdvance,
         advancePaymentItems,
         todayPaymentItems,
+        postClosing: {
+          cash: postClosingCash,
+          transfer: postClosingTransfer,
+          total: postClosingTotal,
+          items: postClosingItems,
+          prevCutoff: prevCutoffTime ? new Date(prevCutoffTime).toISOString() : null
+        },
         carryForward: {
           cash: 0,
           transfer: 0,
@@ -635,17 +729,39 @@ export function FinanceProvider({ children }) {
         system_transfer_in: payload.summary?.transferIn || 0,
         system_cash_out: payload.summary?.cashOut || 0,
         system_transfer_out: payload.summary?.transferOut || 0,
+        post_closing_included: Boolean(payload.summary?.includePostClosing || payload.summary?.includeAdvanceCash),
+        post_closing_total: payload.summary?.postClosing?.total || 0,
+        post_closing_cash: payload.summary?.postClosing?.cash || 0,
+        post_closing_transfer: payload.summary?.postClosing?.transfer || 0,
         closed_by: payload.officer || 'Admin',
         closed_at: new Date().toISOString()
       };
 
-      // 1. Insert/Update daily_closings table
-      const { data, error } = await supabase.from('daily_closings').upsert([closingObj]).select();
-      if (error) {
-        console.warn('daily_closings table notice (saving local fallback):', error.message);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`daily_closing_${payload.date}`, JSON.stringify(closingObj));
+      // 1. Insert/Update daily_closings table via server API (bypassing RLS) with local fallback
+      let apiSaved = false;
+      try {
+        const res = await fetch('/api/finance/daily-closing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ closingObj })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) apiSaved = true;
         }
+      } catch (apiErr) {
+        console.warn('API daily_closing save fallback to client supabase:', apiErr.message);
+      }
+
+      if (!apiSaved) {
+        const { error } = await supabase.from('daily_closings').upsert([closingObj]).select();
+        if (error) {
+          console.warn('daily_closings table notice (saving local fallback):', error.message);
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`daily_closing_${payload.date}`, JSON.stringify(closingObj));
       }
 
       // 2. Stamp closing_id on closed transactions (gracefully attempts if column exists)
