@@ -154,10 +154,10 @@ export default function StandbyWaitlistModal({
               </div>
 
               {/* Row 2: เบอร์โทร (ลดขนาด) + Radio โซน (อาหาร / ทั่วไป / เจาะจง) + ช่องกรอกเจาะจงในแนวเดียวกัน */}
-              <div className="flex flex-wrap items-end gap-3 sm:gap-4 bg-[#FAF0E6]/60 p-3 rounded-xl border border-[#8B4513]/15">
+              <div className="flex flex-wrap items-start gap-3 sm:gap-4 bg-[#FAF0E6]/60 p-3 rounded-xl border border-[#8B4513]/15">
                 {/* เบอร์โทรศัพท์ (ความกว้างกะทัดรัด) */}
-                <div className="flex flex-col gap-1 w-full sm:w-auto">
-                  <label className="font-bold text-[#5D4037] flex items-center gap-1">
+                <div className="flex flex-col gap-1 w-full sm:w-auto shrink-0">
+                  <label className="font-bold text-[#5D4037] flex items-center gap-1 h-5">
                     <Phone className="w-3.5 h-3.5 text-[#8B4513]" /> เบอร์โทรศัพท์
                   </label>
                   <input
@@ -166,14 +166,16 @@ export default function StandbyWaitlistModal({
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="08X-XXX-XXXX"
                     maxLength={12}
-                    className="p-2 w-full sm:w-36 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
+                    className="p-2 h-[38px] w-full sm:w-36 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
                   />
                 </div>
 
                 {/* โซนที่ต้องการ (Radio Buttons) + ช่องเจาะจง */}
                 <div className="flex flex-col gap-1 flex-1 min-w-[280px]">
-                  <label className="font-bold text-[#5D4037]">โซนที่ต้องการ</label>
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 py-1.5">
+                  <label className="font-bold text-[#5D4037] flex items-center h-5">
+                    โซนที่ต้องการ
+                  </label>
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 min-h-[38px]">
                     <label className="inline-flex items-center gap-1.5 cursor-pointer text-gray-800 font-bold select-none text-xs">
                       <input
                         type="radio"
@@ -219,7 +221,7 @@ export default function StandbyWaitlistModal({
                           value={preferredStallName}
                           onChange={(e) => setPreferredStallName(e.target.value)}
                           placeholder="เช่น 28/1"
-                          className="p-1.5 w-24 border-2 border-amber-400 rounded-lg bg-white text-gray-900 font-mono font-black text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513] animate-pop-in"
+                          className="h-8 px-2 py-1 w-24 border-2 border-amber-400 rounded-lg bg-white text-gray-900 font-mono font-black text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
                         />
                       )}
                     </div>
