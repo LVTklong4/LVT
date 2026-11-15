@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import {
   verifyLineSignature,
   replyLineMessage,
+  buildFlexAlreadyRegistered,
   buildFlexUnregistered,
-  buildFlexContractSummary
+  buildFlexContractSummary,
+  getBookingMonthKey,
+  getBangkokCurrentMonthKey,
+  normalizeThaiPhoneNumber
 } from '@/services/line/lineService';
 
 // Disable Next.js body parser to get raw text for HMAC verification
@@ -71,7 +74,32 @@ export async function POST(req) {
           text.includes('สมัคร');
 
         if (isRegister) {
-          await replyLineMessage(replyToken, [buildFlexUnregistered(liffUrl)]);
+          if (!supabaseAdmin) {
+            await replyLineMessage(replyToken, [{
+              type: 'text',
+              text: 'ระบบกำลังปรับปรุงการเชื่อมต่อ กรุณาลองใหม่ภายหลังค่ะ'
+            }]);
+            continue;
+          }
+
+          const { data: lineUser, error: userError } = await supabaseAdmin
+            .from('line_users')
+            .select('display_name')
+            .eq('line_user_id', userId)
+            .maybeSingle();
+
+          if (userError) {
+            console.error('[LINE Webhook] Error checking registration:', userError);
+            await replyLineMessage(replyToken, [{
+              type: 'text',
+              text: 'ขออภัยค่ะ ระบบตรวจสอบข้อมูลไม่สำเร็จ กรุณาลองใหม่ภายหลังค่ะ'
+            }]);
+            continue;
+          }
+
+          await replyLineMessage(replyToken, [
+            lineUser ? buildFlexAlreadyRegistered(lineUser.display_name) : buildFlexUnregistered(liffUrl)
+          ]);
           continue;
         }
 
@@ -92,20 +120,29 @@ export async function POST(req) {
             .eq('line_user_id', userId)
             .maybeSingle();
 
-          if (!lineUser || userError) {
+          if (userError) {
+            console.error('[LINE Webhook] Error reading linked account:', userError);
+            await replyLineMessage(replyToken, [{
+              type: 'text',
+              text: 'ขออภัยค่ะ ระบบตรวจสอบข้อมูลไม่สำเร็จ กรุณาลองใหม่ภายหลังค่ะ'
+            }]);
+            continue;
+          }
+
+          if (!lineUser) {
             // Unregistered: Prompt to bind phone number
             await replyLineMessage(replyToken, [buildFlexUnregistered(liffUrl)]);
             continue;
           }
 
           // Registered: Query monthly bookings for this phone number
-          const cleanPhone = lineUser.phone.replace(/[^0-9]/g, '');
-          const { data: bookings, error: bError } = await supabase
+          const cleanPhone = normalizeThaiPhoneNumber(lineUser.phone);
+          const { data: bookings, error: bError } = await supabaseAdmin
             .from('monthly_bookings')
-            .select('*')
-            .order('booking_month', { ascending: false });
+            .select('id, booker_name, phone, stalls, booking_month, total_price, paid_amount, status, customer_type');
 
           if (bError || !bookings) {
+            console.error('[LINE Webhook] Error reading monthly contracts:', bError);
             await replyLineMessage(replyToken, [
               {
                 type: 'text',
@@ -118,28 +155,41 @@ export async function POST(req) {
           // Match phone number (supporting variations with/without dashes)
           const matchedContracts = bookings.filter(b => {
             if (!b.phone) return false;
-            const bPhone = b.phone.replace(/[^0-9]/g, '');
-            return bPhone === cleanPhone || bPhone.endsWith(cleanPhone) || cleanPhone.endsWith(bPhone);
+            return normalizeThaiPhoneNumber(b.phone) === cleanPhone;
           });
 
-          if (matchedContracts.length === 0) {
+          const currentMonthKey = getBangkokCurrentMonthKey();
+          const relevantContracts = matchedContracts
+            .filter(contract => {
+              if (contract.status === 'ยกเลิก' || contract.customer_type === 'Regular') return false;
+
+              const total = Number(contract.total_price || 0);
+              const paid = Number(contract.paid_amount || 0);
+              if (total <= 0) return false;
+
+              const remaining = Math.max(0, total - paid);
+              const monthKey = getBookingMonthKey(contract.booking_month);
+              return remaining > 0 || (monthKey && monthKey >= currentMonthKey);
+            })
+            .sort((a, b) => getBookingMonthKey(b.booking_month).localeCompare(getBookingMonthKey(a.booking_month)));
+
+          if (relevantContracts.length === 0) {
             await replyLineMessage(replyToken, [
               {
                 type: 'text',
-                text: `เรียนคุณ ${lineUser.display_name || 'ผู้ค้า'} 🙏\n\nระบบผูกกับเบอร์โทร ${lineUser.phone} เรียบร้อยแล้ว แต่ไม่พบสัญญารายเดือนที่เปิดใช้งานอยู่ในขณะนี้\n\nหากท่านเพิ่งทำสัญญาใหม่ หรือต้องการเปลี่ยนเบอร์โทรศัพท์ กรุณาติดต่อเจ้าหน้าที่ตลาดได้เลยค่ะ`
+                text: `เรียนคุณ ${lineUser.display_name || 'ผู้ค้า'} 🙏\n\nบัญชีของท่านลงทะเบียนแล้ว แต่ยังไม่พบสัญญารายเดือนที่เปิดใช้งานหรือมียอดค้างชำระค่ะ หากข้อมูลไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่ตลาด`
               }
             ]);
             continue;
           }
 
-          // Render contract summary Flex Message (up to 5 most recent contracts)
-          const topContracts = matchedContracts.slice(0, 5);
-          const customerName = topContracts[0]?.booker_name || topContracts[0]?.customer_name || lineUser.display_name;
+          // Render current contracts and outstanding prior months in newest-first order.
+          const customerName = relevantContracts[0]?.booker_name || lineUser.display_name;
 
           const flexMsg = buildFlexContractSummary({
             customerName,
             phone: lineUser.phone,
-            contracts: topContracts,
+            contracts: relevantContracts,
             liffUrl
           });
 

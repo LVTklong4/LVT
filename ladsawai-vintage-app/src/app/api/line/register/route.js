@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { pushLineMessage, buildFlexRegistrationSuccess } from '@/services/line/lineService';
+import {
+  pushLineMessage,
+  buildFlexRegistrationSuccess,
+  normalizeThaiPhoneNumber
+} from '@/services/line/lineService';
 
 export async function POST(req) {
   try {
@@ -36,8 +40,8 @@ export async function POST(req) {
 
     if (existingUserError) throw existingUserError;
 
-    const existingPhone = existingUser?.phone?.replace(/[^0-9]/g, '');
-    if (existingPhone && existingPhone === cleanInputPhone) {
+    const existingPhone = normalizeThaiPhoneNumber(existingUser?.phone);
+    if (existingPhone && existingPhone === normalizeThaiPhoneNumber(cleanInputPhone)) {
       return NextResponse.json({
         success: false,
         error: 'already_registered',
@@ -55,8 +59,7 @@ export async function POST(req) {
 
     const matched = (bookings || []).filter(b => {
       if (!b.phone) return false;
-      const bPhone = b.phone.replace(/[^0-9]/g, '');
-      return bPhone === cleanInputPhone || bPhone.endsWith(cleanInputPhone) || cleanInputPhone.endsWith(bPhone);
+      return normalizeThaiPhoneNumber(b.phone) === normalizeThaiPhoneNumber(cleanInputPhone);
     });
 
     if (matched.length === 0) {

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { formatBookingMonth, monthNamesFull } from '@/utils/thaiDateHelper';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot';
 
@@ -91,15 +92,34 @@ export async function pushLineMessage(toUserId, messages) {
  * Formats Thai month string e.g. "2026-11" -> "พฤศจิกายน 2569"
  */
 export function formatThaiMonth(yearMonthStr) {
-  if (!yearMonthStr) return '';
-  const [yearStr, monthStr] = yearMonthStr.split('-');
-  const monthIdx = parseInt(monthStr, 10) - 1;
-  const monthNames = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ];
-  const thaiYear = parseInt(yearStr, 10) + 543;
-  return `${monthNames[monthIdx] || yearMonthStr} ${thaiYear}`;
+  return yearMonthStr ? formatBookingMonth(yearMonthStr) : '';
+}
+
+export function getBookingMonthKey(value) {
+  const formatted = formatBookingMonth(value);
+  const match = formatted.match(/^(.+)\s+(\d{4})$/);
+  if (!match) return '';
+
+  const monthIndex = monthNamesFull.indexOf(match[1]);
+  const year = Number(match[2]) - 543;
+  if (monthIndex < 0 || !Number.isFinite(year)) return '';
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+}
+
+export function getBangkokCurrentMonthKey(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit'
+  }).formatToParts(now);
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  return `${year}-${month}`;
+}
+
+export function normalizeThaiPhoneNumber(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.startsWith('66') ? `0${digits.slice(2)}` : digits;
 }
 
 /**
@@ -180,6 +200,46 @@ export function buildFlexUnregistered(liffUrl) {
   };
 }
 
+export function buildFlexAlreadyRegistered(customerName) {
+  return {
+    type: 'flex',
+    altText: 'บัญชี LINE นี้ลงทะเบียนแล้ว',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        paddingAll: '20px',
+        contents: [
+          {
+            type: 'text',
+            text: 'ข้อมูลตอบกลับจากระบบ',
+            size: 'xxs',
+            color: '#8D6E63'
+          },
+          {
+            type: 'text',
+            text: 'ท่านได้ลงทะเบียนแล้วค่ะ',
+            weight: 'bold',
+            size: 'lg',
+            color: '#2E7D32',
+            wrap: true
+          },
+          {
+            type: 'text',
+            text: `บัญชี LINE นี้ผูกกับข้อมูลของ${customerName ? `ร้าน ${customerName}` : 'ผู้ค้า'}เรียบร้อยแล้ว สามารถพิมพ์ "เช็คยอด" เพื่อตรวจสอบยอดค่าเช่าได้ค่ะ`,
+            size: 'sm',
+            color: '#4A3B32',
+            wrap: true
+          }
+        ]
+      }
+    }
+  };
+}
+
 /**
  * Builds Flex Message for Merchant Monthly Contracts & Balances
  */
@@ -191,7 +251,7 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
     return sum + Math.max(0, total - paid);
   }, 0);
 
-  const contractBoxes = contracts.map((c, idx) => {
+  const contractBoxes = contracts.slice(0, 5).map((c, idx) => {
     const total = parseFloat(c.total_price || 0);
     const paid = parseFloat(c.paid_amount || 0);
     const remaining = Math.max(0, total - paid);
@@ -202,7 +262,7 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
       layout: 'vertical',
       backgroundColor: idx % 2 === 0 ? '#FAF0E6' : '#FFFFFF',
       cornerRadius: 'md',
-      paddingAll: '10px',
+      paddingAll: '12px',
       margin: 'sm',
       contents: [
         {
@@ -211,40 +271,37 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
           contents: [
             {
               type: 'text',
-              text: `แผง ${c.stalls || '-'}`,
+              text: formatThaiMonth(c.booking_month),
               weight: 'bold',
-              size: 'sm',
+              size: 'xs',
               color: '#5D4037'
             },
             {
               type: 'text',
-              text: isPaid ? 'ชำระแล้ว' : `ค้างชำระ ${remaining.toLocaleString()} บ.`,
+              text: `ล็อค ${c.stalls || '-'}`,
               align: 'end',
               weight: 'bold',
               size: 'xs',
-              color: isPaid ? '#2E7D32' : '#C62828'
+              color: '#5D4037',
+              wrap: true
             }
           ]
         },
         {
-          type: 'box',
-          layout: 'horizontal',
-          margin: 'xs',
-          contents: [
-            {
-              type: 'text',
-              text: `รอบเดือน: ${formatThaiMonth(c.booking_month)}`,
-              size: 'xxs',
-              color: '#8D6E63'
-            },
-            {
-              type: 'text',
-              text: `ยอดเต็ม: ${total.toLocaleString()} บ. (จ่ายแล้ว ${paid.toLocaleString()} บ.)`,
-              align: 'end',
-              size: 'xxs',
-              color: '#8D6E63'
-            }
-          ]
+          type: 'text',
+          text: `ยอดสัญญา ${total.toLocaleString()} บาท  ·  ชำระแล้ว ${paid.toLocaleString()} บาท`,
+          size: 'xxs',
+          color: '#8D6E63',
+          wrap: true,
+          margin: 'sm'
+        },
+        {
+          type: 'text',
+          text: isPaid ? 'ชำระครบแล้ว ✓' : `คงเหลือ ${remaining.toLocaleString()} บาท`,
+          weight: 'bold',
+          size: 'xs',
+          color: isPaid ? '#2E7D32' : '#C62828',
+          margin: 'xs'
         }
       ]
     };
@@ -256,60 +313,58 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
     contents: {
       type: 'bubble',
       size: 'mega',
-      header: {
+      body: {
         type: 'box',
         layout: 'vertical',
-        backgroundColor: '#5D4037',
+        spacing: 'sm',
         paddingAll: '16px',
         contents: [
           {
             type: 'text',
-            text: 'ตลาดนัดลาดสวายวินเทจ',
-            color: '#FFE082',
-            weight: 'bold',
-            size: 'xs'
+            text: 'ข้อมูลตอบกลับจากระบบ',
+            size: 'xxs',
+            color: '#8D6E63'
           },
           {
             type: 'text',
             text: 'สรุปยอดค่าเช่ารายเดือน',
-            color: '#FFFFFF',
+            color: '#4A3B32',
             weight: 'bold',
             size: 'lg',
             margin: 'xs'
           },
           {
             type: 'text',
-            text: `ร้าน: ${customerName || '-'} (โทร: ${phone || '-'})`,
-            color: '#D7CCC8',
+            text: `ร้าน ${customerName || '-'}${phone ? ` · โทรลงท้าย ${phone.slice(-4)}` : ''}`,
+            color: '#8D6E63',
             size: 'xs',
-            margin: 'xs'
-          }
-        ]
-      },
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        spacing: 'sm',
-        paddingAll: '14px',
-        contents: [
+            wrap: true
+          },
+          {
+            type: 'separator',
+            margin: 'md',
+            color: '#D7CCC8'
+          },
           {
             type: 'box',
             layout: 'horizontal',
+            margin: 'sm',
             contents: [
               {
                 type: 'text',
-                text: 'สถานะยอดชำระรวม:',
+                text: 'ยอดค้างรวม:',
                 size: 'sm',
                 weight: 'bold',
                 color: '#4A3B32'
               },
               {
                 type: 'text',
-                text: totalBalance > 0 ? `ค้างชำระ ${totalBalance.toLocaleString()} บาท` : 'ชำระครบถ้วนแล้ว ✓',
+                text: totalBalance > 0 ? `${totalBalance.toLocaleString()} บาท` : 'ชำระครบถ้วนแล้ว ✓',
                 align: 'end',
                 weight: 'bold',
                 size: 'sm',
-                color: totalBalance > 0 ? '#C62828' : '#2E7D32'
+                color: totalBalance > 0 ? '#C62828' : '#2E7D32',
+                wrap: true
               }
             ]
           },
@@ -321,28 +376,12 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
           ...contractBoxes,
           ...(totalBalance > 0 ? [
             {
-              type: 'box',
-              layout: 'vertical',
-              backgroundColor: '#FFF8E1',
-              cornerRadius: 'md',
-              paddingAll: '10px',
-              margin: 'md',
-              contents: [
-                {
-                  type: 'text',
-                  text: '📌 ข้อมูลการโอนชำระเงิน',
-                  weight: 'bold',
-                  size: 'xs',
-                  color: '#8B4513'
-                },
-                {
-                  type: 'text',
-                  text: 'กรุณาชำระเงินและส่งสลิปยืนยันในห้องแชทนี้ได้เลยค่ะ',
-                  size: 'xxs',
-                  color: '#6D4C41',
-                  margin: 'xs'
-                }
-              ]
+              type: 'text',
+              text: 'กรุณาติดต่อเจ้าหน้าที่ตลาดเพื่อสอบถามวิธีชำระเงินค่ะ',
+              size: 'xxs',
+              color: '#6D4C41',
+              wrap: true,
+              margin: 'md'
             }
           ] : [])
         ]
@@ -350,7 +389,6 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
       footer: {
         type: 'box',
         layout: 'vertical',
-        spacing: 'xs',
         contents: [
           {
             type: 'button',
@@ -368,7 +406,7 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
   };
 }
 
-/**
+/*
  * Builds Flex Message for Registration Confirmation
  */
 export function buildFlexRegistrationSuccess({ customerName, phone }) {
