@@ -371,7 +371,7 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
 /**
  * Builds Flex Message for Registration Confirmation
  */
-export function buildFlexRegistrationSuccess({ customerName, phone, contractsCount = 0 }) {
+export function buildFlexRegistrationSuccess({ customerName, phone }) {
   return {
     type: 'flex',
     altText: 'ลงทะเบียนผู้ค้ารายเดือนสำเร็จ',
@@ -423,7 +423,7 @@ export function buildFlexRegistrationSuccess({ customerName, phone, contractsCou
           },
           {
             type: 'text',
-            text: `พบข้อมูลสัญญาในระบบทั้งหมด ${contractsCount} รายการ ท่านสามารถพิมพ์คำว่า "เช็คยอด" ในแชทนี้ได้ตลอด 24 ชั่วโมงค่ะ`,
+            text: 'ท่านสามารถพิมพ์คำว่า "เช็คยอด" ในแชทนี้เพื่อตรวจสอบยอดได้ค่ะ',
             size: 'xs',
             color: '#5D4037',
             wrap: true,

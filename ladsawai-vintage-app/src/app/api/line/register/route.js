@@ -18,6 +18,33 @@ export async function POST(req) {
 
     const cleanInputPhone = phone.replace(/[^0-9]/g, '');
 
+    const supabaseAdmin = getSupabaseAdmin();
+    if (!supabaseAdmin) {
+      console.error('[LINE Register] SUPABASE_SERVICE_ROLE_KEY is not configured.');
+      return NextResponse.json({
+        success: false,
+        error: 'server_configuration',
+        message: 'ระบบกำลังปรับปรุงการเชื่อมต่อ กรุณาลองใหม่ภายหลังค่ะ'
+      }, { status: 503 });
+    }
+
+    const { data: existingUser, error: existingUserError } = await supabaseAdmin
+      .from('line_users')
+      .select('phone')
+      .eq('line_user_id', lineUserId)
+      .maybeSingle();
+
+    if (existingUserError) throw existingUserError;
+
+    const existingPhone = existingUser?.phone?.replace(/[^0-9]/g, '');
+    if (existingPhone && existingPhone === cleanInputPhone) {
+      return NextResponse.json({
+        success: false,
+        error: 'already_registered',
+        message: 'บัญชี LINE นี้ได้ลงทะเบียนผูกกับเบอร์โทรศัพท์นี้แล้วค่ะ'
+      }, { status: 409 });
+    }
+
     // 1. Verify that this phone number exists in monthly_bookings
     const { data: bookings, error: bError } = await supabase
       .from('monthly_bookings')
@@ -44,16 +71,6 @@ export async function POST(req) {
     const customerName = primaryContract.booker_name || primaryContract.customer_name || displayName || 'ผู้ค้า';
 
     // 2. Upsert into line_users table
-    const supabaseAdmin = getSupabaseAdmin();
-    if (!supabaseAdmin) {
-      console.error('[LINE Register] SUPABASE_SERVICE_ROLE_KEY is not configured.');
-      return NextResponse.json({
-        success: false,
-        error: 'server_configuration',
-        message: 'ระบบกำลังปรับปรุงการเชื่อมต่อ กรุณาลองใหม่ภายหลังค่ะ'
-      }, { status: 503 });
-    }
-
     const { error: upsertError } = await supabaseAdmin
       .from('line_users')
       .upsert({
@@ -72,8 +89,7 @@ export async function POST(req) {
     // 3. Send direct push confirmation message into LINE chat
     const flexSuccess = buildFlexRegistrationSuccess({
       customerName,
-      phone: cleanInputPhone,
-      contractsCount: matched.length
+      phone: cleanInputPhone
     });
 
     await pushLineMessage(lineUserId, [flexSuccess]);
@@ -81,8 +97,7 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       message: 'ผูกบัญชีร้านค้าสำเร็จ',
-      customerName,
-      contractsCount: matched.length
+      customerName
     });
   } catch (err) {
     console.error('[LINE Register Error]', err);

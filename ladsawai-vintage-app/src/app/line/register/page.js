@@ -133,7 +133,6 @@ export default function LineRegisterPage() {
                     ยินดีต้อนรับร้าน <span className="text-[#8B4513] font-black">{successData.customerName}</span>
                   </p>
                   <p className="text-[11px] text-gray-500 mt-1">
-                    พบสัญญาในระบบทั้งหมด {successData.contractsCount} รายการ<br />
                     ท่านสามารถพิมพ์ <strong className="text-[#8B4513]">"เช็คยอด"</strong> ในแชท LINE เพื่อตรวจสอบยอดได้ทันที
                   </p>
                 </div>

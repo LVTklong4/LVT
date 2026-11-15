@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import {
   verifyLineSignature,
   replyLineMessage,
@@ -24,6 +25,7 @@ export async function POST(req) {
 
     const liffId = '2008895416-VNkDCPju';
     const liffUrl = `https://liff.line.me/${liffId}`;
+    const supabaseAdmin = getSupabaseAdmin();
 
     // 2. Process each incoming event
     for (const event of events) {
@@ -74,8 +76,17 @@ export async function POST(req) {
         }
 
         if (isCheckBalance) {
+          if (!supabaseAdmin) {
+            console.error('[LINE Webhook] SUPABASE_SERVICE_ROLE_KEY is not configured.');
+            await replyLineMessage(replyToken, [{
+              type: 'text',
+              text: 'ระบบกำลังปรับปรุงการเชื่อมต่อ กรุณาลองใหม่ภายหลังค่ะ'
+            }]);
+            continue;
+          }
+
           // Look up user in line_users table
-          let { data: lineUser, error: userError } = await supabase
+          const { data: lineUser, error: userError } = await supabaseAdmin
             .from('line_users')
             .select('*')
             .eq('line_user_id', userId)
