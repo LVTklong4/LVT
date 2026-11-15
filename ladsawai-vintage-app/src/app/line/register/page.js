@@ -13,7 +13,7 @@ export default function LineRegisterPage() {
   const [phone, setPhone] = useState('');
   const [successData, setSuccessData] = useState(null);
 
-  const liffId = process.env.NEXT_PUBLIC_LINE_LIFF_ID || '2008895416-3c35BsXZ';
+  const liffId = process.env.NEXT_PUBLIC_LINE_LIFF_ID || '2008895416-VNkDCPju';
 
   // Initialize LIFF once SDK script loads
   const initLiff = async () => {

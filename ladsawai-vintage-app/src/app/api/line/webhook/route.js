@@ -22,7 +22,7 @@ export async function POST(req) {
     const body = JSON.parse(rawBody);
     const events = body.events || [];
 
-    const liffId = process.env.NEXT_PUBLIC_LINE_LIFF_ID || '2008895416-3c35BsXZ';
+    const liffId = process.env.NEXT_PUBLIC_LINE_LIFF_ID || '2008895416-VNkDCPju';
     const liffUrl = `https://liff.line.me/${liffId}`;
 
     // 2. Process each incoming event
