@@ -7,15 +7,6 @@ import {
   buildFlexContractSummary
 } from '@/services/line/lineService';
 
-// Health check GET handler
-export async function GET() {
-  return NextResponse.json({
-    status: 'ok',
-    service: 'Ladsawai Vintage Market LINE Webhook',
-    timestamp: new Date().toISOString()
-  });
-}
-
 // Disable Next.js body parser to get raw text for HMAC verification
 export async function POST(req) {
   try {
