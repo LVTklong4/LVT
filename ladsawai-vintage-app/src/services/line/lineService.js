@@ -245,180 +245,130 @@ export function buildFlexAlreadyRegistered(customerName) {
  */
 export function buildFlexContractSummary({ customerName, phone, contracts = [], liffUrl }) {
   const targetUrl = liffUrl || 'https://liff.line.me/2008895416-VNkDCPju';
-  const hasUnpricedContracts = contracts.some(c => Number(c.total_price || 0) <= 0);
-  const totalBalance = contracts.reduce((sum, c) => {
-    const total = parseFloat(c.total_price || 0);
-    const paid = parseFloat(c.paid_amount || 0);
-    return sum + Math.max(0, total - paid);
-  }, 0);
-
-  const contractBoxes = contracts.slice(0, 5).map((c, idx) => {
-    const total = parseFloat(c.total_price || 0);
-    const paid = parseFloat(c.paid_amount || 0);
+  const weekdayNames = { 0: 'วันอาทิตย์', 3: 'วันพุธ', 5: 'วันศุกร์', 6: 'วันเสาร์' };
+  const currency = value => Number(value || 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  const formatReceiptDate = value => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : date.toLocaleDateString('th-TH', {
+        timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: 'numeric'
+      });
+  };
+  const bubbles = contracts.slice(0, 12).map(contract => {
+    const total = Number(contract.total_price || 0);
+    const paid = Number(contract.paid_amount || 0);
     const remaining = Math.max(0, total - paid);
-    const hasAmount = total > 0;
-    const isPaid = hasAmount && remaining <= 0;
+    const paymentPercent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : null;
+    const paidDate = formatReceiptDate(contract.timestamp || contract.start_date);
+    const daysByWeekday = new Map();
+    const stallNames = String(contract.stalls || '').split(',').map(name => name.replace(/[\[\]]/g, '').trim()).filter(Boolean);
+    let stallDetails = [];
+    try {
+      stallDetails = Array.isArray(contract.stall_details)
+        ? contract.stall_details
+        : JSON.parse(contract.stall_details || '[]');
+    } catch (e) {}
+
+    stallDetails.forEach(detail => {
+      (Array.isArray(detail.days) ? detail.days : []).forEach(weekday => {
+        if (!weekdayNames[weekday]) return;
+        if (!daysByWeekday.has(weekday)) daysByWeekday.set(weekday, new Set());
+        daysByWeekday.get(weekday).add(String(detail.name || '').replace(/[\[\]]/g, '').trim());
+      });
+    });
+
+    if (daysByWeekday.size === 0) {
+      const selectedDays = String(contract.selected_days || '').toLowerCase();
+      const selectedMap = [
+        [3, /wed|พุธ/], [5, /fri|ศุกร์/], [6, /sat|เสาร์/], [0, /sun|อาทิตย์/]
+      ];
+      selectedMap.forEach(([weekday, pattern]) => {
+        if (pattern.test(selectedDays)) daysByWeekday.set(weekday, new Set(stallNames));
+      });
+    }
+
+    const scheduleRows = [...daysByWeekday.entries()]
+      .sort((a, b) => [3, 5, 6, 0].indexOf(a[0]) - [3, 5, 6, 0].indexOf(b[0]))
+      .map(([weekday, stalls]) => {
+        return `${weekdayNames[weekday]} ล็อค ${[...stalls].filter(Boolean).join(', ') || stallNames.join(', ') || '-'}`;
+      });
+
+    const itemRows = [];
+    scheduleRows.forEach(schedule => itemRows.push({ label: schedule, amount: null }));
+    itemRows.push({ label: 'ยอดค่าเช่าตามสัญญารายเดือน', amount: total });
+
+    const receiptLine = (label, value, options = {}) => ({
+      type: 'box',
+      layout: 'horizontal',
+      margin: options.margin || 'xs',
+      contents: [
+        { type: 'text', text: label, size: options.size || 'xs', color: options.color || '#333333', flex: 7, wrap: true, weight: options.weight || 'regular' },
+        { type: 'text', text: value, size: options.size || 'xs', color: options.valueColor || options.color || '#222222', flex: 4, align: 'end', weight: options.valueWeight || options.weight || 'regular', wrap: true }
+      ]
+    });
+
+    const bodyContents = [
+      { type: 'text', text: 'ข้อมูลตอบกลับจากระบบ', size: 'xxs', color: '#777777' },
+      { type: 'text', text: 'ใบสรุปยอดค่าเช่ารายเดือน', size: 'md', weight: 'bold', color: '#222222', margin: 'xs' },
+      receiptLine('เลขที่สัญญา :', contract.id || '-', { size: 'xxs' }),
+      receiptLine('วันที่ทำรายการ :', paidDate, { size: 'xxs' }),
+      receiptLine('ประจำเดือน :', formatThaiMonth(contract.booking_month), { weight: 'bold', valueWeight: 'bold' }),
+      receiptLine('ผู้จอง :', contract.booker_name || customerName || '-', { valueColor: '#8B4513', valueWeight: 'bold' }),
+      receiptLine(contract.customer_type === 'Room' ? 'ประเภท :' : 'สินค้า :', contract.customer_type === 'Room' ? 'ห้องเช่า/ห้องพัก' : contract.product || 'ของชำทั่วไป', { valueWeight: 'bold' }),
+      ...(phone ? [receiptLine('เบอร์โทร :', `••••${phone.slice(-4)}`, { size: 'xxs' })] : []),
+      { type: 'separator', margin: 'sm', color: '#B8BEC8' },
+      ...itemRows.flatMap(item => [
+        item.amount === null
+          ? { type: 'text', text: item.label, size: 'xs', color: '#16803C', weight: 'bold', margin: 'sm', wrap: true }
+          : receiptLine(item.label, currency(item.amount), { weight: 'bold' })
+      ]),
+      { type: 'separator', margin: 'sm', color: '#B8BEC8' },
+      receiptLine('รวมเป็นเงินทั้งสิ้น :', currency(total), { weight: 'bold', valueWeight: 'bold', valueColor: '#243F8F' }),
+      receiptLine('ชำระแล้วรวมทั้งสิ้น :', currency(paid), { weight: 'bold', valueWeight: 'bold', valueColor: '#16803C' }),
+      receiptLine('คิดเป็นเปอร์เซ็นต์ :', paymentPercent === null ? 'ยังไม่มียอด' : `${paymentPercent}%`, { weight: 'bold', valueWeight: 'bold', valueColor: '#2457E5' }),
+      receiptLine('ค้างชำระ/คงเหลือ :', currency(remaining), { weight: 'bold', valueWeight: 'bold', valueColor: remaining > 0 ? '#B42318' : '#16803C' }),
+      ...(total <= 0 ? [{
+        type: 'text',
+        text: 'ยอดสัญญายังไม่ถูกบันทึก กรุณาติดต่อเจ้าหน้าที่ตลาดเพื่อตรวจสอบค่ะ',
+        size: 'xxs',
+        color: '#A15C00',
+        wrap: true,
+        margin: 'sm'
+      }] : [])
+    ];
 
     return {
-      type: 'box',
-      layout: 'vertical',
-      backgroundColor: idx % 2 === 0 ? '#FAF0E6' : '#FFFFFF',
-      cornerRadius: 'md',
-      paddingAll: '12px',
-      margin: 'sm',
-      contents: [
-        {
-          type: 'box',
-          layout: 'horizontal',
-          contents: [
-            {
-              type: 'text',
-              text: formatThaiMonth(c.booking_month),
-              weight: 'bold',
-              size: 'xs',
-              color: '#5D4037'
-            },
-            {
-              type: 'text',
-              text: `ล็อค ${c.stalls || '-'}`,
-              align: 'end',
-              weight: 'bold',
-              size: 'xs',
-              color: '#5D4037',
-              wrap: true
-            }
-          ]
-        },
-        {
-          type: 'text',
-          text: `ยอดสัญญา ${total.toLocaleString()} บาท  ·  ชำระแล้ว ${paid.toLocaleString()} บาท`,
-          size: 'xxs',
-          color: '#8D6E63',
-          wrap: true,
-          margin: 'sm'
-        },
-        {
-          type: 'text',
-          text: !hasAmount ? 'ยังไม่มียอดสัญญาที่บันทึก' : isPaid ? 'ชำระครบแล้ว ✓' : `คงเหลือ ${remaining.toLocaleString()} บาท`,
-          weight: 'bold',
-          size: 'xs',
-          color: !hasAmount ? '#A15C00' : isPaid ? '#2E7D32' : '#C62828',
-          margin: 'xs'
-        }
-      ]
-    };
-  });
-
-  return {
-    type: 'flex',
-    altText: `สรุปยอดค่าเช่ารายเดือน ร้าน ${customerName || ''}`,
-    contents: {
       type: 'bubble',
       size: 'mega',
       body: {
         type: 'box',
         layout: 'vertical',
-        spacing: 'sm',
+        spacing: 'xs',
         paddingAll: '16px',
-        contents: [
-          {
-            type: 'text',
-            text: 'ข้อมูลตอบกลับจากระบบ',
-            size: 'xxs',
-            color: '#8D6E63'
-          },
-          {
-            type: 'text',
-            text: 'สรุปยอดค่าเช่ารายเดือน',
-            color: '#4A3B32',
-            weight: 'bold',
-            size: 'lg',
-            margin: 'xs'
-          },
-          {
-            type: 'text',
-            text: `ร้าน ${customerName || '-'}${phone ? ` · โทรลงท้าย ${phone.slice(-4)}` : ''}`,
-            color: '#8D6E63',
-            size: 'xs',
-            wrap: true
-          },
-          {
-            type: 'separator',
-            margin: 'md',
-            color: '#D7CCC8'
-          },
-          {
-            type: 'box',
-            layout: 'horizontal',
-            margin: 'sm',
-            contents: [
-              {
-                type: 'text',
-                text: 'ยอดค้างรวม:',
-                size: 'sm',
-                weight: 'bold',
-                color: '#4A3B32'
-              },
-              {
-                type: 'text',
-                text: totalBalance > 0
-                  ? `${totalBalance.toLocaleString()} บาท`
-                  : hasUnpricedContracts
-                    ? 'มีรายการที่ยังไม่บันทึกยอด'
-                    : 'ชำระครบถ้วนแล้ว ✓',
-                align: 'end',
-                weight: 'bold',
-                size: 'sm',
-                color: totalBalance > 0 ? '#C62828' : hasUnpricedContracts ? '#A15C00' : '#2E7D32',
-                wrap: true
-              }
-            ]
-          },
-          {
-            type: 'separator',
-            margin: 'sm',
-            color: '#D7CCC8'
-          },
-          ...contractBoxes,
-          ...(totalBalance > 0 ? [
-            {
-              type: 'text',
-              text: 'กรุณาติดต่อเจ้าหน้าที่ตลาดเพื่อสอบถามวิธีชำระเงินค่ะ',
-              size: 'xxs',
-              color: '#6D4C41',
-              wrap: true,
-              margin: 'md'
-            }
-          ] : []),
-          ...(hasUnpricedContracts ? [
-            {
-              type: 'text',
-              text: 'โปรดติดต่อเจ้าหน้าที่ตลาดเพื่อตรวจสอบยอดของรายการนี้ค่ะ',
-              size: 'xxs',
-              color: '#6D4C41',
-              wrap: true,
-              margin: 'sm'
-            }
-          ] : [])
-        ]
+        contents: bodyContents
       },
       footer: {
         type: 'box',
         layout: 'vertical',
-        contents: [
-          {
-            type: 'button',
-            style: 'secondary',
-            height: 'sm',
-            action: {
-              type: 'uri',
-              label: '🔄 ตรวจสอบข้อมูลผู้ค้า',
-              uri: targetUrl
-            }
-          }
-        ]
+        contents: [{
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: { type: 'uri', label: '🔄 ตรวจสอบข้อมูลผู้ค้า', uri: targetUrl }
+        }]
       }
-    }
+    };
+  });
+
+  return {
+          type: 'flex',
+    altText: `ใบสรุปยอดค่าเช่ารายเดือน ร้าน ${customerName || ''}`,
+    contents: bubbles.length > 1 ? { type: 'carousel', contents: bubbles } : bubbles[0]
   };
 }
 

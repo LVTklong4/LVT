@@ -136,7 +136,7 @@ export async function POST(req) {
           const cleanPhone = normalizeThaiPhoneNumber(lineUser.phone);
           const { data: bookings, error: bError } = await supabaseAdmin
             .from('monthly_bookings')
-            .select('id, booker_name, phone, stalls, booking_month, total_price, paid_amount, status, customer_type');
+            .select('id, booker_name, phone, stalls, booking_month, total_price, paid_amount, status, customer_type, timestamp, start_date, product, stall_details, selected_days');
 
           if (bError || !bookings) {
             console.error('[LINE Webhook] Error reading monthly contracts:', bError);
@@ -178,7 +178,7 @@ export async function POST(req) {
             continue;
           }
 
-          // Render current contracts and outstanding prior months in newest-first order.
+          // Render current contracts and outstanding prior months from monthly_bookings only.
           const customerName = relevantContracts[0]?.booker_name || lineUser.display_name;
 
           const flexMsg = buildFlexContractSummary({
