@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { pushLineMessage, buildFlexRegistrationSuccess } from '@/services/line/lineService';
 
 export async function POST(req) {
@@ -43,7 +44,17 @@ export async function POST(req) {
     const customerName = primaryContract.booker_name || primaryContract.customer_name || displayName || 'ผู้ค้า';
 
     // 2. Upsert into line_users table
-    const { error: upsertError } = await supabase
+    const supabaseAdmin = getSupabaseAdmin();
+    if (!supabaseAdmin) {
+      console.error('[LINE Register] SUPABASE_SERVICE_ROLE_KEY is not configured.');
+      return NextResponse.json({
+        success: false,
+        error: 'server_configuration',
+        message: 'ระบบกำลังปรับปรุงการเชื่อมต่อ กรุณาลองใหม่ภายหลังค่ะ'
+      }, { status: 503 });
+    }
+
+    const { error: upsertError } = await supabaseAdmin
       .from('line_users')
       .upsert({
         line_user_id: lineUserId,
