@@ -42,13 +42,10 @@ export async function POST(req) {
 
       // Handle Follow / Unblock
       if (event.type === 'follow') {
-        await replyLineMessage(replyToken, [
-          {
-            type: 'text',
-            text: 'สวัสดีค่ะ 🙏 ตลาดนัดลาดสวายวินเทจ ยินดีให้บริการค่ะ\n\nสำหรับผู้ค้ารายเดือน สามารถกดปุ่มเมนูด้านล่าง หรือพิมพ์คำว่า "เช็คยอด" เพื่อตรวจสอบข้อมูลค่าเช่าได้ตลอด 24 ชม. ค่ะ'
-          },
-          buildFlexUnregistered(liffUrl)
-        ]);
+        await replyLineMessage(replyToken, [{
+          type: 'text',
+          text: 'สวัสดีค่ะ 🙏 ตลาดนัดลาดสวายวินเทจยินดีให้บริการค่ะ หากเป็นผู้ค้ารายเดือนและต้องการตรวจสอบยอด สามารถพิมพ์ "เช็คยอด" ในแชทนี้ได้ค่ะ'
+        }]);
         continue;
       }
 
