@@ -136,13 +136,7 @@ export async function POST(req) {
           continue;
         }
 
-        // Default Auto-Reply for other greetings or questions
-        await replyLineMessage(replyToken, [
-          {
-            type: 'text',
-            text: 'สวัสดีค่ะ ตลาดนัดลาดสวายวินเทจยินดีให้บริการค่ะ 🏪\n\nต้องการตรวจสอบข้อมูลหรือทำรายการใด สามารถเลือกกดจากเมนูด้านล่าง หรือพิมพ์ได้เลยค่ะ:\n• พิมพ์ "เช็คยอด" เพื่อดูยอดค่าเช่า\n• พิมพ์ "ลงทะเบียน" เพื่อผูกเบอร์โทรศัพท์\n\nหากต้องการสอบถามเรื่องอื่นๆ สามารถพิมพ์ข้อความทิ้งไว้ แอดมินจะรีบมาตอบกลับนะคะ 🙏'
-          }
-        ]);
+        // Ignore other messages so free-form customer messages are not auto-replied to.
       }
     }
 
