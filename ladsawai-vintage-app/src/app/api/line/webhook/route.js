@@ -165,8 +165,6 @@ export async function POST(req) {
 
               const total = Number(contract.total_price || 0);
               const paid = Number(contract.paid_amount || 0);
-              if (total <= 0) return false;
-
               const remaining = Math.max(0, total - paid);
               const monthKey = getBookingMonthKey(contract.booking_month);
               return remaining > 0 || (monthKey && monthKey >= currentMonthKey);

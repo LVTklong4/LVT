@@ -245,6 +245,7 @@ export function buildFlexAlreadyRegistered(customerName) {
  */
 export function buildFlexContractSummary({ customerName, phone, contracts = [], liffUrl }) {
   const targetUrl = liffUrl || 'https://liff.line.me/2008895416-VNkDCPju';
+  const hasUnpricedContracts = contracts.some(c => Number(c.total_price || 0) <= 0);
   const totalBalance = contracts.reduce((sum, c) => {
     const total = parseFloat(c.total_price || 0);
     const paid = parseFloat(c.paid_amount || 0);
@@ -255,7 +256,8 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
     const total = parseFloat(c.total_price || 0);
     const paid = parseFloat(c.paid_amount || 0);
     const remaining = Math.max(0, total - paid);
-    const isPaid = remaining <= 0;
+    const hasAmount = total > 0;
+    const isPaid = hasAmount && remaining <= 0;
 
     return {
       type: 'box',
@@ -297,10 +299,10 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
         },
         {
           type: 'text',
-          text: isPaid ? 'ชำระครบแล้ว ✓' : `คงเหลือ ${remaining.toLocaleString()} บาท`,
+          text: !hasAmount ? 'ยังไม่มียอดสัญญาที่บันทึก' : isPaid ? 'ชำระครบแล้ว ✓' : `คงเหลือ ${remaining.toLocaleString()} บาท`,
           weight: 'bold',
           size: 'xs',
-          color: isPaid ? '#2E7D32' : '#C62828',
+          color: !hasAmount ? '#A15C00' : isPaid ? '#2E7D32' : '#C62828',
           margin: 'xs'
         }
       ]
@@ -359,11 +361,15 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
               },
               {
                 type: 'text',
-                text: totalBalance > 0 ? `${totalBalance.toLocaleString()} บาท` : 'ชำระครบถ้วนแล้ว ✓',
+                text: totalBalance > 0
+                  ? `${totalBalance.toLocaleString()} บาท`
+                  : hasUnpricedContracts
+                    ? 'มีรายการที่ยังไม่บันทึกยอด'
+                    : 'ชำระครบถ้วนแล้ว ✓',
                 align: 'end',
                 weight: 'bold',
                 size: 'sm',
-                color: totalBalance > 0 ? '#C62828' : '#2E7D32',
+                color: totalBalance > 0 ? '#C62828' : hasUnpricedContracts ? '#A15C00' : '#2E7D32',
                 wrap: true
               }
             ]
@@ -382,6 +388,16 @@ export function buildFlexContractSummary({ customerName, phone, contracts = [], 
               color: '#6D4C41',
               wrap: true,
               margin: 'md'
+            }
+          ] : []),
+          ...(hasUnpricedContracts ? [
+            {
+              type: 'text',
+              text: 'โปรดติดต่อเจ้าหน้าที่ตลาดเพื่อตรวจสอบยอดของรายการนี้ค่ะ',
+              size: 'xxs',
+              color: '#6D4C41',
+              wrap: true,
+              margin: 'sm'
             }
           ] : [])
         ]
