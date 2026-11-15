@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef } from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ClipboardList } from 'lucide-react';
 
 export default function StallMapGrid({ hideLegend = false }) {
   const {
@@ -15,7 +15,10 @@ export default function StallMapGrid({ hideLegend = false }) {
     handleStallClick,
     formatBookingMonth,
     getBookingMonthStr,
-    fetchBookingsAndStorage
+    fetchBookingsAndStorage,
+    standbyList,
+    setShowStandbyModal,
+    adminUser
   } = useBooking();
 
   const maxCol = 20;
@@ -143,20 +146,69 @@ export default function StallMapGrid({ hideLegend = false }) {
     return selectedDate ? new Date(selectedDate).getDay() : new Date().getDay();
   }, [selectedDate]);
 
+  // 5. Calculate standby waitlist counts for selectedDate
+  const waitlistCounts = useMemo(() => {
+    if (!standbyList || !selectedDate) return { total: 0, summaryText: '' };
+    const waitingForDate = standbyList.filter(
+      item => item.date === selectedDate && item.status === 'รอคิว'
+    );
+    let food = 0;
+    let general = 0;
+    let specific = 0;
+
+    waitingForDate.forEach(item => {
+      const zone = (item.preferred_zone || '').trim();
+      if (zone === 'เจาะจง' || zone === 'ระบุล็อค' || item.preferred_stall_name) {
+        specific++;
+      } else if (zone.includes('อาหาร')) {
+        food++;
+      } else {
+        general++;
+      }
+    });
+
+    const parts = [];
+    if (food > 0) parts.push(`อาหาร: ${food}`);
+    if (general > 0) parts.push(`ทั่วไป: ${general}`);
+    if (specific > 0) parts.push(`เจาะจง: ${specific}`);
+
+    return {
+      total: waitingForDate.length,
+      food,
+      general,
+      specific,
+      summaryText: parts.length > 0 ? `มีคิว ${parts.join(' / ')} ราย` : `มีคิวรอ ${waitingForDate.length} ราย`
+    };
+  }, [standbyList, selectedDate]);
+
   return (
     <div className="flex flex-col items-center w-full">
       {/* Colors Legend */}
       {!hideLegend && (
-        <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-1.5 mb-2 w-fit">
+        <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-1.5 mb-2 w-fit max-w-full">
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] md:text-[10px] font-bold justify-center items-center text-gray-700">
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#DCEDC8] border border-[#AED581] rounded-sm"></span>อาหาร (ว่าง)</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#B3E5FC] border border-[#81D4FA] rounded-sm"></span>เสื้อผ้า (ว่าง)</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFE0B2] border border-[#FFB74D] rounded-sm"></span>ค้างชำระ</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#FFCDD2] border border-[#E57373] rounded-sm"></span>จองแล้ว</div>
             <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#D1C4E9] border border-[#B39DDB] rounded-sm"></span>รายเดือน</div>
-            <span className="hidden md:inline-flex items-center gap-1 text-[9px] text-[#8B4513] font-extrabold bg-[#8B4513]/10 px-1.5 py-0.5 rounded ml-1">
-              🖐️ คลิกลากเมาส์เพื่อเลื่อนผัง
-            </span>
+
+            {/* Standby Waitlist Notification vs Drag hint */}
+            {adminUser && waitlistCounts.total > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowStandbyModal && setShowStandbyModal(true)}
+                className="inline-flex items-center gap-1 text-[9px] md:text-[10px] bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-extrabold px-2 py-0.5 rounded-full shadow-xs cursor-pointer transition-all active:scale-95 border border-amber-300 ml-1 group animate-pulse"
+                title="คลิกเพื่อดูและจัดการคิวสำรองวันนี้"
+              >
+                <ClipboardList className="w-3 h-3 text-amber-200 shrink-0" />
+                <span>{waitlistCounts.summaryText}</span>
+              </button>
+            ) : (
+              <span className="hidden md:inline-flex items-center gap-1 text-[9px] text-[#8B4513] font-extrabold bg-[#8B4513]/10 px-1.5 py-0.5 rounded ml-1">
+                🖐️ คลิกลากเมาส์เพื่อเลื่อนผัง
+              </span>
+            )}
           </div>
         </div>
       )}

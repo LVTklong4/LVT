@@ -23,7 +23,7 @@ export default function StandbyWaitlistModal({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [product, setProduct] = useState('');
-  const [preferredZone, setPreferredZone] = useState('อาหาร');
+  const [preferredZone, setPreferredZone] = useState('โซนอาหาร');
   const [preferredStallName, setPreferredStallName] = useState('');
   const [filterStatus, setFilterStatus] = useState('ทั้งหมด');
 
@@ -35,13 +35,18 @@ export default function StandbyWaitlistModal({
       alert('โปรดระบุชื่อผู้ค้า/เบอร์โทร');
       return;
     }
+    const isSpecific = preferredZone === 'เจาะจง' || preferredZone === 'ระบุล็อค';
+    if (isSpecific && !preferredStallName.trim()) {
+      alert('โปรดระบุหมายเลขล็อคที่เจาะจง');
+      return;
+    }
     handleAddStandbyQueue({
       date: selectedDate,
       booker_name: name.trim(),
       phone: phone.trim(),
       product: product.trim(),
       preferred_zone: preferredZone,
-      preferred_stall_name: preferredStallName.trim(),
+      preferred_stall_name: isSpecific ? preferredStallName.trim() : '',
       status: 'รอคิว',
       officer: adminUser?.name || 'เจ้าหน้าที่'
     });
@@ -50,6 +55,7 @@ export default function StandbyWaitlistModal({
     setName('');
     setPhone('');
     setProduct('');
+    setPreferredZone('โซนอาหาร');
     setPreferredStallName('');
     setActiveTab('list');
   };
@@ -117,6 +123,7 @@ export default function StandbyWaitlistModal({
           {activeTab === 'add' ? (
             /* Add Form */
             <form onSubmit={handleSubmitNewStandby} className="flex flex-col gap-3.5 text-xs">
+              {/* Row 1: ชื่อผู้ค้า / ชื่อร้าน + สินค้าที่ต้องการขาย */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="font-bold text-[#5D4037] flex items-center gap-1">
@@ -134,59 +141,91 @@ export default function StandbyWaitlistModal({
 
                 <div className="flex flex-col gap-1">
                   <label className="font-bold text-[#5D4037] flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-[#8B4513]" /> เบอร์โทรศัพท์ติดต่อ
-                  </label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="08X-XXX-XXXX"
-                    className="p-2 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[#5D4037] flex items-center gap-1">
                     <Store className="w-3.5 h-3.5 text-[#8B4513]" /> สินค้าที่ต้องการขาย
                   </label>
                   <input
                     type="text"
                     value={product}
                     onChange={(e) => setProduct(e.target.value)}
-                    placeholder="เช่น หมูปิ้งโบราณ, ส้มตำ"
+                    placeholder="เช่น หมูปิ้งโบราณ, เสื้อยืด"
                     className="p-2 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
                   />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[#5D4037]">โซนที่ต้องการ</label>
-                  <select
-                    value={preferredZone}
-                    onChange={(e) => setPreferredZone(e.target.value)}
-                    className="p-2 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
-                  >
-                    <option value="อาหาร">โซนอาหาร</option>
-                    <option value="เสื้อผ้า">โซนเสื้อผ้า</option>
-                    <option value="ทั่วไป">โซนทั่วไป</option>
-                    <option value="ระบุล็อค">ระบุล็อคเจาะจง</option>
-                  </select>
                 </div>
               </div>
 
-              {preferredZone === 'ระบุล็อค' && (
-                <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[#5D4037]">หมายเลขล็อคเจาะจง</label>
+              {/* Row 2: เบอร์โทร (ลดขนาด) + Radio โซน (อาหาร / ทั่วไป / เจาะจง) + ช่องกรอกเจาะจงในแนวเดียวกัน */}
+              <div className="flex flex-wrap items-end gap-3 sm:gap-4 bg-[#FAF0E6]/60 p-3 rounded-xl border border-[#8B4513]/15">
+                {/* เบอร์โทรศัพท์ (ความกว้างกะทัดรัด) */}
+                <div className="flex flex-col gap-1 w-full sm:w-auto">
+                  <label className="font-bold text-[#5D4037] flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-[#8B4513]" /> เบอร์โทรศัพท์
+                  </label>
                   <input
-                    type="text"
-                    value={preferredStallName}
-                    onChange={(e) => setPreferredStallName(e.target.value)}
-                    placeholder="เช่น 28/1"
-                    className="p-2 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="08X-XXX-XXXX"
+                    maxLength={12}
+                    className="p-2 w-full sm:w-36 border border-[#8B4513]/30 rounded-lg bg-[#FFFDF9] text-gray-800 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513]"
                   />
                 </div>
-              )}
+
+                {/* โซนที่ต้องการ (Radio Buttons) + ช่องเจาะจง */}
+                <div className="flex flex-col gap-1 flex-1 min-w-[280px]">
+                  <label className="font-bold text-[#5D4037]">โซนที่ต้องการ</label>
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 py-1.5">
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer text-gray-800 font-bold select-none text-xs">
+                      <input
+                        type="radio"
+                        name="preferredZone"
+                        value="โซนอาหาร"
+                        checked={preferredZone === 'โซนอาหาร' || preferredZone === 'อาหาร'}
+                        onChange={() => setPreferredZone('โซนอาหาร')}
+                        className="text-[#8B4513] focus:ring-[#8B4513] accent-[#8B4513] cursor-pointer"
+                      />
+                      <span>โซนอาหาร</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer text-gray-800 font-bold select-none text-xs">
+                      <input
+                        type="radio"
+                        name="preferredZone"
+                        value="โซนทั่วไป"
+                        checked={preferredZone === 'โซนทั่วไป' || preferredZone === 'ทั่วไป' || preferredZone === 'เสื้อผ้า'}
+                        onChange={() => setPreferredZone('โซนทั่วไป')}
+                        className="text-[#8B4513] focus:ring-[#8B4513] accent-[#8B4513] cursor-pointer"
+                      />
+                      <span>โซนทั่วไป</span>
+                    </label>
+
+                    <div className="inline-flex items-center gap-1.5">
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer text-gray-800 font-bold select-none text-xs">
+                        <input
+                          type="radio"
+                          name="preferredZone"
+                          value="เจาะจง"
+                          checked={preferredZone === 'เจาะจง' || preferredZone === 'ระบุล็อค'}
+                          onChange={() => setPreferredZone('เจาะจง')}
+                          className="text-[#8B4513] focus:ring-[#8B4513] accent-[#8B4513] cursor-pointer"
+                        />
+                        <span>เจาะจง</span>
+                      </label>
+
+                      {(preferredZone === 'เจาะจง' || preferredZone === 'ระบุล็อค') && (
+                        <input
+                          type="text"
+                          required
+                          autoFocus
+                          value={preferredStallName}
+                          onChange={(e) => setPreferredStallName(e.target.value)}
+                          placeholder="เช่น 28/1"
+                          className="p-1.5 w-24 border-2 border-amber-400 rounded-lg bg-white text-gray-900 font-mono font-black text-xs focus:outline-none focus:ring-1 focus:ring-[#8B4513] animate-pop-in"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div className="flex justify-end gap-2 mt-2">
                 <button
