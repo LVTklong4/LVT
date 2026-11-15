@@ -106,7 +106,7 @@ export function formatThaiMonth(yearMonthStr) {
  * Builds Flex Message for Unregistered Merchant
  */
 export function buildFlexUnregistered(liffUrl) {
-  const targetUrl = liffUrl || `https://liff.line.me/${process.env.NEXT_PUBLIC_LINE_LIFF_ID || ''}`;
+  const targetUrl = liffUrl || `https://liff.line.me/${process.env.NEXT_PUBLIC_LINE_LIFF_ID || '2008895416-3c35BsXZ'}`;
 
   return {
     type: 'flex',

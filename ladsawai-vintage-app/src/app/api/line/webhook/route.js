@@ -7,6 +7,15 @@ import {
   buildFlexContractSummary
 } from '@/services/line/lineService';
 
+// Health check GET handler
+export async function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    service: 'Ladsawai Vintage Market LINE Webhook',
+    timestamp: new Date().toISOString()
+  });
+}
+
 // Disable Next.js body parser to get raw text for HMAC verification
 export async function POST(req) {
   try {
@@ -22,8 +31,8 @@ export async function POST(req) {
     const body = JSON.parse(rawBody);
     const events = body.events || [];
 
-    const liffId = process.env.NEXT_PUBLIC_LINE_LIFF_ID;
-    const liffUrl = liffId ? `https://liff.line.me/${liffId}` : '';
+    const liffId = process.env.NEXT_PUBLIC_LINE_LIFF_ID || '2008895416-3c35BsXZ';
+    const liffUrl = `https://liff.line.me/${liffId}`;
 
     // 2. Process each incoming event
     for (const event of events) {
