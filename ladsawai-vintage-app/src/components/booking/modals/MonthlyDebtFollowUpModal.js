@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, Component } from 'react';
+import React, { useState, useEffect, useMemo, Component } from 'react';
 import {
   Printer, X, Search, Calendar, CheckCircle2,
-  Phone, FileText, LayoutList, AlertTriangle
+  Phone, FileText, LayoutList, AlertTriangle,
+  MessageSquare, Loader2, Send, CheckCircle, Info
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { useMonthlyBooking } from '@/context/MonthlyBookingContext';
 import { useAuthAdmin } from '@/context/AuthAdminContext';
 import { monthNamesFull, formatBookingMonth, sortThaiMonthsDescending } from '@/utils/thaiDateHelper';
@@ -143,6 +145,131 @@ function MonthlyDebtFollowUpModalContent({ isOpen, onClose }) {
     printDebtFollowUpA4(previewHTML);
   };
 
+  // LINE Notification States
+  const [lineUsersMap, setLineUsersMap] = useState(new Map());
+  const [isLoadingLineUsers, setIsLoadingLineUsers] = useState(false);
+  const [showLineNotifyModal, setShowLineNotifyModal] = useState(false);
+  const [isSendingLine, setIsSendingLine] = useState(false);
+  const [lineSendResult, setLineSendResult] = useState(null);
+
+  // Fetch registered LINE users from Supabase when modal opens
+  useEffect(() => {
+    if (!isModalOpen) return;
+    let isMounted = true;
+
+    async function fetchLineUsers() {
+      try {
+        setIsLoadingLineUsers(true);
+        const { data, error } = await supabase
+          .from('line_users')
+          .select('line_user_id, phone, display_name');
+
+        if (!error && data && isMounted) {
+          const map = new Map();
+          data.forEach(u => {
+            const clean = (u.phone || '').replace(/[^0-9]/g, '');
+            if (clean) map.set(clean, u);
+          });
+          setLineUsersMap(map);
+        }
+      } catch (err) {
+        console.warn('[MonthlyDebtFollowUpModal] Could not fetch line_users:', err);
+      } finally {
+        if (isMounted) setIsLoadingLineUsers(false);
+      }
+    }
+
+    fetchLineUsers();
+    return () => { isMounted = false; };
+  }, [isModalOpen]);
+
+  // Helper to match phone to a registered LINE user
+  const checkLineUser = (phone) => {
+    if (!phone) return null;
+    const clean = phone.replace(/[^0-9]/g, '');
+    if (!clean) return null;
+    if (lineUsersMap.has(clean)) return lineUsersMap.get(clean);
+    for (const [k, v] of lineUsersMap.entries()) {
+      if (k.endsWith(clean) || clean.endsWith(k)) return v;
+    }
+    return null;
+  };
+
+  // Group overdue debtors from filtered list for LINE notification
+  const overdueDebtors = useMemo(() => {
+    const debtors = (filteredItems || []).filter(item => {
+      const hasDebt = (item.remainingDebt || 0) > 0 || (item.shortfall || 0) > 0;
+      return hasDebt && item.renewalStatus !== 'ลา';
+    });
+
+    const map = new Map();
+    debtors.forEach(item => {
+      const clean = (item.phone || '').replace(/[^0-9]/g, '') || `item_${item.id}`;
+      if (!map.has(clean)) {
+        map.set(clean, {
+          phone: item.phone,
+          customerName: item.bookerName,
+          items: [],
+          totalRemainingDebt: 0,
+          totalShortfall: 0,
+          lineUser: checkLineUser(item.phone)
+        });
+      }
+      const entry = map.get(clean);
+      entry.items.push(item);
+      entry.totalRemainingDebt += (item.remainingDebt || 0);
+      entry.totalShortfall += (item.shortfall || 0);
+      if (!entry.lineUser) {
+        entry.lineUser = checkLineUser(item.phone);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [filteredItems, lineUsersMap]);
+
+  const connectedDebtors = useMemo(() => overdueDebtors.filter(d => !!d.lineUser), [overdueDebtors]);
+  const unconnectedDebtors = useMemo(() => overdueDebtors.filter(d => !d.lineUser), [overdueDebtors]);
+
+  // Handle Send LINE Notifications
+  const handleSendLineNotification = async () => {
+    if (connectedDebtors.length === 0) return;
+
+    try {
+      setIsSendingLine(true);
+      setLineSendResult(null);
+
+      // Collect target contracts
+      const targets = connectedDebtors.flatMap(d => d.items.map(item => ({
+        id: item.id,
+        phone: d.phone,
+        customerName: d.customerName,
+        stalls: item.displayStalls || item.stalls,
+        shortfall: item.shortfall,
+        remainingDebt: item.remainingDebt,
+        totalPrice: item.totalPrice,
+        paidAmount: item.paidAmount,
+        bookingMonth: item.bookingMonth || selectedMonth
+      })));
+
+      const res = await fetch('/api/line/notify-debt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targets })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'เกิดข้อผิดพลาดในการส่ง LINE');
+      }
+
+      setLineSendResult(data);
+    } catch (err) {
+      alert(`ไม่สามารถส่งข้อความได้: ${err.message}`);
+    } finally {
+      setIsSendingLine(false);
+    }
+  };
+
   if (!isModalOpen) return null;
 
   return (
@@ -198,6 +325,20 @@ function MonthlyDebtFollowUpModalContent({ isOpen, onClose }) {
                 <span>ดูตัวอย่างใบ A4 จริง</span>
               </button>
             </div>
+
+            <button
+              onClick={() => {
+                setLineSendResult(null);
+                setShowLineNotifyModal(true);
+              }}
+              disabled={filteredItems.length === 0}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-xl text-xs font-black shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="ส่งแจ้งเตือนยอดค้างผ่าน LINE ให้กับผู้ค้าที่ผูกบัญชีไว้"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">แจ้งเตือนผ่าน LINE ({connectedDebtors.length})</span>
+              <span className="sm:hidden">LINE ({connectedDebtors.length})</span>
+            </button>
 
             <button
               onClick={handlePrintA4}
@@ -400,16 +541,28 @@ function MonthlyDebtFollowUpModalContent({ isOpen, onClose }) {
                         {/* Tenant Info */}
                         <td className="p-2.5">
                           <div className="font-bold text-stone-900">{row.bookerName}</div>
-                          <div className="flex items-center gap-2 text-[11px] text-stone-500 mt-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500 mt-0.5">
                             {row.phone && (
                               <a
                                 href={`tel:${row.phone}`}
-                                className="flex items-center gap-0.5 text-blue-700 hover:underline"
+                                className="flex items-center gap-0.5 text-blue-700 hover:underline font-mono"
                                 title="คลิกเพื่อโทรออก"
                               >
                                 <Phone className="w-3 h-3" />
                                 {row.phone}
                               </a>
+                            )}
+                            {row.phone && (
+                              checkLineUser(row.phone) ? (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#06C755]/15 text-[#05913e] border border-[#06C755]/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#06C755]"></span>
+                                  ผูก LINE แล้ว
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-stone-100 text-stone-400 border border-stone-200">
+                                  ยังไม่ผูก LINE
+                                </span>
+                              )
                             )}
                             {row.product && row.product !== '-' && (
                               <span>• {row.product}</span>
@@ -504,6 +657,17 @@ function MonthlyDebtFollowUpModalContent({ isOpen, onClose }) {
               ปิด
             </button>
             <button
+              onClick={() => {
+                setLineSendResult(null);
+                setShowLineNotifyModal(true);
+              }}
+              disabled={filteredItems.length === 0}
+              className="px-4 py-2 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-xl text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>แจ้งเตือนผ่าน LINE ({connectedDebtors.length})</span>
+            </button>
+            <button
               onClick={handlePrintA4}
               disabled={filteredItems.length === 0}
               className="px-5 py-2 bg-gradient-to-r from-amber-800 to-[#8B4513] hover:from-[#70360f] hover:to-amber-900 text-white rounded-xl text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -513,6 +677,140 @@ function MonthlyDebtFollowUpModalContent({ isOpen, onClose }) {
             </button>
           </div>
         </div>
+
+        {/* LINE Notification Dialog */}
+        {showLineNotifyModal && (
+          <div className="fixed inset-0 z-[220] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+            <div className="bg-[#FFFDF9] border-2 border-[#06C755] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-[#4A3B32]">
+              {/* Dialog Header */}
+              <div className="bg-[#06C755] text-white px-5 py-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                  <h3 className="font-black text-sm sm:text-base">ส่งแจ้งเตือนยอดค้างผ่าน LINE</h3>
+                </div>
+                <button
+                  onClick={() => setShowLineNotifyModal(false)}
+                  className="text-white/80 hover:text-white p-1 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 flex flex-col gap-4 text-xs">
+                {lineSendResult ? (
+                  /* Result Screen */
+                  <div className="flex flex-col items-center text-center py-2 gap-3">
+                    <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
+                      <CheckCircle className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-base text-stone-900">ดำเนินการส่งข้อความเรียบร้อย</h4>
+                      <p className="text-stone-600 text-xs mt-1">ระบบได้ส่งข้อความ Flex Card ไปยังห้องแชท LINE ของผู้ค้าแล้ว</p>
+                    </div>
+
+                    <div className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 flex justify-around text-center mt-2">
+                      <div>
+                        <div className="text-xl font-black text-[#06C755]">{lineSendResult.sentCount || 0}</div>
+                        <div className="text-[11px] font-bold text-stone-600">ส่งสำเร็จ (ร้าน)</div>
+                      </div>
+                      {lineSendResult.failedCount > 0 && (
+                        <div>
+                          <div className="text-xl font-black text-red-600">{lineSendResult.failedCount}</div>
+                          <div className="text-[11px] font-bold text-red-700">ส่งไม่สำเร็จ</div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-xl font-black text-stone-500">{lineSendResult.unregisteredCount || 0}</div>
+                        <div className="text-[11px] font-bold text-stone-600">ยังไม่ผูก LINE</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowLineNotifyModal(false);
+                        setLineSendResult(null);
+                      }}
+                      className="w-full py-2.5 bg-stone-800 hover:bg-stone-900 text-white font-bold rounded-xl text-xs mt-2 transition-all cursor-pointer shadow-md"
+                    >
+                      ปิดหน้าต่าง
+                    </button>
+                  </div>
+                ) : (
+                  /* Confirmation Screen */
+                  <>
+                    <div>
+                      <p className="text-stone-700 font-medium">
+                        ระบบจะส่งข้อความสรุปยอดค้างชำระค่าเช่ารายเดือน <span className="font-bold text-[#8B4513]">({selectedMonth})</span> ให้กับผู้ค้าที่ยังมียอดค้างชำระในรอบนี้โดยตรงทาง LINE Official
+                      </p>
+                    </div>
+
+                    {/* Stats Breakdown */}
+                    <div className="grid grid-cols-2 gap-2 bg-[#FAF7F2] p-3 rounded-xl border border-stone-200">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
+                        <div className="text-[11px] font-bold text-emerald-800">🟢 ผูก LINE แล้ว</div>
+                        <div className="text-xl font-black text-emerald-600 mt-0.5">{connectedDebtors.length} ร้าน</div>
+                        <div className="text-[10px] text-emerald-700 font-medium">พร้อมรับข้อความเตือน</div>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-lg border border-stone-200">
+                        <div className="text-[11px] font-bold text-stone-600">⚪ ยังไม่ผูก LINE</div>
+                        <div className="text-xl font-black text-stone-700 mt-0.5">{unconnectedDebtors.length} ร้าน</div>
+                        <div className="text-[10px] text-stone-500 font-medium">ต้องตามเก็บโดยตรง</div>
+                      </div>
+                    </div>
+
+                    {connectedDebtors.length === 0 ? (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-2">
+                        <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold">ไม่พบผู้ค้าที่ผูก LINE ในกลุ่มนี้</div>
+                          <div className="text-[11px] mt-0.5 text-amber-800">
+                            แนะนำให้แชร์ LINE Official <span className="font-bold">@ladsawaivintage</span> ให้ผู้ค้าแอดเพื่อน และกดปุ่มลงทะเบียนใน LINE เพื่อผูกเบอร์โทรค่ะ
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 bg-emerald-50/60 border border-emerald-200 rounded-xl text-emerald-900 text-[11px]">
+                        💡 ข้อความจะส่งเป็นการ์ดแจ้งเตือน (Flex Card) แสดงเลขล็อค ยอดคงค้าง และวิธีการชำระเงินอย่างสุภาพ
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-stone-200">
+                      <button
+                        type="button"
+                        onClick={() => setShowLineNotifyModal(false)}
+                        disabled={isSendingLine}
+                        className="flex-1 py-2.5 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        ยกเลิก
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSendLineNotification}
+                        disabled={connectedDebtors.length === 0 || isSendingLine}
+                        className="flex-1 py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSendingLine ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>กำลังส่งข้อความ...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            <span>ส่งข้อความ ({connectedDebtors.length} ร้าน)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

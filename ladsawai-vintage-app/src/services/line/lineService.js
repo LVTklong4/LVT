@@ -434,3 +434,171 @@ export function buildFlexRegistrationSuccess({ customerName, phone, contractsCou
     }
   };
 }
+
+/**
+ * Builds Flex Message for Debt / Payment Reminder
+ */
+export function buildFlexDebtReminder({ customerName, phone, contracts = [], customNote = '' }) {
+  const totalBalance = contracts.reduce((sum, c) => {
+    const total = parseFloat(c.total_price || c.totalPrice || 0);
+    const paid = parseFloat(c.paid_amount || c.paidAmount || 0);
+    return sum + Math.max(0, total - paid);
+  }, 0);
+
+  const contractItems = contracts.map(c => {
+    const total = parseFloat(c.total_price || c.totalPrice || 0);
+    const paid = parseFloat(c.paid_amount || c.paidAmount || 0);
+    const remaining = Math.max(0, total - paid);
+    const rawMonth = c.booking_month || c.bookingMonth || c.month || '';
+    const monthText = rawMonth.includes('-') ? formatThaiMonth(rawMonth) : rawMonth;
+    const stallText = c.stalls || c.displayStalls || '-';
+
+    return {
+      type: 'box',
+      layout: 'horizontal',
+      margin: 'xs',
+      contents: [
+        {
+          type: 'text',
+          text: `• แผง ${stallText} (${monthText})`,
+          size: 'xs',
+          color: '#5D4037',
+          flex: 3
+        },
+        {
+          type: 'text',
+          text: `${remaining.toLocaleString()} บ.`,
+          size: 'xs',
+          weight: 'bold',
+          color: '#C62828',
+          align: 'end',
+          flex: 2
+        }
+      ]
+    };
+  });
+
+  return {
+    type: 'flex',
+    altText: `⚠️ แจ้งเตือนยอดค้างชำระค่าเช่ารายเดือน ร้าน ${customerName || ''}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#C62828',
+        paddingAll: '16px',
+        contents: [
+          {
+            type: 'text',
+            text: 'ตลาดนัดลาดสวายวินเทจ',
+            color: '#FFCDD2',
+            weight: 'bold',
+            size: 'xs'
+          },
+          {
+            type: 'text',
+            text: '⚠️ แจ้งเตือนยอดค่าเช่าคงค้าง',
+            color: '#FFFFFF',
+            weight: 'bold',
+            size: 'lg',
+            margin: 'xs'
+          },
+          {
+            type: 'text',
+            text: `ร้าน: ${customerName || '-'} (โทร: ${phone || '-'})`,
+            color: '#FFEBEE',
+            size: 'xs',
+            margin: 'xs'
+          }
+        ]
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        paddingAll: '14px',
+        contents: [
+          {
+            type: 'text',
+            text: 'เรียน ผู้ค้ารายเดือนตลาดนัดลาดสวายวินเทจ',
+            size: 'xs',
+            weight: 'bold',
+            color: '#4A3B32'
+          },
+          {
+            type: 'text',
+            text: 'ระบบขอเรียนแจ้งยอดค่าเช่ารายเดือนที่ยังมียอดคงค้างตามรายละเอียดดังนี้ค่ะ:',
+            size: 'xs',
+            color: '#5D4037',
+            wrap: true
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#FFEBEE',
+            cornerRadius: 'md',
+            paddingAll: '10px',
+            margin: 'sm',
+            contents: [
+              ...contractItems,
+              {
+                type: 'separator',
+                margin: 'sm',
+                color: '#EF9A9A'
+              },
+              {
+                type: 'box',
+                layout: 'horizontal',
+                margin: 'sm',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'ยอดค้างชำระรวมทั้งสิ้น:',
+                    size: 'sm',
+                    weight: 'bold',
+                    color: '#B71C1C'
+                  },
+                  {
+                    type: 'text',
+                    text: `${totalBalance.toLocaleString()} บาท`,
+                    size: 'sm',
+                    weight: 'bold',
+                    align: 'end',
+                    color: '#B71C1C'
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#FFF8E1',
+            cornerRadius: 'md',
+            paddingAll: '10px',
+            margin: 'sm',
+            contents: [
+              {
+                type: 'text',
+                text: '📌 วิธีการชำระเงิน',
+                weight: 'bold',
+                size: 'xs',
+                color: '#8B4513'
+              },
+              {
+                type: 'text',
+                text: 'ท่านสามารถโอนชำระเงินและส่งสลิปยืนยันเข้ามาในห้องแชท LINE นี้ หรือชำระที่สำนักงานตลาดได้เลยค่ะ',
+                size: 'xxs',
+                color: '#6D4C41',
+                margin: 'xs',
+                wrap: true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+}
