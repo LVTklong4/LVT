@@ -32,6 +32,12 @@ export async function POST(req) {
 
     // 2. Process each incoming event
     for (const event of events) {
+      // Only reply in 1:1 chats. Group/room members are not necessarily linked
+      // merchants, and account cards must never be posted into shared chats.
+      if (event.source?.type !== 'user') {
+        continue;
+      }
+
       const userId = event.source?.userId;
       const replyToken = event.replyToken;
 
